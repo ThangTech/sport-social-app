@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "MiniApartmentApp",
-    "slug": "MiniApartmentApp",
+    "name": "SocialSportApp",
+    "slug": "SocialSportApp",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "miniapartmentapp",
+    "scheme": "socialsportapp",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
