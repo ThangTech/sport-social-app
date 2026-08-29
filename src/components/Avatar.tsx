@@ -1,6 +1,5 @@
 import { COLORS } from "@/constants/theme";
 import { StyleSheet, View, Image, ImageSourcePropType } from "react-native";
-import AppText from "./ui/AppText";
 
 
 type AvatarProps = {

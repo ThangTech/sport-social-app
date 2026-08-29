@@ -1,6 +1,5 @@
 import AppHeader from "@/components/AppHeader";
 import PostCard from "@/components/PostCard";
-import SportBadge from "@/components/SportBadge";
 import { COLORS, SPACING } from "@/constants/theme";
 import { Alert, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
