@@ -1,4 +1,5 @@
 import AppHeader from "@/components/AppHeader";
+import PostCard from "@/components/PostCard";
 import SportBadge from "@/components/SportBadge";
 import { COLORS, SPACING } from "@/constants/theme";
 import { Alert, StyleSheet, View } from "react-native";
@@ -8,9 +9,7 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader/>
-      <View style={styles.content}>
-        <SportBadge name="Bóng đá" />
-      </View>
+      <PostCard/>
     </SafeAreaView>
   );
 }
