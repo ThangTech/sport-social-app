@@ -1,7 +1,6 @@
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
-import AppText from "./ui/AppText";
 import Avatar from "./Avatar";
 
 export default function CreatePostPrompt() {
@@ -13,10 +12,9 @@ export default function CreatePostPrompt() {
 
       <TextInput
         style={styles.input}
+        placeholder="Bạn đang nghĩ gì?"
+        placeholderTextColor={COLORS.textMuted}
       >
-        <AppText variant="body" color={COLORS.textMuted}>
-          Bạn đang nghĩ gì?
-        </AppText>
       </TextInput>
 
       <Pressable
@@ -50,6 +48,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.surfaceAlt,
     justifyContent: "center",
+    color: COLORS.textMuted
   },
 
   imageButton: {
