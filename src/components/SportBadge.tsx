@@ -9,7 +9,7 @@ type SportBadgeProps = {
 export default function SportBadge({ name }: SportBadgeProps) {
   return (
     <View style={styles.badge}>
-      <AppText variant="caption" color={COLORS.primary}>
+      <AppText variant="caption" color={COLORS.textBadge}>
         {name}
       </AppText>
     </View>
@@ -19,7 +19,7 @@ export default function SportBadge({ name }: SportBadgeProps) {
 const styles = StyleSheet.create({
   badge: {
     alignSelf: "flex-start",
-    backgroundColor: COLORS.primarySoft,
+    backgroundColor: COLORS.primary,
     borderRadius: RADIUS.full,
     paddingHorizontal: SPACING.md,
     paddingVertical: SPACING.xs,

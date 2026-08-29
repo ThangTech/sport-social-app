@@ -4,6 +4,7 @@ import { COLORS } from "@/constants/theme";
 import { StyleSheet, FlatList } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MOCK_POSTS } from "../data/mock-data";
+import CreatePostPrompt from "@/components/CreatePostPrompt";
 
 export default function HomeScreen() {
   return (
@@ -14,6 +15,7 @@ export default function HomeScreen() {
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => <PostCard post={item} />}
         showsVerticalScrollIndicator={true}
+        ListHeaderComponent={CreatePostPrompt}
       />
     </SafeAreaView>
   );

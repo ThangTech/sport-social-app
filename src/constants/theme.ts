@@ -1,7 +1,8 @@
 export const COLORS = {
-  primary: "#22C55E",
+  primary: "#7ef759",
   primaryDark: "#16A34A",
   primarySoft: "#163A27",
+  textBadge: "black",
 
   background: "#0B1220",
   surface: "#121A2A",
