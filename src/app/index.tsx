@@ -1,15 +1,19 @@
-
-import { Button, Text, View } from "react-native";
-
-
+import AppHeader from "@/components/AppHeader";
+import { COLORS } from "@/constants/theme";
+import { Alert, StyleSheet } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function HomeScreen() {
   return (
-     <View>
-      <Text>Hello World</Text>
-      <Text>Ứng dụng quản lý chung cư mini</Text>
-      <Button title="Bắt đầu" onPress={() => alert("Xin chào mobile")}/>
-    </View>
+    <SafeAreaView style={styles.container}>
+      <AppHeader/>
+    </SafeAreaView>
   );
 }
 
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.background,
+  },
+});
