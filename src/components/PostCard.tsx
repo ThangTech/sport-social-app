@@ -3,31 +3,35 @@ import { Image, StyleSheet, View, Alert, Pressable } from "react-native";
 import AppText from "./ui/AppText";
 import Avatar from "./Avatar";
 import SportBadge from "./SportBadge";
+import { Post } from "../types/post";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-export default function PostCard() {
+type PostCardProps = {
+  post: Post;
+};
+export default function PostCard({ post }: PostCardProps) {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
-        <Avatar source={require("../../assets/images/icon.png")} />
+        <Avatar source={post.authorAvatar} />
 
         <View style={styles.author}>
-          <AppText variant="label">Nguyễn Văn Thắng</AppText>
+          <AppText variant="label"> {post.authorName}</AppText>
 
           <AppText variant="caption" color={COLORS.textMuted}>
-            30 phút trước
+            {post.createdAt}
           </AppText>
         </View>
 
-        <SportBadge name="Bóng đá" />
+        <SportBadge name={post.sport} />
       </View>
 
       <View style={styles.content}>
-        <AppText>Một buổi tập tuyệt vời cùng đồng đội! ⚽</AppText>
+        <AppText>{post.content}</AppText>
       </View>
       <View style={styles.imageContainer}>
         <Image
-          source={require("../../assets/images/football.jpg")}
+          source={post.image}
           style={styles.postImage}
           resizeMode="cover"
         />
@@ -40,7 +44,7 @@ export default function PostCard() {
           <Ionicons name="heart-outline" size={23} color={COLORS.textMuted} />
 
           <AppText variant="caption" color={COLORS.textMuted}>
-            192
+            {post.likeCount}
           </AppText>
         </Pressable>
 
@@ -55,7 +59,7 @@ export default function PostCard() {
           />
 
           <AppText variant="caption" color={COLORS.textMuted}>
-            10
+            {post.commentCount}
           </AppText>
         </Pressable>
 

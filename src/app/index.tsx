@@ -3,12 +3,13 @@ import PostCard from "@/components/PostCard";
 import { COLORS, SPACING } from "@/constants/theme";
 import { Alert, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { MOCK_POSTS } from "../data/mock-data";
 
 export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader/>
-      <PostCard/>
+      <PostCard post={MOCK_POSTS[0]}/>
     </SafeAreaView>
   );
 }
