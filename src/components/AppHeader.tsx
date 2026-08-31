@@ -3,7 +3,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Alert, Pressable, StyleSheet, View, Image } from "react-native";
 import AppText from "./ui/AppText";
 import Avatar from "./Avatar";
-
+import { router } from "expo-router";
 export default function AppHeader() {
   return (
     <View style={styles.container}>
@@ -34,7 +34,7 @@ export default function AppHeader() {
 
         <Pressable
           style={styles.iconButton}
-          onPress={() => Alert.alert("Thông báo")}
+          onPress={() => router.push("/notifications")}
         >
           <Ionicons
             name="notifications-outline"

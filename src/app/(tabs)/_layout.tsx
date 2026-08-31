@@ -32,7 +32,7 @@ export default function TabsLayout() {
         options={{
           title: "Khám phá",
           tabBarIcon: ({ color, size }) => (
-            <Ionicons name="search-outline" color={color} size={size} />
+            <Ionicons name="compass-outline" color={color} size={size} />
           ),
         }}
       />
@@ -80,6 +80,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     transform: [{ translateY: -10 }],
-    elevation: 6,
+    elevation: 6, // == shadow
   },
 });
