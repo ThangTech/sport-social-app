@@ -5,6 +5,7 @@ import { StyleSheet, FlatList } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MOCK_POSTS } from "@/data/mock-data";
 import CreatePostPrompt from "@/components/CreatePostPrompt";
+import { router } from "expo-router";
 
 export default function HomeScreen() {
   return (
@@ -13,7 +14,17 @@ export default function HomeScreen() {
       <FlatList
         data={MOCK_POSTS}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => <PostCard post={item} />}
+        renderItem={({ item }) => 
+        <PostCard post={item} 
+        onPress={() => {
+              router.push({
+                     pathname: "/post/[id]",
+                     params: {id: item.id}
+              })
+        }}/>
+       
+       
+       }
         showsVerticalScrollIndicator={true}
         ListHeaderComponent={CreatePostPrompt}
       />

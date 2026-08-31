@@ -8,34 +8,37 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 type PostCardProps = {
   post: Post;
+  onPress?: () => void;
 };
-export default function PostCard({ post }: PostCardProps) {
+export default function PostCard({ post, onPress }: PostCardProps) {
   return (
     <View style={styles.card}>
-      <View style={styles.header}>
-        <Avatar source={post.authorAvatar} />
+      <Pressable onPress={onPress}>
+        <View style={styles.header}>
+          <Avatar source={post.authorAvatar} />
 
-        <View style={styles.author}>
-          <AppText variant="label"> {post.authorName}</AppText>
+          <View style={styles.author}>
+            <AppText variant="label"> {post.authorName}</AppText>
 
-          <AppText variant="caption" color={COLORS.textMuted}>
-            {post.createdAt}
-          </AppText>
+            <AppText variant="caption" color={COLORS.textMuted}>
+              {post.createdAt}
+            </AppText>
+          </View>
+
+          <SportBadge name={post.sport} />
         </View>
 
-        <SportBadge name={post.sport} />
-      </View>
-
-      <View style={styles.content}>
-        <AppText>{post.content}</AppText>
-      </View>
-      <View style={styles.imageContainer}>
-        <Image
-          source={post.image}
-          style={styles.postImage}
-          resizeMode="cover"
-        />
-      </View>
+        <View style={styles.content}>
+          <AppText>{post.content}</AppText>
+        </View>
+        <View style={styles.imageContainer}>
+          <Image
+            source={post.image}
+            style={styles.postImage}
+            resizeMode="cover"
+          />
+        </View>
+      </Pressable>
       <View style={styles.actions}>
         <Pressable
           style={styles.actionButton}
