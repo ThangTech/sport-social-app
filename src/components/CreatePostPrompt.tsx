@@ -1,31 +1,22 @@
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import Avatar from "./Avatar";
 
 export default function CreatePostPrompt() {
   return (
     <View style={styles.container}>
-      <Avatar
-        source={require("../../assets/images/icon.png")}
-      />
+      <Avatar source={require("../../assets/images/icon.png")} />
 
-      <TextInput
-        style={styles.input}
-        placeholder="Bạn đang nghĩ gì?"
-        placeholderTextColor={COLORS.textMuted}
-      >
-      </TextInput>
+      <Pressable style={styles.input}>
+        <Text style={{color: COLORS.textMuted}}>Bạn đang nghĩ gì?</Text>
+      </Pressable>
 
       <Pressable
         style={styles.imageButton}
         onPress={() => Alert.alert("Chọn ảnh")}
       >
-        <Ionicons
-          name="image-outline"
-          size={24}
-          color={COLORS.primary}
-        />
+        <Ionicons name="image-outline" size={24} color={COLORS.primary} />
       </Pressable>
     </View>
   );
@@ -48,7 +39,7 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.surfaceAlt,
     justifyContent: "center",
-    color: COLORS.textMuted
+    color: COLORS.textMuted,
   },
 
   imageButton: {

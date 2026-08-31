@@ -3,7 +3,7 @@ import PostCard from "@/components/PostCard";
 import { COLORS } from "@/constants/theme";
 import { StyleSheet, FlatList } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { MOCK_POSTS } from "../data/mock-data";
+import { MOCK_POSTS } from "@/data/mock-data";
 import CreatePostPrompt from "@/components/CreatePostPrompt";
 
 export default function HomeScreen() {
