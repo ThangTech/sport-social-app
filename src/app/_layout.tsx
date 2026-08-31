@@ -32,8 +32,24 @@ export default function RootLayout() {
 
   return (
     <>
-      <Stack screenOptions={{ headerShown: false }} />
-      <StatusBar style="light" />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(tabs)" />
+
+        <Stack.Screen
+          name="post/[id]"
+          options={{
+            headerShown: false,
+          }}
+        />
+
+        <Stack.Screen
+          name="create-post"
+          options={{
+            presentation: "modal",
+            headerShown: false,
+          }}
+        />
+      </Stack>
     </>
   );
 }
