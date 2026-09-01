@@ -3,6 +3,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Tabs } from "expo-router";
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
+import CreatePostScreen from "../modal/create-post";
 
 export default function TabsLayout() {
   const [showCreate, setShowCreate] = useState(false);
@@ -27,6 +28,9 @@ export default function TabsLayout() {
           name="index"
           options={{
             title: "Bảng tin",
+            tabBarItemStyle: {
+              transform: [{ translateX: -10 }],
+            },
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="home-outline" color={color} size={size} />
             ),
@@ -37,6 +41,9 @@ export default function TabsLayout() {
           name="explore"
           options={{
             title: "Khám phá",
+            tabBarItemStyle: {
+              transform: [{ translateX: -18 }],
+            },
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="compass-outline" color={color} size={size} />
             ),
@@ -47,6 +54,9 @@ export default function TabsLayout() {
           name="community"
           options={{
             title: "Cộng đồng",
+            tabBarItemStyle: {
+              transform: [{ translateX: 18 }],
+            },
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="people-outline" color={color} size={size} />
             ),
@@ -57,6 +67,9 @@ export default function TabsLayout() {
           name="profile"
           options={{
             title: "Cá nhân",
+            tabBarItemStyle: {
+              transform: [{ translateX: 10 }],
+            },
             tabBarIcon: ({ color, size }) => (
               <Ionicons name="person-outline" color={color} size={size} />
             ),
@@ -79,12 +92,7 @@ export default function TabsLayout() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Pressable
-              style={styles.closeButton}
-              onPress={() => setShowCreate(false)}
-            >
-              <Ionicons name="close" size={28} color={COLORS.text} />
-            </Pressable>
+            <CreatePostScreen onPress={() => setShowCreate(false)} onClose={() => setShowCreate(false)}/>
           </View>
         </View>
       </Modal>
@@ -99,7 +107,7 @@ const styles = StyleSheet.create({
   createButton: {
     position: "absolute",
 
-    bottom: 38,
+    bottom: "1%",
     left: "50%",
     marginLeft: -28,
 
@@ -123,25 +131,17 @@ const styles = StyleSheet.create({
 
     backgroundColor: "rgba(0,0,0,0.5)",
 
-    justifyContent: "flex-end",
+    justifyContent: "center",
   },
 
   modalContent: {
-    height: "85%",
+    height: "75%",
 
     backgroundColor: COLORS.background,
 
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
 
-    padding: 20,
-  },
-
-  closeButton: {
-    width: 40,
-    height: 40,
-
-    alignItems: "center",
-    justifyContent: "center",
+    padding: 10,
   },
 });

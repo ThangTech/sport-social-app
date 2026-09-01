@@ -1,7 +1,6 @@
 import AppText from "@/components/ui/AppText";
 import { COLORS, SPACING } from "@/constants/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router } from "expo-router";
 import { useState } from "react";
 import {
   Alert,
@@ -13,7 +12,11 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-export default function CreatePostScreen() {
+type Props = {
+       onPress: () => void,
+       onClose: () => void
+}
+export default function CreatePostScreen({onPress, onClose}: Props) {
   const [content, setContent] = useState("");
 
   const handleCreatePost = () => {
@@ -26,13 +29,13 @@ export default function CreatePostScreen() {
 
     Alert.alert("Thành công", "Đã đăng bài viết.");
 
-    router.back();
+    onClose();
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Pressable style={styles.headerButton} onPress={() => router.back()}>
+        <Pressable style={styles.headerButton} onPress={onPress}>
           <Ionicons name="close" size={28} color={COLORS.text} />
         </Pressable>
 
