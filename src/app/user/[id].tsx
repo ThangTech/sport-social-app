@@ -5,7 +5,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import PostCard from "@/components/PostCard";
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
@@ -81,13 +81,27 @@ export default function UserProfileScreen() {
             <AppText style={styles.followText}>Theo dõi</AppText>
           </Pressable>
         </View>
-
+        {userPosts.length === 0 && (
+          <View style={styles.emptyPosts}>
+            <AppText color={COLORS.textMuted}>
+              Người dùng này chưa có bài viết.
+            </AppText>
+          </View>
+        )}
         <View style={styles.postsSection}>
           <AppText variant="subtitle">Bài viết</AppText>
 
           <AppText variant="caption" color={COLORS.textMuted}>
             {userPosts.length} bài viết
           </AppText>
+        </View>
+        <View>
+          {userPosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+            />
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -189,5 +203,9 @@ const styles = StyleSheet.create({
     borderTopColor: COLORS.border,
 
     gap: SPACING.xs,
+  },
+  emptyPosts: {
+    padding: SPACING.xl,
+    alignItems: "center",
   },
 });

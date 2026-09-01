@@ -14,17 +14,25 @@ export default function HomeScreen() {
       <FlatList
         data={MOCK_POSTS}
         keyExtractor={(item) => item.id}
-        renderItem={({ item }) => 
-        <PostCard post={item} 
-        onPress={() => {
+        renderItem={({ item }) => (
+          <PostCard
+            post={item}
+            onPress={() => {
               router.push({
-                     pathname: "/post/[id]",
-                     params: {id: item.id}
+                pathname: "/post/[id]",
+                params: { id: item.id },
+              });
+            }}
+            onAuthorPress={() =>
+              router.push({
+                pathname: "/user/[id]",
+                params: {
+                  id: item.authorId,
+                },
               })
-        }}/>
-       
-       
-       }
+            }
+          />
+        )}
         showsVerticalScrollIndicator={true}
         ListHeaderComponent={CreatePostPrompt}
       />

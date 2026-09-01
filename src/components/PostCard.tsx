@@ -10,13 +10,15 @@ import { router } from "expo-router";
 type PostCardProps = {
   post: Post;
   onPress?: () => void;
+  onAuthorPress?: () => void;
 };
-export default function PostCard({ post, onPress }: PostCardProps) {
+export default function PostCard({ post, onPress, onAuthorPress }: PostCardProps) {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
         <Pressable
           style={styles.userInfo}
+          disabled={!onAuthorPress}
           onPress={() =>
             router.push({
               pathname: "/user/[id]",
