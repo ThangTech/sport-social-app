@@ -12,7 +12,11 @@ type PostCardProps = {
   onPress?: () => void;
   onAuthorPress?: () => void;
 };
-export default function PostCard({ post, onPress, onAuthorPress }: PostCardProps) {
+export default function PostCard({
+  post,
+  onPress,
+  onAuthorPress,
+}: PostCardProps) {
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -29,11 +33,18 @@ export default function PostCard({ post, onPress, onAuthorPress }: PostCardProps
           }
         >
           <Avatar source={post.authorAvatar} />
-
           <View style={styles.author}>
             <AppText variant="label"> {post.authorName}</AppText>
-
-            <AppText variant="caption" color={COLORS.textMuted} style={{marginLeft: 2, marginTop: 5}}>
+            {post.groupName && (
+              <AppText variant="caption" color={COLORS.primary} style={{marginLeft: 2, marginTop: 5}}>
+                {post.groupName}
+              </AppText>
+            )}
+            <AppText
+              variant="caption"
+              color={COLORS.textMuted}
+              style={{ marginLeft: 2, marginTop: 5 }}
+            >
               {post.createdAt}
             </AppText>
           </View>

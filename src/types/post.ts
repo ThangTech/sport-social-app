@@ -5,6 +5,8 @@ export type Post = {
   authorId: string;
   authorName: string;
   authorAvatar: ImageSourcePropType;
+  groupId?: string;
+  groupName?: string;
   createdAt: string;
   content: string;
   image: ImageSourcePropType;

@@ -6,6 +6,8 @@ export const MOCK_POSTS: Post[] = [
     authorId: "user-1",
     authorName: "Nguyễn Văn Thắng",
     authorAvatar: require("../../assets/images/icon.png"),
+    groupId: "group-1",
+    groupName: "Cộng đồng yêu bóng đá",
     createdAt: "30 phút trước",
     content: "Một buổi tập tuyệt vời cùng đồng đội! ⚽",
     image: require("../../assets/images/football.jpg"),
@@ -13,7 +15,7 @@ export const MOCK_POSTS: Post[] = [
     likeCount: 192,
     commentCount: 10,
   },
-   {
+  {
     id: "2",
     authorId: "user-2",
     authorName: "Nguyễn Văn Thắng",
@@ -30,6 +32,8 @@ export const MOCK_POSTS: Post[] = [
     authorId: "user-3",
     authorName: "Nguyễn Văn Thắng",
     authorAvatar: require("../../assets/images/icon.png"),
+    groupId: "group-1",
+    groupName: "Cộng đồng yêu bóng đá 2",
     createdAt: "30 phút trước",
     content: "Một buổi tập tuyệt vời cùng đồng đội! ⚽",
     image: require("../../assets/images/football.jpg"),
