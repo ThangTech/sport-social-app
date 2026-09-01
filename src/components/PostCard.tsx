@@ -5,6 +5,7 @@ import Avatar from "./Avatar";
 import SportBadge from "./SportBadge";
 import { Post } from "../types/post";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { router } from "expo-router";
 
 type PostCardProps = {
   post: Post;
@@ -13,21 +14,31 @@ type PostCardProps = {
 export default function PostCard({ post, onPress }: PostCardProps) {
   return (
     <View style={styles.card}>
-      <Pressable onPress={onPress}>
-        <View style={styles.header}>
+      <View style={styles.header}>
+        <Pressable
+          style={styles.userInfo}
+          onPress={() =>
+            router.push({
+              pathname: "/user/[id]",
+              params: {
+                id: post.authorId,
+              },
+            })
+          }
+        >
           <Avatar source={post.authorAvatar} />
 
           <View style={styles.author}>
             <AppText variant="label"> {post.authorName}</AppText>
 
-            <AppText variant="caption" color={COLORS.textMuted}>
+            <AppText variant="caption" color={COLORS.textMuted} style={{marginLeft: 2, marginTop: 5}}>
               {post.createdAt}
             </AppText>
           </View>
-
-          <SportBadge name={post.sport} />
-        </View>
-
+        </Pressable>
+        <SportBadge name={post.sport} />
+      </View>
+      <Pressable onPress={onPress}>
         <View style={styles.content}>
           <AppText>{post.content}</AppText>
         </View>
@@ -106,7 +117,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: SPACING.sm,
   },
-
+  userInfo: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
   author: {
     flex: 1,
   },

@@ -2,6 +2,7 @@ import { ImageSourcePropType } from "react-native";
 
 export type Post = {
   id: string;
+  authorId: string;
   authorName: string;
   authorAvatar: ImageSourcePropType;
   createdAt: string;
