@@ -5,18 +5,18 @@
     "version": "1.0.0",
     "orientation": "portrait",
 
-    "icon": "./assets/images/icon.png",
+    "icon": "../mobile/assets/images/icon.png",
 
     "scheme": "socialsportapp",
     "userInterfaceStyle": "automatic",
 
     "ios": {
-      "icon": "./assets/images/icon.png"
+      "icon": "../mobile/assets/images/icon.png"
     },
 
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "../mobile/assets/images/adaptive-icon.png",
         "backgroundColor": "#0F172A"
       },
       "predictiveBackGestureEnabled": false
@@ -24,7 +24,7 @@
 
     "web": {
       "output": "static",
-      "favicon": "./assets/images/icon.png"
+      "favicon": "../mobile/assets/images/icon.png"
     },
 
     "plugins": [
@@ -32,7 +32,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "../mobile/assets/images/splash-icon.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#0F172A"
