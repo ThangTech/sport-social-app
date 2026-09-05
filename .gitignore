@@ -42,3 +42,11 @@ example
 # generated native folders
 /ios
 /android
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# .NET build outputs
+[Bb]in/
+[Oo]bj/
