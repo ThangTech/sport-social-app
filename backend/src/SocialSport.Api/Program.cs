@@ -1,10 +1,10 @@
-using SocialSport.Infrastructure;
+using SocialSport.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddOpenApi();
 
-builder.Services.AddInfrastructure(
+builder.Services.AddDependencies(
     builder.Configuration
 );
 

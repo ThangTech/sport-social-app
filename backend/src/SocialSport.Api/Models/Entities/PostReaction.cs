@@ -1,11 +1,11 @@
-﻿using SocialSport.Domain.Enums;
+using SocialSport.Api.Models.Enums;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SocialSport.Domain.Entities
+namespace SocialSport.Api.Models.Entities
 {
     public class PostReaction
     {

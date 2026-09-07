@@ -1,9 +1,9 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using SocialSport.Domain.Entities;
-using SocialSport.Infrastructure.Identity;
+using SocialSport.Api.Models.Entities;
+using SocialSport.Api.Identity;
 
-namespace SocialSport.Infrastructure.Persistence.Configurations;
+namespace SocialSport.Api.Data.Configurations;
 
 public class CommentConfiguration
     : IEntityTypeConfiguration<Comment>

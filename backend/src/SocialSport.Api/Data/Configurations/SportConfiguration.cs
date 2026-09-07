@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using SocialSport.Domain.Entities;
+using SocialSport.Api.Models.Entities;
 
-namespace SocialSport.Infrastructure.Persistence.Configurations;
+namespace SocialSport.Api.Data.Configurations;
 
 public class SportConfiguration : IEntityTypeConfiguration<Sport>
 {

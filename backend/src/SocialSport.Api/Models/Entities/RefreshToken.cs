@@ -1,11 +1,11 @@
-﻿using SocialSport.Domain.Common;
+using SocialSport.Api.Models.Common;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SocialSport.Domain.Entities
+namespace SocialSport.Api.Models.Entities
 {
     public class RefreshToken : BaseEntity
     {

@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using SocialSport.Domain.Entities;
-using SocialSport.Infrastructure.Identity;
+using SocialSport.Api.Models.Entities;
+using SocialSport.Api.Identity;
 
-namespace SocialSport.Infrastructure.Persistence;
+namespace SocialSport.Api.Data;
 
 public class ApplicationDbContext
     : IdentityDbContext<

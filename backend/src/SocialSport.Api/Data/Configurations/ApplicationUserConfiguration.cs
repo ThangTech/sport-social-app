@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using SocialSport.Infrastructure.Identity;
+using SocialSport.Api.Identity;
 
-namespace SocialSport.Infrastructure.Persistence.Configurations;
+namespace SocialSport.Api.Data.Configurations;
 
 public class ApplicationUserConfiguration
     : IEntityTypeConfiguration<ApplicationUser>

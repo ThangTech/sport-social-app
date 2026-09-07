@@ -1,15 +1,13 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using SocialSport.Infrastructure.Identity;
-using SocialSport.Infrastructure.Persistence;
+using SocialSport.Api.Data;
+using SocialSport.Api.Identity;
 
-namespace SocialSport.Infrastructure;
+namespace SocialSport.Api.Extensions;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddInfrastructure(
+    public static IServiceCollection AddDependencies(
         this IServiceCollection services,
         IConfiguration configuration)
     {
@@ -36,8 +34,6 @@ public static class DependencyInjection
             })
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
-            //.AddSignInManager()
-            //.AddDefaultTokenProviders();
 
         return services;
     }

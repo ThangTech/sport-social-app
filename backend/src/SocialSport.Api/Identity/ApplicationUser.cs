@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Identity;
-using SocialSport.Domain.Enums;
+using Microsoft.AspNetCore.Identity;
+using SocialSport.Api.Models.Enums;
 
-namespace SocialSport.Infrastructure.Identity;
+namespace SocialSport.Api.Identity;
 
 public class ApplicationUser : IdentityUser<Guid>
 {
