@@ -9,8 +9,7 @@ builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddDependencies(
-    builder.Configuration
-);
+    builder.Configuration);
 
 var app = builder.Build();
 
@@ -22,6 +21,9 @@ if (app.Environment.IsDevelopment())
 app.UseExceptionHandler();
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapControllers();
 

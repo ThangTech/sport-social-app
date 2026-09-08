@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using SocialSport.Api.Data;
 using SocialSport.Api.Identity;
+using SocialSport.Api.Settings;
+using System.Text;
 
 namespace SocialSport.Api.Extensions;
 
@@ -34,7 +38,53 @@ public static class DependencyInjection
             })
             .AddRoles<IdentityRole<Guid>>()
             .AddEntityFrameworkStores<ApplicationDbContext>();
+        var jwtSettings = configuration
+    .GetSection(JwtSettings.SectionName)
+    .Get<JwtSettings>()
+    ?? throw new InvalidOperationException(
+        "JWT configuration was not found.");
 
+        if (string.IsNullOrWhiteSpace(jwtSettings.Key))
+        {
+            throw new InvalidOperationException(
+                "JWT key was not configured.");
+        }
+
+        services.Configure<JwtSettings>(
+            configuration.GetSection(JwtSettings.SectionName));
+
+        services
+            .AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme =
+                    JwtBearerDefaults.AuthenticationScheme;
+
+                options.DefaultChallengeScheme =
+                    JwtBearerDefaults.AuthenticationScheme;
+            })
+            .AddJwtBearer(options =>
+            {
+                options.TokenValidationParameters =
+                    new TokenValidationParameters
+                    {
+                        ValidateIssuer = true,
+                        ValidateAudience = true,
+                        ValidateLifetime = true,
+                        ValidateIssuerSigningKey = true,
+
+                        ValidIssuer = jwtSettings.Issuer,
+                        ValidAudience = jwtSettings.Audience,
+
+                        IssuerSigningKey =
+                            new SymmetricSecurityKey(
+                                Encoding.UTF8.GetBytes(
+                                    jwtSettings.Key)),
+
+                        ClockSkew = TimeSpan.Zero
+                    };
+            });
+
+        services.AddAuthorization();
         return services;
     }
 }
