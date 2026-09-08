@@ -3,6 +3,7 @@ using SocialSport.Api.Repositories.Interfaces;
 using SocialSport.Api.Services.Implementations;
 using SocialSport.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using SocialSport.Api.Middleware;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -89,6 +90,7 @@ public static class DependencyInjection
             });
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>(); 
         services.AddScoped<IAuthService, AuthService>();
+        services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddAuthorization();
         return services;
     }
