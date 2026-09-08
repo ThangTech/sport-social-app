@@ -1,3 +1,7 @@
+using SocialSport.Api.Repositories.Implementations;
+using SocialSport.Api.Repositories.Interfaces;
+using SocialSport.Api.Services.Implementations;
+using SocialSport.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -83,7 +87,8 @@ public static class DependencyInjection
                         ClockSkew = TimeSpan.Zero
                     };
             });
-
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>(); 
+        services.AddScoped<IAuthService, AuthService>();
         services.AddAuthorization();
         return services;
     }
