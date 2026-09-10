@@ -145,7 +145,15 @@ public class AuthService : IAuthService
 
         var roles = await _userManager.GetRolesAsync(user);
 
-        return MapUser(user, roles);
+        return new AuthUserDto
+        {
+            Id = user.Id,
+            UserName = user.UserName ?? string.Empty,
+            Email = user.Email ?? string.Empty,
+            DisplayName = user.DisplayName,
+            AvatarUrl = user.AvatarUrl,
+            Roles = roles
+        };
     }
 
     // =========================
@@ -178,7 +186,15 @@ public class AuthService : IAuthService
             AccessTokenExpiresAt = accessTokenExpiresAt,
             RefreshToken = rawRefreshToken,
             RefreshTokenExpiresAt = refreshTokenExpiresAt,
-            User = MapUser(user, roles)
+            User = new AuthUserDto
+            {
+                Id = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                Email = user.Email ?? string.Empty,
+                DisplayName = user.DisplayName,
+                AvatarUrl = user.AvatarUrl,
+                Roles = roles
+            }
         };
     }
 
@@ -232,18 +248,6 @@ public class AuthService : IAuthService
     // =========================
     // MAPPING
     // =========================
-    private static AuthUserDto MapUser(ApplicationUser user, IList<string> roles)
-    {
-        return new AuthUserDto
-        {
-            Id = user.Id,
-            UserName = user.UserName ?? string.Empty,
-            Email = user.Email ?? string.Empty,
-            DisplayName = user.DisplayName,
-            AvatarUrl = user.AvatarUrl,
-            Roles = roles
-        };
-    }
 
     private static string GetIdentityErrors(IdentityResult result)
     {

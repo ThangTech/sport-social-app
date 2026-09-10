@@ -92,6 +92,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IFollowRepository, FollowRepository>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IUserBlockRepository, UserBlockRepository>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddAuthorization();
         return services;

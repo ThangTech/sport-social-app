@@ -16,7 +16,40 @@ public class UsersController : ControllerBase
     {
         _userService = userService;
     }
+    [HttpGet("{id:guid}/followers")]
+    public async Task<ActionResult<List<UserSummaryDto>>> GetFollowers(Guid id)
+    {
+        return Ok(await _userService.GetFollowersAsync(id));
+    }
 
+    [HttpGet("{id:guid}/following")]
+    public async Task<ActionResult<List<UserSummaryDto>>> GetFollowing(Guid id)
+    {
+        return Ok(await _userService.GetFollowingAsync(id));
+    }
+
+    [Authorize]
+    [HttpPost("{id:guid}/block")]
+    public async Task<IActionResult> Block(Guid id)
+    {
+        await _userService.BlockAsync(GetCurrentUserId(), id);
+        return NoContent();
+    }
+
+    [Authorize]
+    [HttpDelete("{id:guid}/block")]
+    public async Task<IActionResult> Unblock(Guid id)
+    {
+        await _userService.UnblockAsync(GetCurrentUserId(), id);
+        return NoContent();
+    }
+
+    [Authorize]
+    [HttpGet("me/blocked-users")]
+    public async Task<ActionResult<List<UserSummaryDto>>> GetBlockedUsers()
+    {
+        return Ok(await _userService.GetBlockedUsersAsync(GetCurrentUserId()));
+    }
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<UserProfileDto>> GetProfile(Guid id)
     {

@@ -12,11 +12,13 @@ namespace SocialSport.Api.Services.Implementations
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IFollowRepository _followRepository;
+        private readonly IUserBlockRepository _userBlockRepository;
 
-        public UserService(UserManager<ApplicationUser> userManager, IFollowRepository followRepository)
+        public UserService(UserManager<ApplicationUser> userManager, IFollowRepository followRepository, IUserBlockRepository userBlockRepository)
         {
             _userManager = userManager;
             _followRepository = followRepository;
+            _userBlockRepository = userBlockRepository;
         }
 
         public async Task<UserProfileDto?> GetProfileAsync(Guid userId, Guid? currentUserId)
@@ -102,6 +104,77 @@ namespace SocialSport.Api.Services.Implementations
 
             _followRepository.Remove(follow);
             await _followRepository.SaveChangesAsync();
+        }
+
+        public async Task<List<UserSummaryDto>> GetFollowersAsync(Guid userId)
+        {
+            var users = await _followRepository.GetFollowersAsync(userId);
+            return users.Select(u => new UserSummaryDto
+            {
+                Id = u.Id,
+                UserName = u.UserName ?? string.Empty,
+                DisplayName = u.DisplayName,
+                AvatarUrl = u.AvatarUrl
+            }).ToList();
+        }
+
+        public async Task<List<UserSummaryDto>> GetFollowingAsync(Guid userId)
+        {
+            var users = await _followRepository.GetFollowingAsync(userId);
+            return users.Select(u => new UserSummaryDto
+            {
+                Id = u.Id,
+                UserName = u.UserName ?? string.Empty,
+                DisplayName = u.DisplayName,
+                AvatarUrl = u.AvatarUrl
+            }).ToList();
+        }
+
+        public async Task BlockAsync(Guid currentUserId, Guid targetUserId)
+        {
+            if (currentUserId == targetUserId)
+                throw new InvalidOperationException("Bạn không thể block chính mình.");
+
+            var targetUser = await _userManager.FindByIdAsync(targetUserId.ToString());
+
+            if (targetUser is null)
+                throw new InvalidOperationException("Không tìm thấy người dùng.");
+
+            if (await _userBlockRepository.IsBlockedAsync(currentUserId, targetUserId))
+                return;
+
+            var userBlock = new UserBlock
+            {
+                BlockerId = currentUserId,
+                BlockedId = targetUserId,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            await _userBlockRepository.AddAsync(userBlock);
+            await _userBlockRepository.SaveChangesAsync();
+        }
+
+        public async Task UnblockAsync(Guid currentUserId, Guid targetUserId)
+        {
+            var userBlock = await _userBlockRepository.GetAsync(currentUserId, targetUserId);
+
+            if (userBlock is null)
+                return;
+
+            _userBlockRepository.Remove(userBlock);
+            await _userBlockRepository.SaveChangesAsync();
+        }
+
+        public async Task<List<UserSummaryDto>> GetBlockedUsersAsync(Guid currentUserId)
+        {
+            var users = await _userBlockRepository.GetBlockedUsersAsync(currentUserId);
+            return users.Select(u => new UserSummaryDto
+            {
+                Id = u.Id,
+                UserName = u.UserName ?? string.Empty,
+                DisplayName = u.DisplayName,
+                AvatarUrl = u.AvatarUrl
+            }).ToList();
         }
     }
 }

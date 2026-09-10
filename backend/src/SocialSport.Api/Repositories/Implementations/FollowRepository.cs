@@ -1,6 +1,7 @@
 ﻿
 using Microsoft.EntityFrameworkCore;
 using SocialSport.Api.Data;
+using SocialSport.Api.Identity;
 using SocialSport.Api.Models.Entities;
 using SocialSport.Api.Repositories.Interfaces;
 
@@ -48,6 +49,24 @@ namespace SocialSport.Api.Repositories.Implementations
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();
+        }
+
+        public async Task<List<ApplicationUser>> GetFollowersAsync(Guid userId)
+        {
+                return await(
+                from follow in _context.Follows
+                join user in _context.Users on follow.FollowerId equals user.Id
+                where follow.FollowingId == userId
+                select user).ToListAsync();
+        }
+
+        public async Task<List<ApplicationUser>> GetFollowingAsync(Guid userId)
+        {
+            return await(
+            from follow in _context.Follows
+            join user in _context.Users on follow.FollowingId equals user.Id
+            where follow.FollowerId == userId
+            select user).ToListAsync();
         }
     }
 }
