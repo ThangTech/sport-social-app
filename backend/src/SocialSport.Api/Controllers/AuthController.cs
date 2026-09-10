@@ -16,7 +16,6 @@ public class AuthController : ControllerBase
     {
         _authService = authService;
     }
-
     [HttpPost("register")]
     [AllowAnonymous]
     public async Task<ActionResult<AuthResponse>>

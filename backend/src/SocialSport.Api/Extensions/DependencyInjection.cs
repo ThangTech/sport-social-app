@@ -90,6 +90,8 @@ public static class DependencyInjection
             });
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>(); 
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IFollowRepository, FollowRepository>();
+        services.AddScoped<IUserService, UserService>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddAuthorization();
         return services;
