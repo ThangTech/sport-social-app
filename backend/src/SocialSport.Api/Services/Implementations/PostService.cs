@@ -14,11 +14,13 @@ namespace SocialSport.Api.Services.Implementations
     {
         private readonly IPostRepository _postRepository;
         private readonly UserManager<ApplicationUser> _userManager;
+        private readonly ISavedPostRepository _savedPostRepository;
 
-        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager)
+        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository)
         {
             _postRepository = postRepository;
             _userManager = userManager;
+            _savedPostRepository = savedPostRepository;
         }
         public async Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request)
         {
@@ -337,6 +339,78 @@ namespace SocialSport.Api.Services.Implementations
                 Items = items,
                 NextCursor = nextCursor
             };
+        }
+
+        public async Task SavePostAsync(Guid userId, Guid postId)
+        {
+            var post = await _postRepository.GetByIdAsync(postId);
+
+            if (post is null || post.Status != PostStatus.Published)
+                throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            if (await _savedPostRepository.GetAsync(userId, postId) is not null)
+                return;
+
+            var savedPost = new SavedPost
+            {
+                UserId = userId,
+                PostId = postId,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            await _savedPostRepository.AddAsync(savedPost);
+            await _savedPostRepository.SaveChangesAsync();
+        }
+
+        public async Task UnsavePostAsync(Guid userId, Guid postId)
+        {
+            var savedPost = await _savedPostRepository.GetAsync(userId, postId);
+
+            if (savedPost is null)
+                return;
+
+            _savedPostRepository.Remove(savedPost);
+            await _savedPostRepository.SaveChangesAsync();
+        }
+
+        public async Task<List<PostDto>> GetSavedPostsAsync(Guid userId)
+        {
+            var posts = await _savedPostRepository.GetSavedPostsAsync(userId);
+            var authorIds = posts.Select(x => x.AuthorId).Distinct().ToList();
+
+            var users = await _userManager.Users
+                .Where(x => authorIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id);
+
+            return posts.Select(post =>
+            {
+                users.TryGetValue(post.AuthorId, out var author);
+
+                return new PostDto
+                {
+                    Id = post.Id,
+                    AuthorId = post.AuthorId,
+                    AuthorName = author?.DisplayName ?? string.Empty,
+                    AuthorAvatar = author?.AvatarUrl,
+                    GroupId = post.GroupId,
+                    GroupName = post.Group?.Name,
+                    SportId = post.SportId,
+                    SportName = post.Sport?.Name,
+                    Content = post.Content,
+                    Visibility = post.Visibility,
+                    LikeCount = post.Reactions.Count,
+                    CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
+                    CreatedAt = post.CreatedAt,
+                    UpdatedAt = post.UpdatedAt,
+                    Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
+                    {
+                        Id = x.Id,
+                        Url = x.Url,
+                        MediaType = (int)x.MediaType,
+                        SortOrder = x.SortOrder
+                    }).ToList()
+                };
+            }).ToList();
         }
     }
 }

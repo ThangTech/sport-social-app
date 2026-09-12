@@ -70,6 +70,28 @@ namespace SocialSport.Api.Controllers
         {
             return Ok(await _postService.GetUserPostsAsync(userId));
         }
+        [Authorize]
+        [HttpPost("{id:guid}/save")]
+        public async Task<IActionResult> Save(Guid id)
+        {
+            await _postService.SavePostAsync(GetCurrentUserId(), id);
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpDelete("{id:guid}/save")]
+        public async Task<IActionResult> Unsave(Guid id)
+        {
+            await _postService.UnsavePostAsync(GetCurrentUserId(), id);
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpGet("saved")]
+        public async Task<ActionResult<List<PostDto>>> GetSavedPosts()
+        {
+            return Ok(await _postService.GetSavedPostsAsync(GetCurrentUserId()));
+        }
 
         private Guid GetCurrentUserId()
         {

@@ -4,6 +4,9 @@ namespace SocialSport.Api.Services.Interfaces
 {
     public interface IPostService
     {
+        Task SavePostAsync(Guid userId, Guid postId);
+        Task UnsavePostAsync(Guid userId, Guid postId);
+        Task<List<PostDto>> GetSavedPostsAsync(Guid userId);
         Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request);
         Task<ReactionResponse> RemoveReactionAsync(Guid userId, Guid postId);
         Task<FeedResponse> GetFeedAsync(Guid userId, int limit, string? cursor);
