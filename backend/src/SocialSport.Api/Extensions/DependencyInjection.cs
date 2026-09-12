@@ -16,9 +16,7 @@ namespace SocialSport.Api.Extensions;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddDependencies(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static IServiceCollection AddDependencies(this IServiceCollection services,IConfiguration configuration)
     {
         var connectionString =
             configuration.GetConnectionString("DefaultConnection")
@@ -29,7 +27,6 @@ public static class DependencyInjection
         {
             options.UseSqlServer(connectionString);
         });
-
         services
             .AddIdentityCore<ApplicationUser>(options =>
             {
@@ -57,7 +54,6 @@ public static class DependencyInjection
 
         services.Configure<JwtSettings>(
             configuration.GetSection(JwtSettings.SectionName));
-
         services
             .AddAuthentication(options =>
             {

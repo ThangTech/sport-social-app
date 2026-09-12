@@ -7,6 +7,7 @@ using SocialSport.Api.Models.Enums;
 using SocialSport.Api.Repositories.Interfaces;
 using SocialSport.Api.Services.Interfaces;
 using System.Text;
+using Microsoft.AspNetCore.Http;
 
 namespace SocialSport.Api.Services.Implementations
 {
@@ -15,12 +16,14 @@ namespace SocialSport.Api.Services.Implementations
         private readonly IPostRepository _postRepository;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ISavedPostRepository _savedPostRepository;
+        private readonly IWebHostEnvironment _environment;
 
-        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository)
+        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository, IWebHostEnvironment environment)
         {
             _postRepository = postRepository;
             _userManager = userManager;
             _savedPostRepository = savedPostRepository;
+            _environment = environment;
         }
         public async Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request)
         {
@@ -411,6 +414,92 @@ namespace SocialSport.Api.Services.Implementations
                     }).ToList()
                 };
             }).ToList();
+        }
+        public async Task<PostMediaUploadResponse> UploadMediaAsync(Guid userId, Guid postId, IFormFile file)
+        {
+            var post = await _postRepository.GetByIdAsync(postId);
+
+            if (post is null || post.Status != PostStatus.Published)
+                throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            if (post.AuthorId != userId)
+                throw new UnauthorizedAccessException("Bạn không có quyền thêm media vào bài viết này.");
+
+            if (file.Length == 0)
+                throw new InvalidOperationException("File không hợp lệ.");
+
+            if (file.Length > 20 * 1024 * 1024)
+                throw new InvalidOperationException("File không được vượt quá 20MB.");
+
+            var mediaType = GetMediaType(file.ContentType);
+
+            var uploadFolder = Path.Combine(_environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot"), "uploads", "posts");
+
+            Directory.CreateDirectory(uploadFolder);
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var fileName = $"{Guid.NewGuid()}{extension}";
+            var filePath = Path.Combine(uploadFolder, fileName);
+
+            await using (var stream = new FileStream(filePath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var media = new PostMedia
+            {
+                Id = Guid.NewGuid(),
+                PostId = postId,
+                Url = $"/uploads/posts/{fileName}",
+                MediaType = mediaType,
+                SortOrder = post.Media.Count,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            await _postRepository.AddMediaAsync(media);
+            await _postRepository.SaveChangesAsync();
+
+            return new PostMediaUploadResponse
+            {
+                Id = media.Id,
+                Url = media.Url,
+                MediaType = (int)media.MediaType,
+                SortOrder = media.SortOrder
+            };
+        }
+        public async Task DeleteMediaAsync(Guid userId, Guid postId, Guid mediaId)
+        {
+            var post = await _postRepository.GetByIdAsync(postId);
+
+            if (post is null || post.Status != PostStatus.Published)
+                throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            if (post.AuthorId != userId)
+                throw new UnauthorizedAccessException("Bạn không có quyền xóa media của bài viết này.");
+
+            var media = await _postRepository.GetMediaByIdAsync(mediaId);
+
+            if (media is null || media.PostId != postId)
+                throw new KeyNotFoundException("Không tìm thấy media.");
+
+            var relativePath = media.Url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+            var fullPath = Path.Combine(_environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot"), relativePath);
+
+            if (File.Exists(fullPath))
+                File.Delete(fullPath);
+
+            _postRepository.RemoveMedia(media);
+            await _postRepository.SaveChangesAsync();
+        }
+        private static MediaType GetMediaType(string contentType)
+        {
+            if (contentType.StartsWith("image/"))
+                return MediaType.Image;
+
+            if (contentType.StartsWith("video/"))
+                return MediaType.Video;
+
+            throw new InvalidOperationException("Chỉ hỗ trợ file ảnh hoặc video.");
         }
     }
 }

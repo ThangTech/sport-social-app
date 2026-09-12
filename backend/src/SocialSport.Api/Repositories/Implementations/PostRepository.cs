@@ -96,7 +96,20 @@ namespace SocialSport.Api.Repositories.Implementations
         {
             await _context.SaveChangesAsync();
         }
+        public async Task<PostMedia?> GetMediaByIdAsync(Guid mediaId)
+        {
+            return await _context.PostMedia.FirstOrDefaultAsync(x => x.Id == mediaId);
+        }
 
+        public async Task AddMediaAsync(PostMedia media)
+        {
+            await _context.PostMedia.AddAsync(media);
+        }
+
+        public void RemoveMedia(PostMedia media)
+        {
+            _context.PostMedia.Remove(media);
+        }
         public async Task<bool> ExistsAsync(Guid postId)
         {
             return await _context.Posts.AnyAsync(x => x.Id == postId && x.Status == PostStatus.Published);

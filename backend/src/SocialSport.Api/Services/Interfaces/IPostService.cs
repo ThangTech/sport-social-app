@@ -4,6 +4,8 @@ namespace SocialSport.Api.Services.Interfaces
 {
     public interface IPostService
     {
+        Task<PostMediaUploadResponse> UploadMediaAsync(Guid userId, Guid postId, IFormFile file);
+        Task DeleteMediaAsync(Guid userId, Guid postId, Guid mediaId);
         Task SavePostAsync(Guid userId, Guid postId);
         Task UnsavePostAsync(Guid userId, Guid postId);
         Task<List<PostDto>> GetSavedPostsAsync(Guid userId);

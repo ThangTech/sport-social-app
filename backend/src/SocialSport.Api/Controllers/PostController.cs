@@ -18,6 +18,20 @@ namespace SocialSport.Api.Controllers
             _postService = postService;
         }
         [Authorize]
+        [HttpPost("{id:guid}/media")]
+        public async Task<ActionResult<PostMediaUploadResponse>> UploadMedia(Guid id, IFormFile file)
+        {
+            return Ok(await _postService.UploadMediaAsync(GetCurrentUserId(), id, file));
+        }
+
+        [Authorize]
+        [HttpDelete("{postId:guid}/media/{mediaId:guid}")]
+        public async Task<IActionResult> DeleteMedia(Guid postId, Guid mediaId)
+        {
+            await _postService.DeleteMediaAsync(GetCurrentUserId(), postId, mediaId);
+            return NoContent();
+        }
+        [Authorize]
         [HttpPost("{id:guid}/reactions")]
         public async Task<ActionResult<ReactionResponse>> React(Guid id, ReactionRequest request)
         {
