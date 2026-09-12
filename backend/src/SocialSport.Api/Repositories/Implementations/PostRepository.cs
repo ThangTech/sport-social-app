@@ -48,7 +48,36 @@ namespace SocialSport.Api.Repositories.Implementations
         {
             await _context.Posts.AddAsync(post);
         }
+        public async Task<List<Post>> GetFeedAsync(Guid userId, int limit, DateTimeOffset? cursor)
+        {
+            var followingIds = _context.Follows.Where(x => x.FollowerId == userId).Select(x => x.FollowingId);
 
+            var blockedByMe = _context.UserBlocks.Where(x => x.BlockerId == userId).Select(x => x.BlockedId);
+            var blockedMe = _context.UserBlocks.Where(x => x.BlockedId == userId).Select(x => x.BlockerId);
+
+            var query = _context.Posts
+                .AsNoTracking()
+                .Include(x => x.Group)
+                .Include(x => x.Sport)
+                .Include(x => x.Media)
+                .Include(x => x.Comments)
+                .Include(x => x.Reactions)
+                .Where(x => x.Status == PostStatus.Published)
+                .Where(x => x.GroupId == null)
+                .Where(x => !blockedByMe.Contains(x.AuthorId) && !blockedMe.Contains(x.AuthorId))
+                .Where(x =>
+                    x.AuthorId == userId ||
+                    x.Visibility == PostVisibility.Public ||
+                    (x.Visibility == PostVisibility.Followers && followingIds.Contains(x.AuthorId)));
+
+            if (cursor.HasValue)
+                query = query.Where(x => x.CreatedAt < cursor.Value);
+
+            return await query
+                .OrderByDescending(x => x.CreatedAt)
+                .Take(limit + 1)
+                .ToListAsync();
+        }
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

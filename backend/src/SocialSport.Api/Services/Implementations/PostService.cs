@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using SocialSport.Api.DTOs.Post;
 using SocialSport.Api.Identity;
 using SocialSport.Api.Models.Entities;
 using SocialSport.Api.Models.Enums;
 using SocialSport.Api.Repositories.Interfaces;
 using SocialSport.Api.Services.Interfaces;
+using System.Text;
 
 namespace SocialSport.Api.Services.Implementations
 {
@@ -199,6 +201,84 @@ namespace SocialSport.Api.Services.Implementations
             post.DeletedAt = DateTimeOffset.UtcNow;
 
             await _postRepository.SaveChangesAsync();
+        }
+        public async Task<FeedResponse> GetFeedAsync(Guid userId, int limit, string? cursor)
+        {
+            limit = Math.Clamp(limit, 1, 50);
+
+            DateTimeOffset? cursorDate = null;
+
+            if (!string.IsNullOrWhiteSpace(cursor))
+            {
+                try
+                {
+                    var value = Encoding.UTF8.GetString(Convert.FromBase64String(cursor));
+
+                    if (!DateTimeOffset.TryParse(value, out var parsedCursor))
+                        throw new InvalidOperationException("Cursor không hợp lệ.");
+
+                    cursorDate = parsedCursor;
+                }
+                catch (FormatException)
+                {
+                    throw new InvalidOperationException("Cursor không hợp lệ.");
+                }
+            }
+
+            var posts = await _postRepository.GetFeedAsync(userId, limit, cursorDate);
+            var hasMore = posts.Count > limit;
+
+            if (hasMore)
+                posts = posts.Take(limit).ToList();
+
+            var authorIds = posts.Select(x => x.AuthorId).Distinct().ToList();
+
+            var users = await _userManager.Users
+                .Where(x => authorIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id);
+
+            var items = posts.Select(post =>
+            {
+                users.TryGetValue(post.AuthorId, out var author);
+                return new PostDto
+                {
+                    Id = post.Id,
+                    AuthorId = post.AuthorId,
+                    AuthorName = author?.DisplayName ?? string.Empty,
+                    AuthorAvatar = author?.AvatarUrl,
+                    GroupId = post.GroupId,
+                    GroupName = post.Group?.Name,
+                    SportId = post.SportId,
+                    SportName = post.Sport?.Name,
+                    Content = post.Content,
+                    Visibility = post.Visibility,
+                    LikeCount = post.Reactions.Count,
+                    CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
+                    CreatedAt = post.CreatedAt,
+                    UpdatedAt = post.UpdatedAt,
+                    Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
+                    {
+                        Id = x.Id,
+                        Url = x.Url,
+                        MediaType = (int)x.MediaType,
+                        SortOrder = x.SortOrder
+                    }).ToList()
+                };
+            }).ToList();
+
+            string? nextCursor = null;
+
+            if (hasMore && posts.Count > 0)
+            {
+                var lastCreatedAt = posts[^1].CreatedAt.ToString("O");
+                nextCursor = Convert.ToBase64String(Encoding.UTF8.GetBytes(lastCreatedAt));
+            }
+
+            return new FeedResponse
+            {
+                Items = items,
+                NextCursor = nextCursor
+            };
         }
     }
 }
