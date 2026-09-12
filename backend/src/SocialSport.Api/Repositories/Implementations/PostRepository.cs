@@ -96,5 +96,10 @@ namespace SocialSport.Api.Repositories.Implementations
         {
             await _context.SaveChangesAsync();
         }
+
+        public async Task<bool> ExistsAsync(Guid postId)
+        {
+            return await _context.Posts.AnyAsync(x => x.Id == postId && x.Status == PostStatus.Published);
+        }
     }
 }

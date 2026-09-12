@@ -95,6 +95,8 @@ public static class DependencyInjection
         services.AddScoped<IUserBlockRepository, UserBlockRepository>();
         services.AddScoped<IPostRepository, PostRepository>();
         services.AddScoped<IPostService, PostService>();
+        services.AddScoped<ICommentRepository, CommentRepository>();
+        services.AddScoped<ICommentService, CommentService>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddAuthorization();
         return services;

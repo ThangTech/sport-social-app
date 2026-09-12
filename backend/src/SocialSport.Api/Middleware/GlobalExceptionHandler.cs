@@ -12,6 +12,7 @@ public class GlobalExceptionHandler
         var statusCode =
             exception switch
             {
+                KeyNotFoundException => StatusCodes.Status404NotFound,
                 UnauthorizedAccessException =>
                     StatusCodes.Status401Unauthorized,
 

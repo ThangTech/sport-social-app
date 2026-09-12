@@ -4,6 +4,7 @@ namespace SocialSport.Api.Repositories.Interfaces
 {
     public interface IPostRepository
     {
+        Task<bool> ExistsAsync(Guid postId);
         Task<PostReaction?> GetReactionAsync(Guid postId, Guid userId);
         Task AddReactionAsync(PostReaction reaction);
         void RemoveReaction(PostReaction reaction);
