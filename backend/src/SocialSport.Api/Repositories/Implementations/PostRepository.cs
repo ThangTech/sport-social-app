@@ -78,6 +78,20 @@ namespace SocialSport.Api.Repositories.Implementations
                 .Take(limit + 1)
                 .ToListAsync();
         }
+        public async Task<PostReaction?> GetReactionAsync(Guid postId, Guid userId)
+        {
+            return await _context.PostReactions.FirstOrDefaultAsync(x => x.PostId == postId && x.UserId == userId);
+        }
+
+        public async Task AddReactionAsync(PostReaction reaction)
+        {
+            await _context.PostReactions.AddAsync(reaction);
+        }
+
+        public void RemoveReaction(PostReaction reaction)
+        {
+            _context.PostReactions.Remove(reaction);
+        }
         public async Task SaveChangesAsync()
         {
             await _context.SaveChangesAsync();

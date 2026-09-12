@@ -20,7 +20,65 @@ namespace SocialSport.Api.Services.Implementations
             _postRepository = postRepository;
             _userManager = userManager;
         }
+        public async Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request)
+        {
+            var post = await _postRepository.GetByIdAsync(postId);
 
+            if (post is null || post.Status != PostStatus.Published)
+                throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            var reaction = await _postRepository.GetReactionAsync(postId, userId);
+
+            if (reaction is null)
+            {
+                reaction = new PostReaction
+                {
+                    PostId = postId,
+                    UserId = userId,
+                    Type = request.Type,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
+
+                await _postRepository.AddReactionAsync(reaction);
+            }
+            else
+            {
+                reaction.Type = request.Type;
+            }
+
+            await _postRepository.SaveChangesAsync();
+
+            var updatedPost = await _postRepository.GetByIdAsync(postId);
+
+            return new ReactionResponse
+            {
+                ReactionCount = updatedPost!.Reactions.Count,
+                CurrentReaction = request.Type
+            };
+        }
+        public async Task<ReactionResponse> RemoveReactionAsync(Guid userId, Guid postId)
+        {
+            var post = await _postRepository.GetByIdAsync(postId);
+
+            if (post is null || post.Status != PostStatus.Published)
+                throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            var reaction = await _postRepository.GetReactionAsync(postId, userId);
+
+            if (reaction is not null)
+            {
+                _postRepository.RemoveReaction(reaction);
+                await _postRepository.SaveChangesAsync();
+            }
+
+            var updatedPost = await _postRepository.GetByIdAsync(postId);
+
+            return new ReactionResponse
+            {
+                ReactionCount = updatedPost!.Reactions.Count,
+                CurrentReaction = null
+            };
+        }
         public async Task<PostDto> CreateAsync(Guid userId, CreatePostRequest request)
         {
             if (request.SportId.HasValue && !await _postRepository.SportExistsAsync(request.SportId.Value))

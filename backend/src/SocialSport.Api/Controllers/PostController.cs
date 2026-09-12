@@ -17,7 +17,19 @@ namespace SocialSport.Api.Controllers
         {
             _postService = postService;
         }
+        [Authorize]
+        [HttpPost("{id:guid}/reactions")]
+        public async Task<ActionResult<ReactionResponse>> React(Guid id, ReactionRequest request)
+        {
+            return Ok(await _postService.ReactAsync(GetCurrentUserId(), id, request));
+        }
 
+        [Authorize]
+        [HttpDelete("{id:guid}/reactions")]
+        public async Task<ActionResult<ReactionResponse>> RemoveReaction(Guid id)
+        {
+            return Ok(await _postService.RemoveReactionAsync(GetCurrentUserId(), id));
+        }
         [Authorize]
         [HttpPost]
         public async Task<ActionResult<PostDto>> Create(CreatePostRequest request)
