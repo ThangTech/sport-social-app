@@ -18,6 +18,12 @@ namespace SocialSport.Api.Controllers
             _postService = postService;
         }
         [Authorize]
+        [HttpPut("{postId:guid}/media/{mediaId:guid}")]
+        public async Task<ActionResult<PostMediaUploadResponse>> UpdateMedia(Guid postId, Guid mediaId, IFormFile file)
+        {
+            return Ok(await _postService.UpdateMediaAsync(GetCurrentUserId(), postId, mediaId, file));
+        }
+        [Authorize]
         [HttpPost("{id:guid}/media")]
         public async Task<ActionResult<PostMediaUploadResponse>> UploadMedia(Guid id, IFormFile file)
         {

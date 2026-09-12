@@ -501,5 +501,60 @@ namespace SocialSport.Api.Services.Implementations
 
             throw new InvalidOperationException("Chỉ hỗ trợ file ảnh hoặc video.");
         }
+        public async Task<PostMediaUploadResponse> UpdateMediaAsync(Guid userId, Guid postId, Guid mediaId, IFormFile file)
+        {
+            var post = await _postRepository.GetByIdAsync(postId);
+
+            if (post is null || post.Status != PostStatus.Published)
+                throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            if (post.AuthorId != userId)
+                throw new UnauthorizedAccessException("Bạn không có quyền sửa media của bài viết này.");
+
+            var media = await _postRepository.GetMediaByIdAsync(mediaId);
+
+            if (media is null || media.PostId != postId)
+                throw new KeyNotFoundException("Không tìm thấy media.");
+
+            if (file.Length == 0)
+                throw new InvalidOperationException("File không hợp lệ.");
+
+            if (file.Length > 20 * 1024 * 1024)
+                throw new InvalidOperationException("File không được vượt quá 20MB.");
+
+            var mediaType = GetMediaType(file.ContentType);
+            var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+            var uploadFolder = Path.Combine(webRoot, "uploads", "posts");
+
+            Directory.CreateDirectory(uploadFolder);
+
+            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+            var fileName = $"{Guid.NewGuid()}{extension}";
+            var newPath = Path.Combine(uploadFolder, fileName);
+
+            await using (var stream = new FileStream(newPath, FileMode.Create))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var oldRelativePath = media.Url.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+            var oldPath = Path.Combine(webRoot, oldRelativePath);
+
+            media.Url = $"/uploads/posts/{fileName}";
+            media.MediaType = mediaType;
+
+            await _postRepository.SaveChangesAsync();
+
+            if (File.Exists(oldPath))
+                File.Delete(oldPath);
+
+            return new PostMediaUploadResponse
+            {
+                Id = media.Id,
+                Url = media.Url,
+                MediaType = (int)media.MediaType,
+                SortOrder = media.SortOrder
+            };
+        }
     }
 }
