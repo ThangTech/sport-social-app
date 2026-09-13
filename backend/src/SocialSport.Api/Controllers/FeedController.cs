@@ -9,11 +9,11 @@ namespace SocialSport.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/v1/feed")]
-public class FeedController : ControllerBase
+public class FeedsController : ControllerBase
 {
     private readonly IPostService _postService;
 
-    public FeedController(IPostService postService)
+    public FeedsController(IPostService postService)
     {
         _postService = postService;
     }
