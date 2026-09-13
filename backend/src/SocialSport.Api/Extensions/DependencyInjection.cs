@@ -96,6 +96,7 @@ public static class DependencyInjection
         services.AddScoped<ISavedPostRepository, SavedPostRepository>();
         services.AddScoped<IGroupRepository, GroupRepository>();
         services.AddScoped<IGroupService, GroupService>();
+        services.AddScoped<IGroupMemberRepository, GroupMemberRepository>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddAuthorization();
         return services;

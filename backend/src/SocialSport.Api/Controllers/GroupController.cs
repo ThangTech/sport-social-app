@@ -50,7 +50,49 @@ namespace SocialSport.Api.Controllers
             await _groupService.DeleteAsync(GetCurrentUserId(), id);
             return NoContent();
         }
+        [Authorize]
+        [HttpPost("{id:guid}/join")]
+        public async Task<ActionResult<GroupMemberDto>> Join(Guid id)
+        {
+            return Ok(await _groupService.JoinAsync(GetCurrentUserId(), id));
+        }
 
+        [Authorize]
+        [HttpDelete("{id:guid}/leave")]
+        public async Task<IActionResult> Leave(Guid id)
+        {
+            await _groupService.LeaveAsync(GetCurrentUserId(), id);
+            return NoContent();
+        }
+
+        [HttpGet("{id:guid}/members")]
+        public async Task<ActionResult<List<GroupMemberDto>>> GetMembers(Guid id)
+        {
+            return Ok(await _groupService.GetMembersAsync(id));
+        }
+
+        [Authorize]
+        [HttpGet("{id:guid}/join-requests")]
+        public async Task<ActionResult<List<GroupMemberDto>>> GetJoinRequests(Guid id)
+        {
+            return Ok(await _groupService.GetJoinRequestsAsync(GetCurrentUserId(), id));
+        }
+
+        [Authorize]
+        [HttpPost("{id:guid}/join-requests/{userId:guid}/approve")]
+        public async Task<IActionResult> Approve(Guid id, Guid userId)
+        {
+            await _groupService.ApproveMemberAsync(GetCurrentUserId(), id, userId);
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpDelete("{id:guid}/join-requests/{userId:guid}")]
+        public async Task<IActionResult> Reject(Guid id, Guid userId)
+        {
+            await _groupService.RejectMemberAsync(GetCurrentUserId(), id, userId);
+            return NoContent();
+        }
         private Guid GetCurrentUserId()
         {
             var value = User.FindFirstValue(ClaimTypes.NameIdentifier);

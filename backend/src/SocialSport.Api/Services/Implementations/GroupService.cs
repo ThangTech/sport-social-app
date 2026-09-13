@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using SocialSport.Api.DTOs.Group;
 using SocialSport.Api.Identity;
 using SocialSport.Api.Models.Entities;
@@ -14,11 +15,13 @@ public class GroupService : IGroupService
 {
     private readonly IGroupRepository _groupRepository;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IGroupMemberRepository _groupMemberRepository;
 
-    public GroupService(IGroupRepository groupRepository, UserManager<ApplicationUser> userManager)
+    public GroupService(IGroupRepository groupRepository, UserManager<ApplicationUser> userManager, IGroupMemberRepository groupMemberRepository)
     {
         _groupRepository = groupRepository;
         _userManager = userManager;
+        _groupMemberRepository = groupMemberRepository;
     }
 
     public async Task<GroupDto> CreateAsync(Guid userId, CreateGroupRequest request)
@@ -192,5 +195,187 @@ public class GroupService : IGroupService
         slug = System.Text.RegularExpressions.Regex.Replace(slug, @"[^a-z0-9]+", "-").Trim('-');
 
         return string.IsNullOrWhiteSpace(slug) ? "group" : slug;
+    }
+    public async Task<GroupMemberDto> JoinAsync(Guid userId, Guid groupId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        var user = await _userManager.FindByIdAsync(userId.ToString());
+
+        if (user is null)
+            throw new KeyNotFoundException("Không tìm thấy người dùng.");
+
+        var existingMember = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (existingMember is not null)
+        {
+            if (existingMember.Status == GroupMemberStatus.Banned)
+                throw new InvalidOperationException("Bạn đã bị cấm khỏi nhóm.");
+
+            return new GroupMemberDto
+            {
+                UserId = user.Id,
+                UserName = user.UserName ?? string.Empty,
+                DisplayName = user.DisplayName,
+                AvatarUrl = user.AvatarUrl,
+                Role = existingMember.Role,
+                Status = existingMember.Status,
+                JoinedAt = existingMember.JoinedAt
+            };
+        }
+
+        var member = new GroupMember
+        {
+            GroupId = groupId,
+            UserId = userId,
+            Role = GroupMemberRole.Member,
+            Status = group.Privacy == GroupPrivacy.Public ? GroupMemberStatus.Active : GroupMemberStatus.Pending,
+            JoinedAt = DateTimeOffset.UtcNow
+        };
+
+        await _groupMemberRepository.AddAsync(member);
+        await _groupMemberRepository.SaveChangesAsync();
+
+        return new GroupMemberDto
+        {
+            UserId = user.Id,
+            UserName = user.UserName ?? string.Empty,
+            DisplayName = user.DisplayName,
+            AvatarUrl = user.AvatarUrl,
+            Role = member.Role,
+            Status = member.Status,
+            JoinedAt = member.JoinedAt
+        };
+    }
+    public async Task LeaveAsync(Guid userId, Guid groupId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        if (group.OwnerId == userId)
+            throw new InvalidOperationException("Chủ nhóm không thể rời nhóm.");
+
+        var member = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (member is null)
+            return;
+
+        if (member.Status == GroupMemberStatus.Banned)
+            throw new InvalidOperationException("Bạn đang bị cấm khỏi nhóm.");
+
+        _groupMemberRepository.Remove(member);
+        await _groupMemberRepository.SaveChangesAsync();
+    }
+    public async Task<List<GroupMemberDto>> GetMembersAsync(Guid groupId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        var members = await _groupMemberRepository.GetByGroupAsync(groupId, GroupMemberStatus.Active);
+        var userIds = members.Select(x => x.UserId).ToList();
+
+        var users = await _userManager.Users
+            .Where(x => userIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id);
+
+        return members.Select(member =>
+        {
+            users.TryGetValue(member.UserId, out var user);
+
+            return new GroupMemberDto
+            {
+                UserId = member.UserId,
+                UserName = user?.UserName ?? string.Empty,
+                DisplayName = user?.DisplayName ?? string.Empty,
+                AvatarUrl = user?.AvatarUrl,
+                Role = member.Role,
+                Status = member.Status,
+                JoinedAt = member.JoinedAt
+            };
+        }).ToList();
+    }
+    public async Task<List<GroupMemberDto>> GetJoinRequestsAsync(Guid userId, Guid groupId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        var currentMember = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (currentMember is null || currentMember.Status != GroupMemberStatus.Active || currentMember.Role != GroupMemberRole.Admin)
+            throw new UnauthorizedAccessException("Bạn không có quyền xem yêu cầu tham gia.");
+
+        var requests = await _groupMemberRepository.GetByGroupAsync(groupId, GroupMemberStatus.Pending);
+        var userIds = requests.Select(x => x.UserId).ToList();
+
+        var users = await _userManager.Users
+            .Where(x => userIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id);
+
+        return requests.Select(member =>
+        {
+            users.TryGetValue(member.UserId, out var user);
+
+            return new GroupMemberDto
+            {
+                UserId = member.UserId,
+                UserName = user?.UserName ?? string.Empty,
+                DisplayName = user?.DisplayName ?? string.Empty,
+                AvatarUrl = user?.AvatarUrl,
+                Role = member.Role,
+                Status = member.Status,
+                JoinedAt = member.JoinedAt
+            };
+        }).ToList();
+    }
+    public async Task ApproveMemberAsync(Guid userId, Guid groupId, Guid targetUserId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        var currentMember = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (currentMember is null || currentMember.Status != GroupMemberStatus.Active || currentMember.Role != GroupMemberRole.Admin)
+            throw new UnauthorizedAccessException("Bạn không có quyền duyệt thành viên.");
+
+        var targetMember = await _groupMemberRepository.GetAsync(groupId, targetUserId);
+
+        if (targetMember is null || targetMember.Status != GroupMemberStatus.Pending)
+            throw new KeyNotFoundException("Không tìm thấy yêu cầu tham gia.");
+
+        targetMember.Status = GroupMemberStatus.Active;
+        targetMember.JoinedAt = DateTimeOffset.UtcNow;
+
+        await _groupMemberRepository.SaveChangesAsync();
+    }
+    public async Task RejectMemberAsync(Guid userId, Guid groupId, Guid targetUserId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        var currentMember = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (currentMember is null || currentMember.Status != GroupMemberStatus.Active || currentMember.Role != GroupMemberRole.Admin)
+            throw new UnauthorizedAccessException("Bạn không có quyền từ chối yêu cầu tham gia.");
+
+        var targetMember = await _groupMemberRepository.GetAsync(groupId, targetUserId);
+
+        if (targetMember is null || targetMember.Status != GroupMemberStatus.Pending)
+            throw new KeyNotFoundException("Không tìm thấy yêu cầu tham gia.");
+
+        _groupMemberRepository.Remove(targetMember);
+        await _groupMemberRepository.SaveChangesAsync();
     }
 }
