@@ -93,6 +93,37 @@ namespace SocialSport.Api.Controllers
             await _groupService.RejectMemberAsync(GetCurrentUserId(), id, userId);
             return NoContent();
         }
+        [Authorize]
+        [HttpPatch("{id:guid}/members/{userId:guid}/role")]
+        public async Task<IActionResult> UpdateMemberRole(Guid id, Guid userId, UpdateGroupMemberRoleRequest request)
+        {
+            await _groupService.UpdateMemberRoleAsync(GetCurrentUserId(), id, userId, request);
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpDelete("{id:guid}/members/{userId:guid}")]
+        public async Task<IActionResult> RemoveMember(Guid id, Guid userId)
+        {
+            await _groupService.RemoveMemberAsync(GetCurrentUserId(), id, userId);
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpPost("{id:guid}/members/{userId:guid}/ban")]
+        public async Task<IActionResult> BanMember(Guid id, Guid userId)
+        {
+            await _groupService.BanMemberAsync(GetCurrentUserId(), id, userId);
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpDelete("{id:guid}/members/{userId:guid}/ban")]
+        public async Task<IActionResult> UnbanMember(Guid id, Guid userId)
+        {
+            await _groupService.UnbanMemberAsync(GetCurrentUserId(), id, userId);
+            return NoContent();
+        }
         private Guid GetCurrentUserId()
         {
             var value = User.FindFirstValue(ClaimTypes.NameIdentifier);

@@ -14,5 +14,10 @@ namespace SocialSport.Api.Services.Interfaces
         Task<List<GroupMemberDto>> GetJoinRequestsAsync(Guid userId, Guid groupId);
         Task ApproveMemberAsync(Guid userId, Guid groupId, Guid targetUserId);
         Task RejectMemberAsync(Guid userId, Guid groupId, Guid targetUserId);
+
+        Task UpdateMemberRoleAsync(Guid userId, Guid groupId, Guid targetUserId, UpdateGroupMemberRoleRequest request);
+        Task RemoveMemberAsync(Guid userId, Guid groupId, Guid targetUserId);
+        Task BanMemberAsync(Guid userId, Guid groupId, Guid targetUserId);
+        Task UnbanMemberAsync(Guid userId, Guid groupId, Guid targetUserId);
     }
 }

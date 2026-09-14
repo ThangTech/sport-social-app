@@ -378,4 +378,147 @@ public class GroupService : IGroupService
         _groupMemberRepository.Remove(targetMember);
         await _groupMemberRepository.SaveChangesAsync();
     }
+    public async Task UpdateMemberRoleAsync(Guid userId, Guid groupId, Guid targetUserId, UpdateGroupMemberRoleRequest request)
+    {
+        if (!Enum.IsDefined(typeof(GroupMemberRole), request.Role))
+            throw new InvalidOperationException("Vai trò không hợp lệ.");
+
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        var currentMember = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (currentMember is null || currentMember.Status != GroupMemberStatus.Active || currentMember.Role != GroupMemberRole.Admin)
+            throw new UnauthorizedAccessException("Bạn không có quyền thay đổi vai trò thành viên.");
+
+        var targetMember = await _groupMemberRepository.GetAsync(groupId, targetUserId);
+
+        if (targetMember is null || targetMember.Status != GroupMemberStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy thành viên.");
+
+        if (targetUserId == group.OwnerId)
+            throw new InvalidOperationException("Không thể thay đổi vai trò của chủ nhóm.");
+
+        if (targetUserId == userId)
+            throw new InvalidOperationException("Bạn không thể tự thay đổi vai trò của mình.");
+
+        var isOwner = group.OwnerId == userId;
+
+        if (!isOwner)
+        {
+            if (targetMember.Role == GroupMemberRole.Admin)
+                throw new UnauthorizedAccessException("Admin không thể thay đổi quyền của Admin khác.");
+
+            if (request.Role == GroupMemberRole.Admin)
+                throw new UnauthorizedAccessException("Chỉ chủ nhóm mới có thể cấp quyền Admin.");
+        }
+
+        targetMember.Role = request.Role;
+
+        await _groupMemberRepository.SaveChangesAsync();
+    }
+    public async Task RemoveMemberAsync(Guid userId, Guid groupId, Guid targetUserId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        if (targetUserId == group.OwnerId)
+            throw new InvalidOperationException("Không thể xóa chủ nhóm khỏi nhóm.");
+
+        if (targetUserId == userId)
+            throw new InvalidOperationException("Hãy sử dụng chức năng rời nhóm để rời khỏi nhóm.");
+
+        var currentMember = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (currentMember is null || currentMember.Status != GroupMemberStatus.Active)
+            throw new UnauthorizedAccessException("Bạn không có quyền quản lý thành viên.");
+
+        var targetMember = await _groupMemberRepository.GetAsync(groupId, targetUserId);
+
+        if (targetMember is null || targetMember.Status != GroupMemberStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy thành viên.");
+
+        var isOwner = group.OwnerId == userId;
+
+        if (!isOwner)
+        {
+            if (currentMember.Role == GroupMemberRole.Member)
+                throw new UnauthorizedAccessException("Bạn không có quyền xóa thành viên.");
+
+            if (currentMember.Role == GroupMemberRole.Moderator && targetMember.Role != GroupMemberRole.Member)
+                throw new UnauthorizedAccessException("Moderator chỉ có thể xóa Member.");
+
+            if (currentMember.Role == GroupMemberRole.Admin && targetMember.Role == GroupMemberRole.Admin)
+                throw new UnauthorizedAccessException("Admin không thể xóa Admin khác.");
+        }
+
+        _groupMemberRepository.Remove(targetMember);
+        await _groupMemberRepository.SaveChangesAsync();
+    }
+    public async Task BanMemberAsync(Guid userId, Guid groupId, Guid targetUserId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        if (targetUserId == group.OwnerId)
+            throw new InvalidOperationException("Không thể cấm chủ nhóm.");
+
+        if (targetUserId == userId)
+            throw new InvalidOperationException("Bạn không thể tự cấm chính mình.");
+
+        var currentMember = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (currentMember is null || currentMember.Status != GroupMemberStatus.Active)
+            throw new UnauthorizedAccessException("Bạn không có quyền quản lý thành viên.");
+
+        var targetMember = await _groupMemberRepository.GetAsync(groupId, targetUserId);
+
+        if (targetMember is null || targetMember.Status != GroupMemberStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy thành viên.");
+
+        var isOwner = group.OwnerId == userId;
+
+        if (!isOwner)
+        {
+            if (currentMember.Role == GroupMemberRole.Member)
+                throw new UnauthorizedAccessException("Bạn không có quyền cấm thành viên.");
+
+            if (currentMember.Role == GroupMemberRole.Moderator && targetMember.Role != GroupMemberRole.Member)
+                throw new UnauthorizedAccessException("Moderator chỉ có thể cấm Member.");
+
+            if (currentMember.Role == GroupMemberRole.Admin && targetMember.Role == GroupMemberRole.Admin)
+                throw new UnauthorizedAccessException("Admin không thể cấm Admin khác.");
+        }
+
+        targetMember.Status = GroupMemberStatus.Banned;
+        targetMember.Role = GroupMemberRole.Member;
+
+        await _groupMemberRepository.SaveChangesAsync();
+    }
+    public async Task UnbanMemberAsync(Guid userId, Guid groupId, Guid targetUserId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        var currentMember = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (currentMember is null || currentMember.Status != GroupMemberStatus.Active || currentMember.Role != GroupMemberRole.Admin)
+            throw new UnauthorizedAccessException("Bạn không có quyền bỏ cấm thành viên.");
+
+        var targetMember = await _groupMemberRepository.GetAsync(groupId, targetUserId);
+
+        if (targetMember is null || targetMember.Status != GroupMemberStatus.Banned)
+            throw new KeyNotFoundException("Không tìm thấy thành viên bị cấm.");
+
+        _groupMemberRepository.Remove(targetMember);
+        await _groupMemberRepository.SaveChangesAsync();
+    }
 }

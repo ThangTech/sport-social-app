@@ -14,7 +14,7 @@ public class GlobalExceptionHandler
             {
                 KeyNotFoundException => StatusCodes.Status404NotFound,
                 UnauthorizedAccessException =>
-                    StatusCodes.Status401Unauthorized,
+                    StatusCodes.Status403Forbidden,
 
                 InvalidOperationException =>
                     StatusCodes.Status400BadRequest,
