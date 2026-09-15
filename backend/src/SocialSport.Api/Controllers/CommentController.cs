@@ -20,7 +20,7 @@ public class CommentsController : ControllerBase
     [HttpGet("posts/{postId:guid}/comments")]
     public async Task<ActionResult<List<CommentDto>>> GetComments(Guid postId)
     {
-        return Ok(await _commentService.GetByPostIdAsync(postId));
+        return Ok(await _commentService.GetByPostIdAsync(postId, TryGetCurrentUserId()));
     }
 
     [Authorize]
@@ -53,5 +53,10 @@ public class CommentsController : ControllerBase
             throw new UnauthorizedAccessException("User id trong token không hợp lệ.");
 
         return userId;
+    }
+    private Guid? TryGetCurrentUserId()
+    {
+        var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        return Guid.TryParse(value, out var userId) ? userId : null;
     }
 }

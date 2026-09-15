@@ -281,12 +281,23 @@ public class GroupService : IGroupService
         _groupMemberRepository.Remove(member);
         await _groupMemberRepository.SaveChangesAsync();
     }
-    public async Task<List<GroupMemberDto>> GetMembersAsync(Guid groupId)
+    public async Task<List<GroupMemberDto>> GetMembersAsync(Guid? currentUserId, Guid groupId)
     {
         var group = await _groupRepository.GetByIdAsync(groupId);
 
         if (group is null || group.Status != GroupStatus.Active)
             throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        GroupMember? currentMember = null;
+
+        if (currentUserId.HasValue)
+            currentMember = await _groupMemberRepository.GetAsync(groupId, currentUserId.Value);
+
+        if (currentMember?.Status == GroupMemberStatus.Banned)
+            throw new UnauthorizedAccessException("Bạn đã bị cấm khỏi nhóm.");
+
+        if (group.Privacy == GroupPrivacy.Private && (currentMember is null || currentMember.Status != GroupMemberStatus.Active))
+            throw new UnauthorizedAccessException("Bạn phải là thành viên để xem danh sách thành viên.");
 
         var members = await _groupMemberRepository.GetByGroupAsync(groupId, GroupMemberStatus.Active);
         var userIds = members.Select(x => x.UserId).ToList();
@@ -553,7 +564,7 @@ public class GroupService : IGroupService
             GroupId = groupId,
             SportId = request.SportId,
             Content = request.Content.Trim(),
-            Visibility = request.Visibility,
+            Visibility = PostVisibility.Public,
             Status = PostStatus.Published,
             CreatedAt = DateTimeOffset.UtcNow
         };

@@ -69,7 +69,7 @@ namespace SocialSport.Api.Controllers
         [HttpGet("{id:guid}/members")]
         public async Task<ActionResult<List<GroupMemberDto>>> GetMembers(Guid id)
         {
-            return Ok(await _groupService.GetMembersAsync(id));
+            return Ok(await _groupService.GetMembersAsync(TryGetCurrentUserId(), id));
         }
 
         [Authorize]

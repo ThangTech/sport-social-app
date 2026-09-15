@@ -61,7 +61,7 @@ namespace SocialSport.Api.Controllers
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<PostDto>> GetById(Guid id)
         {
-            var post = await _postService.GetByIdAsync(id);
+            var post = await _postService.GetByIdAsync(id, TryGetCurrentUserId());
 
             if (post is null)
                 return NotFound();
@@ -88,7 +88,7 @@ namespace SocialSport.Api.Controllers
         [HttpGet("~/api/v1/users/{userId:guid}/posts")]
         public async Task<ActionResult<List<PostDto>>> GetUserPosts(Guid userId)
         {
-            return Ok(await _postService.GetUserPostsAsync(userId));
+            return Ok(await _postService.GetUserPostsAsync(userId, TryGetCurrentUserId()));
         }
         [Authorize]
         [HttpPost("{id:guid}/save")]
@@ -121,6 +121,11 @@ namespace SocialSport.Api.Controllers
                 throw new UnauthorizedAccessException("User id trong token không hợp lệ.");
 
             return userId;
+        }
+        private Guid? TryGetCurrentUserId()
+        {
+            var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return Guid.TryParse(value, out var userId) ? userId : null;
         }
     }
 }

@@ -11,21 +11,27 @@ namespace SocialSport.Api.Services.Implementations;
 
 public class CommentService : ICommentService
 {
+    private readonly IPostAccessService _postAccessService;
     private readonly ICommentRepository _commentRepository;
     private readonly IPostRepository _postRepository;
     private readonly UserManager<ApplicationUser> _userManager;
 
-    public CommentService(ICommentRepository commentRepository, IPostRepository postRepository, UserManager<ApplicationUser> userManager)
+    public CommentService(ICommentRepository commentRepository, IPostRepository postRepository, UserManager<ApplicationUser> userManager, IPostAccessService postAccessService)
     {
         _commentRepository = commentRepository;
         _postRepository = postRepository;
         _userManager = userManager;
+        _postAccessService = postAccessService;
     }
 
-    public async Task<List<CommentDto>> GetByPostIdAsync(Guid postId)
+    public async Task<List<CommentDto>> GetByPostIdAsync(Guid postId, Guid? currentUserId)
     {
-        if (!await _postRepository.ExistsAsync(postId))
+        var post = await _postRepository.GetByIdAsync(postId);
+
+        if (post is null || post.Status != PostStatus.Published)
             throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+        await _postAccessService.EnsureCanViewAsync(currentUserId, post);
 
         var comments = await _commentRepository.GetByPostIdAsync(postId);
         var authorIds = comments.Select(x => x.AuthorId).Distinct().ToList();
@@ -70,8 +76,12 @@ public class CommentService : ICommentService
 
     public async Task<CommentDto> CreateAsync(Guid userId, Guid postId, CreateCommentRequest request)
     {
-        if (!await _postRepository.ExistsAsync(postId))
+        var post = await _postRepository.GetByIdAsync(postId);
+
+        if (post is null || post.Status != PostStatus.Published)
             throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+        await _postAccessService.EnsureCanInteractAsync(userId, post);
 
         if (request.ParentCommentId.HasValue)
         {
@@ -114,8 +124,16 @@ public class CommentService : ICommentService
     {
         var comment = await _commentRepository.GetByIdAsync(commentId);
 
+
         if (comment is null || comment.Status != CommentStatus.Published)
             throw new KeyNotFoundException("Không tìm thấy bình luận.");
+
+        var post = await _postRepository.GetByIdAsync(comment.PostId);
+
+        if (post is null || post.Status != PostStatus.Published)
+            throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+        await _postAccessService.EnsureCanInteractAsync(userId, post);
 
         if (comment.AuthorId != userId)
             throw new UnauthorizedAccessException("Bạn không có quyền sửa bình luận này.");
@@ -147,6 +165,13 @@ public class CommentService : ICommentService
 
         if (comment is null || comment.Status == CommentStatus.Deleted)
             throw new KeyNotFoundException("Không tìm thấy bình luận.");
+
+        var post = await _postRepository.GetByIdAsync(comment.PostId);
+
+        if (post is null || post.Status != PostStatus.Published)
+            throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+        await _postAccessService.EnsureCanInteractAsync(userId, post);
 
         if (comment.AuthorId != userId)
             throw new UnauthorizedAccessException("Bạn không có quyền xóa bình luận này.");

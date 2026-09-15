@@ -11,6 +11,6 @@ namespace SocialSport.Api.DTOs.Group
 
         public Guid? SportId { get; set; }
 
-        public PostVisibility Visibility { get; set; } = PostVisibility.Public;
+       
     }
 }

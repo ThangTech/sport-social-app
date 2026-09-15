@@ -52,7 +52,7 @@ namespace SocialSport.Api.Repositories.Implementations
                 .Include(x => x.Media)
                 .Include(x => x.Comments)
                 .Include(x => x.Reactions)
-                .Where(x => x.AuthorId == userId && x.Status == PostStatus.Published)
+                .Where(x => x.AuthorId == userId && x.GroupId == null && x.Status == PostStatus.Published)
                 .OrderByDescending(x => x.CreatedAt)
                 .ToListAsync();
         }

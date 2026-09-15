@@ -13,17 +13,19 @@ namespace SocialSport.Api.Services.Implementations
 {
     public class PostService : IPostService
     {
+        private readonly IPostAccessService _postAccessService;
         private readonly IPostRepository _postRepository;
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ISavedPostRepository _savedPostRepository;
         private readonly IWebHostEnvironment _environment;
 
-        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository, IWebHostEnvironment environment)
+        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository, IWebHostEnvironment environment, IPostAccessService postAccessService)
         {
             _postRepository = postRepository;
             _userManager = userManager;
             _savedPostRepository = savedPostRepository;
             _environment = environment;
+            _postAccessService = postAccessService;
         }
         public async Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request)
         {
@@ -31,6 +33,8 @@ namespace SocialSport.Api.Services.Implementations
 
             if (post is null || post.Status != PostStatus.Published)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             var reaction = await _postRepository.GetReactionAsync(postId, userId);
 
@@ -67,6 +71,8 @@ namespace SocialSport.Api.Services.Implementations
 
             if (post is null || post.Status != PostStatus.Published)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             var reaction = await _postRepository.GetReactionAsync(postId, userId);
 
@@ -132,12 +138,14 @@ namespace SocialSport.Api.Services.Implementations
             };
         }
 
-        public async Task<PostDto?> GetByIdAsync(Guid postId)
+        public async Task<PostDto?> GetByIdAsync(Guid postId, Guid? currentUserId)
         {
             var post = await _postRepository.GetByIdAsync(postId);
 
             if (post is null || post.Status != PostStatus.Published)
                 return null;
+
+            await _postAccessService.EnsureCanViewAsync(currentUserId, post);
 
             var user = await _userManager.FindByIdAsync(post.AuthorId.ToString());
 
@@ -166,8 +174,7 @@ namespace SocialSport.Api.Services.Implementations
                 }).ToList()
             };
         }
-
-        public async Task<List<PostDto>> GetUserPostsAsync(Guid userId)
+        public async Task<List<PostDto>> GetUserPostsAsync(Guid userId, Guid? currentUserId)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
 
@@ -175,6 +182,16 @@ namespace SocialSport.Api.Services.Implementations
                 throw new KeyNotFoundException("Không tìm thấy người dùng.");
 
             var posts = await _postRepository.GetByUserIdAsync(userId);
+
+            var visiblePosts = new List<Post>();
+
+            foreach (var post in posts)
+            {
+                if (await _postAccessService.CanViewAsync(currentUserId, post))
+                    visiblePosts.Add(post);
+            }
+
+            posts = visiblePosts;
 
             return posts.Select(post => new PostDto
             {
@@ -208,6 +225,8 @@ namespace SocialSport.Api.Services.Implementations
 
             if (post is null || post.Status == PostStatus.Deleted)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             if (post.AuthorId != userId)
                 throw new UnauthorizedAccessException("Bạn không có quyền sửa bài viết này.");
@@ -256,6 +275,8 @@ namespace SocialSport.Api.Services.Implementations
 
             if (post is null || post.Status == PostStatus.Deleted)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             if (post.AuthorId != userId)
                 throw new UnauthorizedAccessException("Bạn không có quyền xóa bài viết này.");
@@ -351,6 +372,9 @@ namespace SocialSport.Api.Services.Implementations
             if (post is null || post.Status != PostStatus.Published)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
 
+            await _postAccessService.EnsureCanInteractAsync(userId, post);
+
+
             if (await _savedPostRepository.GetAsync(userId, postId) is not null)
                 return;
 
@@ -379,6 +403,17 @@ namespace SocialSport.Api.Services.Implementations
         public async Task<List<PostDto>> GetSavedPostsAsync(Guid userId)
         {
             var posts = await _savedPostRepository.GetSavedPostsAsync(userId);
+
+            var visiblePosts = new List<Post>();
+
+            foreach (var post in posts)
+            {
+                if (await _postAccessService.CanViewAsync(userId, post))
+                    visiblePosts.Add(post);
+            }
+
+            posts = visiblePosts;
+
             var authorIds = posts.Select(x => x.AuthorId).Distinct().ToList();
 
             var users = await _userManager.Users
@@ -419,8 +454,11 @@ namespace SocialSport.Api.Services.Implementations
         {
             var post = await _postRepository.GetByIdAsync(postId);
 
+
             if (post is null || post.Status != PostStatus.Published)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             if (post.AuthorId != userId)
                 throw new UnauthorizedAccessException("Bạn không có quyền thêm media vào bài viết này.");
@@ -474,6 +512,8 @@ namespace SocialSport.Api.Services.Implementations
             if (post is null || post.Status != PostStatus.Published)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
 
+            await _postAccessService.EnsureCanInteractAsync(userId, post);
+
             if (post.AuthorId != userId)
                 throw new UnauthorizedAccessException("Bạn không có quyền xóa media của bài viết này.");
 
@@ -507,6 +547,8 @@ namespace SocialSport.Api.Services.Implementations
 
             if (post is null || post.Status != PostStatus.Published)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
+
+            await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             if (post.AuthorId != userId)
                 throw new UnauthorizedAccessException("Bạn không có quyền sửa media của bài viết này.");

@@ -14,8 +14,8 @@ namespace SocialSport.Api.Services.Interfaces
         Task<ReactionResponse> RemoveReactionAsync(Guid userId, Guid postId);
         Task<FeedResponse> GetFeedAsync(Guid userId, int limit, string? cursor);
         Task<PostDto> CreateAsync(Guid userId, CreatePostRequest request);
-        Task<PostDto?> GetByIdAsync(Guid postId);
-        Task<List<PostDto>> GetUserPostsAsync(Guid userId);
+        Task<PostDto?> GetByIdAsync(Guid postId, Guid? currentUserId);
+        Task<List<PostDto>> GetUserPostsAsync(Guid userId, Guid? currentUserId);
         Task<PostDto> UpdateAsync(Guid userId, Guid postId, UpdatePostRequest request);
         Task DeleteAsync(Guid userId, Guid postId);
     }
