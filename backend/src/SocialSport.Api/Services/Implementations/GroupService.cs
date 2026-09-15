@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SocialSport.Api.DTOs.Group;
+using SocialSport.Api.DTOs.Post;
 using SocialSport.Api.Identity;
 using SocialSport.Api.Models.Entities;
 using SocialSport.Api.Models.Enums;
@@ -16,12 +17,14 @@ public class GroupService : IGroupService
     private readonly IGroupRepository _groupRepository;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IGroupMemberRepository _groupMemberRepository;
+    private readonly IPostRepository _postRepository;
 
-    public GroupService(IGroupRepository groupRepository, UserManager<ApplicationUser> userManager, IGroupMemberRepository groupMemberRepository)
+    public GroupService(IGroupRepository groupRepository, UserManager<ApplicationUser> userManager, IGroupMemberRepository groupMemberRepository, IPostRepository postRepository)
     {
         _groupRepository = groupRepository;
         _userManager = userManager;
         _groupMemberRepository = groupMemberRepository;
+        _postRepository = postRepository;
     }
 
     public async Task<GroupDto> CreateAsync(Guid userId, CreateGroupRequest request)
@@ -87,6 +90,13 @@ public class GroupService : IGroupService
         var owner = await _userManager.FindByIdAsync(group.OwnerId.ToString());
 
         GroupMember? currentMember = null;
+        if (currentUserId.HasValue)
+        {
+            currentMember = await _groupMemberRepository.GetAsync(groupId, currentUserId.Value);
+
+            if (currentMember?.Status == GroupMemberStatus.Banned)
+                throw new UnauthorizedAccessException("Bạn đã bị cấm khỏi nhóm.");
+        }
 
         if (currentUserId.HasValue)
             currentMember = group.Members.FirstOrDefault(x => x.UserId == currentUserId.Value && x.Status == GroupMemberStatus.Active);
@@ -520,5 +530,158 @@ public class GroupService : IGroupService
 
         _groupMemberRepository.Remove(targetMember);
         await _groupMemberRepository.SaveChangesAsync();
+    }
+    public async Task<PostDto> CreatePostAsync(Guid userId, Guid groupId, CreateGroupPostRequest request)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        var member = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (member is null || member.Status != GroupMemberStatus.Active)
+            throw new UnauthorizedAccessException("Bạn phải là thành viên của nhóm để đăng bài.");
+
+        if (request.SportId.HasValue && !await _postRepository.SportExistsAsync(request.SportId.Value))
+            throw new KeyNotFoundException("Không tìm thấy môn thể thao.");
+
+        var post = new Post
+        {
+            Id = Guid.NewGuid(),
+            AuthorId = userId,
+            GroupId = groupId,
+            SportId = request.SportId,
+            Content = request.Content.Trim(),
+            Visibility = request.Visibility,
+            Status = PostStatus.Published,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+
+        await _postRepository.AddAsync(post);
+        await _postRepository.SaveChangesAsync();
+
+        var createdPost = await _postRepository.GetByIdAsync(post.Id);
+        var author = await _userManager.FindByIdAsync(userId.ToString());
+
+        return new PostDto
+        {
+            Id = createdPost!.Id,
+            AuthorId = createdPost.AuthorId,
+            AuthorName = author?.DisplayName ?? string.Empty,
+            AuthorAvatar = author?.AvatarUrl,
+            GroupId = createdPost.GroupId,
+            GroupName = createdPost.Group?.Name,
+            SportId = createdPost.SportId,
+            SportName = createdPost.Sport?.Name,
+            Content = createdPost.Content,
+            Visibility = createdPost.Visibility,
+            LikeCount = createdPost.Reactions.Count,
+            CommentCount = createdPost.Comments.Count(x => x.Status == CommentStatus.Published),
+            CreatedAt = createdPost.CreatedAt,
+            UpdatedAt = createdPost.UpdatedAt,
+            Media = createdPost.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
+            {
+                Id = x.Id,
+                Url = x.Url,
+                MediaType = (int)x.MediaType,
+                SortOrder = x.SortOrder
+            }).ToList()
+        };
+    }
+    public async Task<GroupPostsResponse> GetPostsAsync(Guid? userId, Guid groupId, int limit, string? cursor)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        GroupMember? member = null;
+
+        if (userId.HasValue)
+            member = await _groupMemberRepository.GetAsync(groupId, userId.Value);
+
+        if (member?.Status == GroupMemberStatus.Banned)
+            throw new UnauthorizedAccessException("Bạn đã bị cấm khỏi nhóm.");
+
+        if (group.Privacy == GroupPrivacy.Private && (member is null || member.Status != GroupMemberStatus.Active))
+            throw new UnauthorizedAccessException("Bạn phải là thành viên để xem bài viết của nhóm riêng tư.");
+
+        limit = Math.Clamp(limit, 1, 50);
+
+        DateTimeOffset? cursorDate = null;
+
+        if (!string.IsNullOrWhiteSpace(cursor))
+        {
+            try
+            {
+                var value = Encoding.UTF8.GetString(Convert.FromBase64String(cursor));
+
+                if (!DateTimeOffset.TryParse(value, out var parsedCursor))
+                    throw new InvalidOperationException("Cursor không hợp lệ.");
+
+                cursorDate = parsedCursor;
+            }
+            catch (FormatException)
+            {
+                throw new InvalidOperationException("Cursor không hợp lệ.");
+            }
+        }
+
+        var posts = await _postRepository.GetGroupPostsAsync(groupId, limit, cursorDate);
+        var hasMore = posts.Count > limit;
+
+        if (hasMore)
+            posts = posts.Take(limit).ToList();
+
+        var authorIds = posts.Select(x => x.AuthorId).Distinct().ToList();
+
+        var users = await _userManager.Users
+            .Where(x => authorIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id);
+
+        var items = posts.Select(post =>
+        {
+            users.TryGetValue(post.AuthorId, out var author);
+
+            return new PostDto
+            {
+                Id = post.Id,
+                AuthorId = post.AuthorId,
+                AuthorName = author?.DisplayName ?? string.Empty,
+                AuthorAvatar = author?.AvatarUrl,
+                GroupId = post.GroupId,
+                GroupName = post.Group?.Name,
+                SportId = post.SportId,
+                SportName = post.Sport?.Name,
+                Content = post.Content,
+                Visibility = post.Visibility,
+                LikeCount = post.Reactions.Count,
+                CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
+                CreatedAt = post.CreatedAt,
+                UpdatedAt = post.UpdatedAt,
+                Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
+                {
+                    Id = x.Id,
+                    Url = x.Url,
+                    MediaType = (int)x.MediaType,
+                    SortOrder = x.SortOrder
+                }).ToList()
+            };
+        }).ToList();
+
+        string? nextCursor = null;
+
+        if (hasMore && posts.Count > 0)
+        {
+            var value = posts[posts.Count - 1].CreatedAt.ToString("O");
+            nextCursor = Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+        }
+
+        return new GroupPostsResponse
+        {
+            Items = items,
+            NextCursor = nextCursor
+        };
     }
 }

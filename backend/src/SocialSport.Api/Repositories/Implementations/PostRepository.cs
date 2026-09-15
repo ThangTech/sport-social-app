@@ -14,7 +14,25 @@ namespace SocialSport.Api.Repositories.Implementations
         {
             _context = context;
         }
+        public async Task<List<Post>> GetGroupPostsAsync(Guid groupId, int limit, DateTimeOffset? cursor)
+        {
+            var query = _context.Posts
+                .AsNoTracking()
+                .Include(x => x.Group)
+                .Include(x => x.Sport)
+                .Include(x => x.Media)
+                .Include(x => x.Comments)
+                .Include(x => x.Reactions)
+                .Where(x => x.GroupId == groupId && x.Status == PostStatus.Published);
 
+            if (cursor.HasValue)
+                query = query.Where(x => x.CreatedAt < cursor.Value);
+
+            return await query
+                .OrderByDescending(x => x.CreatedAt)
+                .Take(limit + 1)
+                .ToListAsync();
+        }
         public async Task<Post?> GetByIdAsync(Guid id)
         {
             return await _context.Posts

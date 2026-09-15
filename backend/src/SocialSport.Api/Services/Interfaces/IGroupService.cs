@@ -1,4 +1,5 @@
 ﻿using SocialSport.Api.DTOs.Group;
+using SocialSport.Api.DTOs.Post;
 
 namespace SocialSport.Api.Services.Interfaces
 {
@@ -19,5 +20,8 @@ namespace SocialSport.Api.Services.Interfaces
         Task RemoveMemberAsync(Guid userId, Guid groupId, Guid targetUserId);
         Task BanMemberAsync(Guid userId, Guid groupId, Guid targetUserId);
         Task UnbanMemberAsync(Guid userId, Guid groupId, Guid targetUserId);
+
+        Task<PostDto> CreatePostAsync(Guid userId, Guid groupId, CreateGroupPostRequest request);
+        Task<GroupPostsResponse> GetPostsAsync(Guid? userId, Guid groupId, int limit, string? cursor);
     }
 }

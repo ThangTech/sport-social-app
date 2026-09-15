@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SocialSport.Api.DTOs.Group;
+using SocialSport.Api.DTOs.Post;
 using SocialSport.Api.Services.Interfaces;
 using System.Security.Claims;
 
@@ -123,6 +124,18 @@ namespace SocialSport.Api.Controllers
         {
             await _groupService.UnbanMemberAsync(GetCurrentUserId(), id, userId);
             return NoContent();
+        }
+        [Authorize]
+        [HttpPost("{id:guid}/posts")]
+        public async Task<ActionResult<PostDto>> CreatePost(Guid id, CreateGroupPostRequest request)
+        {
+            return Ok(await _groupService.CreatePostAsync(GetCurrentUserId(), id, request));
+        }
+
+        [HttpGet("{id:guid}/posts")]
+        public async Task<ActionResult<GroupPostsResponse>> GetPosts(Guid id, [FromQuery] int limit = 20, [FromQuery] string? cursor = null)
+        {
+            return Ok(await _groupService.GetPostsAsync(TryGetCurrentUserId(), id, limit, cursor));
         }
         private Guid GetCurrentUserId()
         {
