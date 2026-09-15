@@ -137,6 +137,13 @@ namespace SocialSport.Api.Controllers
         {
             return Ok(await _groupService.GetPostsAsync(TryGetCurrentUserId(), id, limit, cursor));
         }
+        [Authorize]
+        [HttpDelete("{id:guid}/posts/{postId:guid}")]
+        public async Task<IActionResult> RemovePost(Guid id, Guid postId)
+        {
+            await _groupService.RemovePostAsync(GetCurrentUserId(), id, postId);
+            return NoContent();
+        }
         private Guid GetCurrentUserId()
         {
             var value = User.FindFirstValue(ClaimTypes.NameIdentifier);

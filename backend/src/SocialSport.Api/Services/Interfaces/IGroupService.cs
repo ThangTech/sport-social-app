@@ -23,5 +23,7 @@ namespace SocialSport.Api.Services.Interfaces
 
         Task<PostDto> CreatePostAsync(Guid userId, Guid groupId, CreateGroupPostRequest request);
         Task<GroupPostsResponse> GetPostsAsync(Guid? userId, Guid groupId, int limit, string? cursor);
+
+        Task RemovePostAsync(Guid userId, Guid groupId, Guid postId);
     }
 }

@@ -684,4 +684,45 @@ public class GroupService : IGroupService
             NextCursor = nextCursor
         };
     }
+    public async Task RemovePostAsync(Guid userId, Guid groupId, Guid postId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        var post = await _postRepository.GetByIdAsync(postId);
+
+        if (post is null || post.Status != PostStatus.Published || post.GroupId != groupId)
+            throw new KeyNotFoundException("Không tìm thấy bài viết trong nhóm.");
+
+        var currentMember = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (currentMember is null || currentMember.Status != GroupMemberStatus.Active)
+            throw new UnauthorizedAccessException("Bạn không có quyền quản lý bài viết trong nhóm.");
+
+        var isOwner = group.OwnerId == userId;
+
+        if (!isOwner && currentMember.Role != GroupMemberRole.Admin && currentMember.Role != GroupMemberRole.Moderator)
+            throw new UnauthorizedAccessException("Bạn không có quyền gỡ bài viết.");
+
+        if (post.AuthorId == group.OwnerId && !isOwner)
+            throw new UnauthorizedAccessException("Không thể gỡ bài viết của chủ nhóm.");
+
+        if (!isOwner)
+        {
+            var authorMember = await _groupMemberRepository.GetAsync(groupId, post.AuthorId);
+
+            if (currentMember.Role == GroupMemberRole.Moderator && authorMember is not null && authorMember.Role != GroupMemberRole.Member)
+                throw new UnauthorizedAccessException("Moderator chỉ có thể gỡ bài viết của Member.");
+
+            if (currentMember.Role == GroupMemberRole.Admin && authorMember is not null && authorMember.Role == GroupMemberRole.Admin)
+                throw new UnauthorizedAccessException("Admin không thể gỡ bài viết của Admin khác.");
+        }
+
+        post.Status = PostStatus.Removed;
+        post.UpdatedAt = DateTimeOffset.UtcNow;
+
+        await _postRepository.SaveChangesAsync();
+    }
 }
