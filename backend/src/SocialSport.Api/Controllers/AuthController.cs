@@ -18,8 +18,7 @@ public class AuthController : ControllerBase
     }
     [HttpPost("register")]
     [AllowAnonymous]
-    public async Task<ActionResult<AuthResponse>>
-        Register(RegisterRequest request)
+    public async Task<ActionResult<AuthResponse>>Register(RegisterRequest request)
     {
         var result =
             await _authService.RegisterAsync(request);
@@ -29,8 +28,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("login")]
     [AllowAnonymous]
-    public async Task<ActionResult<AuthResponse>>
-        Login(LoginRequest request)
+    public async Task<ActionResult<AuthResponse>>Login(LoginRequest request)
     {
         var result =
             await _authService.LoginAsync(request);
@@ -40,8 +38,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("refresh")]
     [AllowAnonymous]
-    public async Task<ActionResult<AuthResponse>>
-        Refresh(RefreshTokenRequest request)
+    public async Task<ActionResult<AuthResponse>>Refresh(RefreshTokenRequest request)
     {
         var result =
             await _authService.RefreshTokenAsync(request);
@@ -51,8 +48,7 @@ public class AuthController : ControllerBase
 
     [HttpPost("logout")]
     [Authorize]
-    public async Task<IActionResult>
-        Logout(LogoutRequest request)
+    public async Task<IActionResult> Logout(LogoutRequest request)
     {
         var userId = GetCurrentUserId();
 
@@ -65,8 +61,7 @@ public class AuthController : ControllerBase
 
     [HttpGet("me")]
     [Authorize]
-    public async Task<ActionResult<AuthUserDto>>
-        Me()
+    public async Task<ActionResult<AuthUserDto>>Me()
     {
         var userId = GetCurrentUserId();
 
@@ -81,7 +76,29 @@ public class AuthController : ControllerBase
 
         return Ok(user);
     }
+    [AllowAnonymous]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
+    {
+        await _authService.ForgotPasswordAsync(request);
 
+        return Ok(new
+        {
+            message = "Nếu email tồn tại, hướng dẫn đặt lại mật khẩu đã được gửi."
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpPost("reset-password")]
+    public async Task<IActionResult> ResetPassword(ResetPasswordRequest request)
+    {
+        await _authService.ResetPasswordAsync(request);
+
+        return Ok(new
+        {
+            message = "Mật khẩu đã được đặt lại thành công."
+        });
+    }
     private Guid GetCurrentUserId()
     {
         var value =
