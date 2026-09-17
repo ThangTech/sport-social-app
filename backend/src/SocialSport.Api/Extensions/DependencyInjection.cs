@@ -39,19 +39,19 @@ public static class DependencyInjection
                 options.Password.RequireNonAlphanumeric = false;
             })
             .AddRoles<IdentityRole<Guid>>()
-            .AddEntityFrameworkStores<ApplicationDbContext>();
-        var jwtSettings = configuration
-    .GetSection(JwtSettings.SectionName)
-    .Get<JwtSettings>()
-    ?? throw new InvalidOperationException(
-        "JWT configuration was not found.");
+            .AddEntityFrameworkStores<ApplicationDbContext>()
+            .AddDefaultTokenProviders();
+        services.Configure<DataProtectionTokenProviderOptions>(options =>
+        {
+            options.TokenLifespan = TimeSpan.FromMinutes(30);
+        });
+        var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()?? throw new InvalidOperationException("JWT configuration was not found.");
 
         if (string.IsNullOrWhiteSpace(jwtSettings.Key))
         {
             throw new InvalidOperationException(
                 "JWT key was not configured.");
         }
-
         services.Configure<JwtSettings>(
             configuration.GetSection(JwtSettings.SectionName));
         services
@@ -84,6 +84,8 @@ public static class DependencyInjection
                         ClockSkew = TimeSpan.Zero
                     };
             });
+        services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
+        services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>(); 
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IFollowRepository, FollowRepository>();

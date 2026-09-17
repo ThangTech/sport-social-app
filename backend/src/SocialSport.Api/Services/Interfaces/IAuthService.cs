@@ -12,4 +12,7 @@ public interface IAuthService
     Task LogoutAsync(Guid userId,LogoutRequest request);
 
     Task<AuthUserDto?> GetCurrentUserAsync(Guid userId);
+
+    Task ForgotPasswordAsync(ForgotPasswordRequest request);
+    Task ResetPasswordAsync(ResetPasswordRequest request);
 }

@@ -20,12 +20,16 @@ public class AuthService : IAuthService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly JwtSettings _jwtSettings;
+    private readonly IEmailService _emailService;
+    private readonly IConfiguration _configuration;
 
-    public AuthService(UserManager<ApplicationUser> userManager, IRefreshTokenRepository refreshTokenRepository, IOptions<JwtSettings> jwtOptions)
+    public AuthService(UserManager<ApplicationUser> userManager, IRefreshTokenRepository refreshTokenRepository, IOptions<JwtSettings> jwtOptions, IEmailService emailService, IConfiguration configuration)
     {
         _userManager = userManager;
         _refreshTokenRepository = refreshTokenRepository;
         _jwtSettings = jwtOptions.Value;
+        _emailService = emailService;   
+        _configuration = configuration;
     }
 
     // =========================
@@ -245,9 +249,55 @@ public class AuthService : IAuthService
         return Convert.ToHexString(hash);
     }
 
-    // =========================
-    // MAPPING
-    // =========================
+    public async Task ForgotPasswordAsync(ForgotPasswordRequest request)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email.Trim());
+
+        if (user is null)
+            return;
+
+        var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+
+        var resetUrl = _configuration["App:ResetPasswordUrl"];
+
+        if (string.IsNullOrWhiteSpace(resetUrl))
+            throw new InvalidOperationException("Reset password URL chưa được cấu hình.");
+
+        var encodedEmail = Uri.EscapeDataString(user.Email ?? request.Email);
+        var encodedToken = Uri.EscapeDataString(token);
+
+        var link = $"{resetUrl}?email={encodedEmail}&token={encodedToken}";
+
+        var html = $"""
+        <h2>Đặt lại mật khẩu SocialSport</h2>
+        <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản SocialSport.</p>
+        <p>
+            <a href="{link}">Đặt lại mật khẩu</a>
+        </p>
+        <p>Liên kết này sẽ hết hạn sau 30 phút.</p>
+        <p>Nếu bạn không yêu cầu thao tác này, bạn có thể bỏ qua email.</p>
+        """;
+
+        await _emailService.SendAsync(user.Email!, "Đặt lại mật khẩu SocialSport", html);
+    }
+    public async Task ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        var user = await _userManager.FindByEmailAsync(request.Email.Trim());
+
+        if (user is null)
+            throw new InvalidOperationException("Thông tin đặt lại mật khẩu không hợp lệ.");
+
+        var result = await _userManager.ResetPasswordAsync(user, request.Token, request.NewPassword);
+
+        if (!result.Succeeded)
+        {
+            var errors = string.Join("; ", result.Errors.Select(x => x.Description));
+            throw new InvalidOperationException(errors);
+        }
+
+        await _userManager.UpdateSecurityStampAsync(user);
+        await _refreshTokenRepository.RevokeAllByUserAsync(user.Id);
+    }
 
     private static string GetIdentityErrors(IdentityResult result)
     {
