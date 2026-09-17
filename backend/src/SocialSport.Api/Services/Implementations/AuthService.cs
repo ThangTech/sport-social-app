@@ -264,34 +264,20 @@ public class AuthService : IAuthService
         if (string.IsNullOrWhiteSpace(resetUrl))
             throw new InvalidOperationException("Reset password URL chưa được cấu hình.");
 
-        var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
         var encodedEmail = Uri.EscapeDataString(user.Email ?? request.Email);
+        var encodedToken = Uri.EscapeDataString(token);
 
         var link = $"{resetUrl}?email={encodedEmail}&token={encodedToken}";
-        var displayLink = System.Net.WebUtility.HtmlEncode(link);
-
 
         var html = $"""
-    <h2>Đặt lại mật khẩu SocialSport</h2>
-
-    <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản SocialSport.</p>
-
-    <p>Nhấn vào nút bên dưới để đặt lại mật khẩu:</p>
-
-    <p>
-        <a href="{displayLink}">Đặt lại mật khẩu</a>
-    </p>
-
-    <p>Nếu nút trên không hoạt động, hãy sao chép liên kết sau:</p>
-
-    <p style="word-break: break-all;">
-        {displayLink}
-    </p>
-
-    <p>Liên kết này sẽ hết hạn sau 30 phút.</p>
-
-    <p>Nếu bạn không yêu cầu thao tác này, bạn có thể bỏ qua email.</p>
-    """;
+        <h2>Đặt lại mật khẩu SocialSport</h2>
+        <p>Bạn đã yêu cầu đặt lại mật khẩu cho tài khoản SocialSport.</p>
+        <p>
+            <a href="{link}">Đặt lại mật khẩu</a>
+        </p>
+        <p>Liên kết này sẽ hết hạn sau 30 phút.</p>
+        <p>Nếu bạn không yêu cầu thao tác này, bạn có thể bỏ qua email.</p>
+        """;
 
         await _emailService.SendAsync(user.Email!, "Đặt lại mật khẩu SocialSport", html);
     }
@@ -301,29 +287,11 @@ public class AuthService : IAuthService
 
         if (user is null)
             throw new InvalidOperationException("Thông tin đặt lại mật khẩu không hợp lệ.");
-
-        string decodedToken;
-
-        try
-        {
-            decodedToken = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Token));
-        }
-        catch
-        {
-            throw new InvalidOperationException("Token đặt lại mật khẩu không hợp lệ.");
-        }
-
-        var result = await _userManager.ResetPasswordAsync(user, decodedToken, request.NewPassword);
-
-        if (!result.Succeeded)
-        {
-            var errors = string.Join("; ", result.Errors.Select(x => x.Description));
-            throw new InvalidOperationException(errors);
-        }
-
-        await _userManager.UpdateSecurityStampAsync(user);
-        await _refreshTokenRepository.RevokeAllByUserAsync(user.Id);
     }
+
+    // =========================
+    // MAPPING
+    // =========================
 
     private static string GetIdentityErrors(IdentityResult result)
     {

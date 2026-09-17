@@ -12,11 +12,6 @@ namespace SocialSport.Api.DTOs.Auth
         public string Token { get; set; } = string.Empty;
 
         [Required]
-        [RegularExpression(
-        @"^(?=^.{8,}$)((?=.*\d)|(?=.*\W+))(?![.\n])(?=.*[A-Z])(?=.*[a-z]).*$",
-        ErrorMessage = "Mật khẩu phải tối thiểu 8 ký tự, bao gồm chữ hoa, chữ thường và ít nhất một chữ số hoặc ký tự đặc biệt."
-    )]
-
         public string NewPassword { get; set; } = string.Empty;
 
         [Required]
