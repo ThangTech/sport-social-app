@@ -4,16 +4,12 @@
     "slug": "SocialSportApp",
     "version": "1.0.0",
     "orientation": "portrait",
-
     "icon": "../mobile/assets/images/icon.png",
-
     "scheme": "socialsportapp",
     "userInterfaceStyle": "automatic",
-
     "ios": {
       "icon": "../mobile/assets/images/icon.png"
     },
-
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "../mobile/assets/images/adaptive-icon.png",
@@ -21,12 +17,10 @@
       },
       "predictiveBackGestureEnabled": false
     },
-
     "web": {
       "output": "static",
       "favicon": "../mobile/assets/images/icon.png"
     },
-
     "plugins": [
       "expo-router",
       [
@@ -38,9 +32,9 @@
           "backgroundColor": "#0F172A"
         }
       ],
-      "expo-font"
+      "expo-font",
+      "expo-secure-store"
     ],
-
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true

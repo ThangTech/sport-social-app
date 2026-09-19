@@ -268,7 +268,9 @@ public class AuthService : IAuthService
         var encodedToken = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(token));
 
         var link = $"{resetUrl}?email={encodedEmail}&token={encodedToken}";
+
         var displayLink = System.Net.WebUtility.HtmlEncode(link);
+
         var html = $"""
         <h2>Đặt lại mật khẩu SocialSport</h2>
 
