@@ -8,7 +8,6 @@ import CreatePostPrompt from "@/components/CreatePostPrompt";
 import { router, Redirect } from "expo-router";
 
 export default function HomeScreen() {
-  return <Redirect href="/(auth)/login" />;
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader />
@@ -38,7 +37,6 @@ export default function HomeScreen() {
         ListHeaderComponent={CreatePostPrompt}
       />
     </SafeAreaView>
-    
   );
 }
 

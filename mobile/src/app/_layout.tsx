@@ -5,12 +5,69 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { Stack } from "expo-router";
+import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
+import { ActivityIndicator, View } from "react-native";
+import { AuthProvider, useAuth } from "../context/AuthContext";
 
 SplashScreen.preventAutoHideAsync();
+
+function RootNavigator() {
+  const { user, loading } = useAuth();
+  const segments = useSegments();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (loading) return;
+
+    const inAuthGroup = segments[0] === "(auth)";
+
+    if (!user && !inAuthGroup) {
+      router.replace("/(auth)/login");
+      return;
+    }
+
+    if (user && inAuthGroup) {
+      router.replace("/(tabs)");
+    }
+  }, [user, loading, segments]);
+
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="(auth)" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen
+        name="post/[id]"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="create-post"
+        options={{
+          presentation: "modal",
+          headerShown: false,
+        }}
+      />
+    </Stack>
+  );
+}
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
@@ -31,25 +88,9 @@ export default function RootLayout() {
   }
 
   return (
-    <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(tabs)" />
-
-        <Stack.Screen
-          name="post/[id]"
-          options={{
-            headerShown: false,
-          }}
-        />
-
-        <Stack.Screen
-          name="create-post"
-          options={{
-            presentation: "modal",
-            headerShown: false,
-          }}
-        />
-      </Stack>
-    </>
+    <AuthProvider>
+      <StatusBar style="auto" />
+      <RootNavigator />
+    </AuthProvider>
   );
 }

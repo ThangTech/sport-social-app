@@ -1,5 +1,4 @@
-import { getMe, login } from "@/services/auth.service";
-import { router } from "expo-router";
+import { useAuth } from "../../context/AuthContext";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -7,14 +6,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   Pressable,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
-
+import { SafeAreaView } from "react-native-safe-area-context";
 export default function LoginScreen() {
+  const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,16 +27,10 @@ export default function LoginScreen() {
     try {
       setLoading(true);
 
-      await login({
+      await signIn({
         email: email.trim(),
         password,
       });
-
-      const user = await getMe();
-
-      console.log("Current user:", user);
-
-      router.replace("/(tabs)");
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Đăng nhập thất bại.";
