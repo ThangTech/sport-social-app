@@ -5,9 +5,10 @@ import { StyleSheet, FlatList } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MOCK_POSTS } from "@/data/mock-data";
 import CreatePostPrompt from "@/components/CreatePostPrompt";
-import { router } from "expo-router";
+import { router, Redirect } from "expo-router";
 
 export default function HomeScreen() {
+  return <Redirect href="/(auth)/login" />;
   return (
     <SafeAreaView style={styles.container}>
       <AppHeader />
@@ -37,6 +38,7 @@ export default function HomeScreen() {
         ListHeaderComponent={CreatePostPrompt}
       />
     </SafeAreaView>
+    
   );
 }
 
