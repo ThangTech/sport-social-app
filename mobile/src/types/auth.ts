@@ -19,3 +19,9 @@ export type AuthResponse = {
   refreshTokenExpiresAt: string;
   user: AuthUser;
 };
+export type RegisterRequest = {
+  userName: string;
+  email: string;
+  displayName: string;
+  password: string;
+};

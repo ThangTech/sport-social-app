@@ -1,4 +1,4 @@
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "@/context/AuthContext";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -12,6 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router} from "expo-router";
 export default function LoginScreen() {
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
@@ -108,7 +109,9 @@ export default function LoginScreen() {
         <View style={styles.footer}>
           <Text style={styles.footerText}>Chưa có tài khoản? </Text>
 
-          <Text style={styles.link}>Đăng ký</Text>
+          <Pressable onPress={() => router.push("/(auth)/register")}>
+            <Text style={styles.link}>Đăng ký</Text>
+          </Pressable>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

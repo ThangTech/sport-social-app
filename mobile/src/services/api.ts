@@ -1,4 +1,5 @@
 import { getAccessToken } from "@/storage/token.storage";
+import { ApiError } from "@/types/api";
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
@@ -10,7 +11,10 @@ type ApiOptions = RequestInit & {
   auth?: boolean;
 };
 
-export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promise<T> => {
+export const api = async <T>(
+  endpoint: string,
+  options: ApiOptions = {},
+): Promise<T> => {
   const headers = new Headers(options.headers);
 
   if (!(options.body instanceof FormData)) {
@@ -32,13 +36,23 @@ export const api = async <T>(endpoint: string, options: ApiOptions = {}): Promis
 
   if (!response.ok) {
     let message = "Có lỗi xảy ra.";
+    let errors: Record<string, string[]> | undefined;
 
     try {
       const data = await response.json();
-      message = data.detail || data.title || data.message || message;
-    } catch {}
 
-    throw new Error(message);
+      console.log("API ERROR:", response.status, data);
+
+      message = data.detail || data.message || data.title || message;
+
+      if (data.errors && typeof data.errors === "object") {
+        errors = data.errors;
+      }
+    } catch (error) {
+      console.log("Cannot parse API error:", error);
+    }
+
+    throw new ApiError(message, response.status, errors);
   }
 
   if (response.status === 204) {

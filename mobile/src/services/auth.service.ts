@@ -1,6 +1,11 @@
 import { api } from "@/services/api";
 import { saveTokens } from "@/storage/token.storage";
-import { AuthResponse, AuthUser, LoginRequest } from "@/types/auth";
+import {
+  AuthResponse,
+  AuthUser,
+  LoginRequest,
+  RegisterRequest,
+} from "@/types/auth";
 
 export const login = async (request: LoginRequest) => {
   const response = await api<AuthResponse>("/auth/login", {
@@ -12,7 +17,12 @@ export const login = async (request: LoginRequest) => {
 
   return response;
 };
-
+export const register = async (request: RegisterRequest) => {
+  return await api<AuthResponse>("/auth/register", {
+    method: "POST",
+    body: JSON.stringify(request),
+  });
+};
 export const getMe = async () => {
   return await api<AuthUser>("/auth/me", {
     method: "GET",
