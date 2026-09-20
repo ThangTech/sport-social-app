@@ -12,6 +12,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { setUnauthorizedHandler } from "@/services/api";
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -29,7 +30,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     restoreSession();
   }, []);
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setUser(null);
+    });
 
+    return () => {
+      setUnauthorizedHandler(null);
+    };
+  }, []);
   const restoreSession = async () => {
     try {
       const token = await getAccessToken();
