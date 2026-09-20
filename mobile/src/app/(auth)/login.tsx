@@ -1,8 +1,7 @@
-import { useAuth } from "@/context/AuthContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,17 +12,18 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
+import { ApiError } from "@/types/api";
 export default function LoginScreen() {
+  const [errorMessage, setErrorMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.trim() || !password) {
-      Alert.alert("Thông báo", "Vui lòng nhập email và mật khẩu.");
-      return;
-    }
+    setErrorMessage("");
+    setFieldErrors({});
 
     try {
       setLoading(true);
@@ -33,10 +33,18 @@ export default function LoginScreen() {
         password,
       });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Đăng nhập thất bại.";
+      if (error instanceof ApiError) {
+        setErrorMessage(error.message);
+        setFieldErrors(error.errors ?? {});
+        return;
+      }
 
-      Alert.alert("Đăng nhập thất bại", message);
+      if (error instanceof Error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      setErrorMessage("Đăng nhập thất bại. Vui lòng thử lại.");
     } finally {
       setLoading(false);
     }
@@ -59,6 +67,11 @@ export default function LoginScreen() {
         </View>
 
         <View style={styles.form}>
+          {errorMessage ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorBoxText}>{errorMessage}</Text>
+            </View>
+          ) : null}
           <View>
             <Text style={styles.label}>Email</Text>
 
@@ -71,6 +84,11 @@ export default function LoginScreen() {
               autoCorrect={false}
               style={styles.input}
             />
+            {fieldErrors.Email?.map((message, index) => (
+              <Text key={`${message}-${index}`} style={styles.fieldError}>
+                {message}
+              </Text>
+            ))}
           </View>
 
           <View>
@@ -83,6 +101,11 @@ export default function LoginScreen() {
               secureTextEntry
               style={styles.input}
             />
+            {fieldErrors.Password?.map((message, index) => (
+              <Text key={`${message}-${index}`} style={styles.fieldError}>
+                {message}
+              </Text>
+            ))}
           </View>
 
           <Pressable
@@ -213,5 +236,22 @@ const styles = StyleSheet.create({
 
   footerText: {
     opacity: 0.6,
+  },
+  errorBox: {
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: "#FEE2E2",
+  },
+
+  errorBoxText: {
+    color: "#B91C1C",
+    fontSize: 14,
+    lineHeight: 20,
+  },
+
+  fieldError: {
+    color: "#DC2626",
+    fontSize: 13,
+    marginTop: 6,
   },
 });

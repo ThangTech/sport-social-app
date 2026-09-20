@@ -1,10 +1,10 @@
 import {
   getMe,
   login as loginRequest,
-  register as registerRequest,
+  logout as logoutRequest,
 } from "@/services/auth.service";
 import { clearTokens, getAccessToken } from "@/storage/token.storage";
-import { AuthUser, LoginRequest, RegisterRequest } from "@/types/auth";
+import { AuthUser, LoginRequest } from "@/types/auth";
 import {
   createContext,
   ReactNode,
@@ -54,8 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.user);
   };
   const signOut = async () => {
-    await clearTokens();
-    setUser(null);
+    try {
+      await logoutRequest();
+    } finally {
+      await clearTokens();
+      setUser(null);
+    }
   };
 
   return (

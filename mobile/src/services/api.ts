@@ -47,10 +47,11 @@ export const api = async <T>(
       try {
         const data = JSON.parse(rawBody);
 
-        message = data.detail || data.message || data.title || message;
-
         if (data.errors && typeof data.errors === "object") {
           errors = data.errors;
+          message = "Dữ liệu không hợp lệ. Vui lòng kiểm tra lại.";
+        } else {
+          message = data.detail || data.message || data.title || message;
         }
       } catch {
         message = rawBody;

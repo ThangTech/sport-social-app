@@ -1,5 +1,5 @@
 import { api } from "@/services/api";
-import { saveTokens } from "@/storage/token.storage";
+import { saveTokens, getRefreshToken } from "@/storage/token.storage";
 import {
   AuthResponse,
   AuthUser,
@@ -36,6 +36,19 @@ export const resetPassword = async (request: ResetPasswordRequest) => {
   return await api<MessageResponse>("/auth/reset-password", {
     method: "POST",
     body: JSON.stringify(request),
+  });
+};
+export const logout = async () => {
+  const refreshToken = await getRefreshToken();
+
+  if (!refreshToken) return;
+
+  await api<void>("/auth/logout", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify({
+      refreshToken,
+    }),
   });
 };
 export const getMe = async () => {
