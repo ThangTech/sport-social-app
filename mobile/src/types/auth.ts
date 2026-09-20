@@ -25,3 +25,16 @@ export type RegisterRequest = {
   displayName: string;
   password: string;
 };
+export type ForgotPasswordRequest = {
+  email: string;
+};
+
+export type MessageResponse = {
+  message: string;
+};
+export type ResetPasswordRequest = {
+  email: string;
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+};

@@ -38,26 +38,37 @@ export const api = async <T>(
     let message = "Có lỗi xảy ra.";
     let errors: Record<string, string[]> | undefined;
 
-    try {
-      const data = await response.json();
+    const rawBody = await response.text();
 
-      console.log("API ERROR:", response.status, data);
+    console.log("API ERROR STATUS:", response.status);
+    console.log("API ERROR BODY:", rawBody);
 
-      message = data.detail || data.message || data.title || message;
+    if (rawBody) {
+      try {
+        const data = JSON.parse(rawBody);
 
-      if (data.errors && typeof data.errors === "object") {
-        errors = data.errors;
+        message = data.detail || data.message || data.title || message;
+
+        if (data.errors && typeof data.errors === "object") {
+          errors = data.errors;
+        }
+      } catch {
+        message = rawBody;
       }
-    } catch (error) {
-      console.log("Cannot parse API error:", error);
+    } else {
+      if (response.status === 400) {
+        message = "Yêu cầu không hợp lệ.";
+      } else if (response.status === 401) {
+        message = "Bạn chưa đăng nhập hoặc phiên đăng nhập đã hết hạn.";
+      } else if (response.status === 403) {
+        message = "Bạn không có quyền thực hiện thao tác này.";
+      } else if (response.status === 404) {
+        message = "Không tìm thấy dữ liệu.";
+      } else if (response.status >= 500) {
+        message = "Máy chủ đang gặp lỗi. Vui lòng thử lại.";
+      }
     }
-
     throw new ApiError(message, response.status, errors);
   }
-
-  if (response.status === 204) {
-    return undefined as T;
-  }
-
   return await response.json();
 };

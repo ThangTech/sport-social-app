@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { router} from "expo-router";
+import { router } from "expo-router";
 export default function LoginScreen() {
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
@@ -85,7 +85,10 @@ export default function LoginScreen() {
             />
           </View>
 
-          <Pressable style={styles.forgot}>
+          <Pressable
+            onPress={() => router.push("/(auth)/forgot-password")}
+            style={styles.forgot}
+          >
             <Text style={styles.link}>Quên mật khẩu?</Text>
           </Pressable>
 
