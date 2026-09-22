@@ -5,7 +5,7 @@ import Avatar from "./Avatar";
 import SportBadge from "./SportBadge";
 import { Post } from "../types/post";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { router } from "expo-router";
+
 
 type PostCardProps = {
   post: Post;
@@ -23,14 +23,7 @@ export default function PostCard({
         <Pressable
           style={styles.userInfo}
           disabled={!onAuthorPress}
-          onPress={() =>
-            router.push({
-              pathname: "/user/[id]",
-              params: {
-                id: post.authorId,
-              },
-            })
-          }
+          onPress={onAuthorPress}
         >
           <Avatar source={post.authorAvatar} />
           <View style={styles.author}>

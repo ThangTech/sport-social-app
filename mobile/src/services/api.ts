@@ -12,7 +12,17 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 if (!API_URL) {
   throw new Error("EXPO_PUBLIC_API_URL chưa được cấu hình.");
 }
+const SERVER_URL = API_URL.replace(/\/api\/v1\/?$/, "");
 
+export const getFileUrl = (url?: string | null) => {
+  if (!url) return null;
+
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
+
+  return `${SERVER_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+};
 type ApiOptions = RequestInit & {
   auth?: boolean;
 };
