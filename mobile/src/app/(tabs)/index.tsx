@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import { formatRelativeTime } from "@/utils/date";
 export default function HomeScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -35,6 +35,7 @@ export default function HomeScreen() {
 
           return {
             id: item.id,
+
             authorId: item.authorId,
             authorName: item.authorName,
 
@@ -47,7 +48,7 @@ export default function HomeScreen() {
             groupId: item.groupId ?? undefined,
             groupName: item.groupName ?? undefined,
 
-            createdAt: new Date(item.createdAt).toLocaleString("vi-VN"),
+            createdAt: formatRelativeTime(item.createdAt),
 
             content: item.content ?? "",
 
@@ -55,9 +56,9 @@ export default function HomeScreen() {
               ? {
                   uri: getFileUrl(firstImage.url)!,
                 }
-              : require("@/assets/images/football.jpg"),
+              : undefined,
 
-            sport: item.sportName ?? "Thể thao",
+            sport: item.sportName ?? undefined,
 
             likeCount: item.likeCount,
             commentCount: item.commentCount,

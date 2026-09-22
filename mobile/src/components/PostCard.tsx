@@ -6,7 +6,6 @@ import SportBadge from "./SportBadge";
 import { Post } from "../types/post";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
-
 type PostCardProps = {
   post: Post;
   onPress?: () => void;
@@ -29,7 +28,11 @@ export default function PostCard({
           <View style={styles.author}>
             <AppText variant="label"> {post.authorName}</AppText>
             {post.groupName && (
-              <AppText variant="caption" color={COLORS.primary} style={{marginLeft: 2, marginTop: 5}}>
+              <AppText
+                variant="caption"
+                color={COLORS.primary}
+                style={{ marginLeft: 2, marginTop: 5 }}
+              >
                 {post.groupName}
               </AppText>
             )}
@@ -42,19 +45,21 @@ export default function PostCard({
             </AppText>
           </View>
         </Pressable>
-        <SportBadge name={post.sport} />
+        {post.sport ? <SportBadge name={post.sport} /> : null}
       </View>
       <Pressable onPress={onPress}>
         <View style={styles.content}>
           <AppText>{post.content}</AppText>
         </View>
-        <View style={styles.imageContainer}>
-          <Image
-            source={post.image}
-            style={styles.postImage}
-            resizeMode="cover"
-          />
-        </View>
+        {post.image ? (
+          <View style={styles.imageContainer}>
+            <Image
+              source={post.image}
+              style={styles.postImage}
+              resizeMode="cover"
+            />
+          </View>
+        ) : null}
       </Pressable>
       <View style={styles.actions}>
         <Pressable
