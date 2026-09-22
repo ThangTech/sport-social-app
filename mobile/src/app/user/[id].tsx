@@ -1,33 +1,117 @@
+import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
 import { COLORS, SPACING } from "@/constants/theme";
-import { MOCK_POSTS, MOCK_USERS } from "@/data/mock-data";
+import { getFileUrl } from "@/services/api";
+import { getUserPosts, getUserProfile } from "@/services/user.service";
+import type { Post } from "@/types/post";
+import type { UserProfileDto } from "@/types/user";
+import { formatRelativeTime } from "@/utils/date";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
-import { Image, Pressable, ScrollView, StyleSheet, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import PostCard from "@/components/PostCard";
+import UserNotFound from "@/components/UserNotFound";
+import { ApiError } from "@/types/api";
 export default function UserProfileScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{
+    id?: string | string[];
+  }>();
 
-  const user = MOCK_USERS.find((item) => item.id === id);
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
-  if (!user) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Pressable style={styles.backButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-          </Pressable>
+  const [user, setUser] = useState<UserProfileDto | null>(null);
 
-          <AppText variant="subtitle">Không tìm thấy người dùng</AppText>
+  const [posts, setPosts] = useState<Post[]>([]);
 
-          <View style={styles.headerSpace} />
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const [loading, setLoading] = useState(true);
 
-  const userPosts = MOCK_POSTS.filter((post) => post.authorId === user.id);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    setNotFound(false);
+    const loadProfile = async () => {
+      if (!id) {
+        setErrorMessage("Không tìm thấy người dùng.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setErrorMessage("");
+
+        const [profileResult, postsResult] = await Promise.all([
+          getUserProfile(id),
+          getUserPosts(id),
+        ]);
+
+        setUser(profileResult);
+
+        setPosts(
+          postsResult.map((item) => {
+            const firstImage = item.media.find(
+              (media) => media.mediaType === 1,
+            );
+
+            return {
+              id: item.id,
+              authorId: item.authorId,
+              authorName: item.authorName,
+
+              authorAvatar: item.authorAvatar
+                ? {
+                    uri: getFileUrl(item.authorAvatar)!,
+                  }
+                : require("@/assets/images/icon.png"),
+
+              groupId: item.groupId ?? undefined,
+
+              groupName: item.groupName ?? undefined,
+
+              createdAt: formatRelativeTime(item.createdAt),
+
+              content: item.content ?? "",
+
+              image: firstImage
+                ? {
+                    uri: getFileUrl(firstImage.url)!,
+                  }
+                : undefined,
+
+              sport: item.sportName ?? undefined,
+
+              likeCount: item.likeCount,
+
+              commentCount: item.commentCount,
+            };
+          }),
+        );
+      } catch (error) {
+        if (error instanceof ApiError && error.status === 404) {
+          setNotFound(true);
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Không thể tải thông tin người dùng.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadProfile();
+  }, [id]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -41,73 +125,143 @@ export default function UserProfileScreen() {
         <View style={styles.headerSpace} />
       </View>
 
-      <ScrollView>
-        <View style={styles.profile}>
-          <Image source={user.avatar} style={styles.avatar} />
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
 
-          <AppText variant="subtitle">{user.name}</AppText>
-
-          <AppText style={styles.username}>@{user.username}</AppText>
-
-          <AppText style={styles.bio}>{user.bio}</AppText>
-
-          <View style={styles.stats}>
-            <View style={styles.statItem}>
-              <AppText variant="subtitle">{userPosts.length}</AppText>
-
-              <AppText style={styles.statLabel}>Bài viết</AppText>
-            </View>
-
-            <View style={styles.statItem}>
-              <AppText variant="subtitle">{user.followerCount}</AppText>
-
-              <AppText style={styles.statLabel}>Người theo dõi</AppText>
-            </View>
-
-            <View style={styles.statItem}>
-              <AppText variant="subtitle">{user.followingCount}</AppText>
-
-              <AppText style={styles.statLabel}>Đang theo dõi</AppText>
-            </View>
-          </View>
-
-          <Pressable style={styles.followButton}>
-            <Ionicons
-              name="person-add-outline"
-              size={18}
-              color={COLORS.background}
-            />
-
-            <AppText style={styles.followText}>Theo dõi</AppText>
-          </Pressable>
-        </View>
-        {userPosts.length === 0 && (
-          <View style={styles.emptyPosts}>
-            <AppText color={COLORS.textMuted}>
-              Người dùng này chưa có bài viết.
-            </AppText>
-          </View>
-        )}
-        <View style={styles.postsSection}>
-          <AppText variant="subtitle">Bài viết</AppText>
-
-          <AppText variant="caption" color={COLORS.textMuted}>
-            {userPosts.length} bài viết
+          <AppText color={COLORS.textMuted} style={styles.message}>
+            Đang tải trang cá nhân...
           </AppText>
         </View>
-        <View>
-          {userPosts.map((post) => (
-            <PostCard
-              key={post.id}
-              post={post}
-            />
-          ))}
+      ) : notFound ? (
+        <UserNotFound />
+      ) : errorMessage ? (
+        <View style={styles.center}>
+          <Ionicons
+            name="person-circle-outline"
+            size={52}
+            color={COLORS.textMuted}
+          />
+
+          <AppText color={COLORS.textMuted} style={styles.message}>
+            {errorMessage}
+          </AppText>
         </View>
-      </ScrollView>
+      ) : user ? (
+        <ScrollView>
+          {user.coverUrl ? (
+            <Image
+              source={{
+                uri: getFileUrl(user.coverUrl)!,
+              }}
+              style={styles.cover}
+            />
+          ) : null}
+
+          <View
+            style={[
+              styles.profile,
+              !user.coverUrl && styles.profileWithoutCover,
+            ]}
+          >
+            <Image
+              source={
+                user.avatarUrl
+                  ? {
+                      uri: getFileUrl(user.avatarUrl)!,
+                    }
+                  : require("@/assets/images/icon.png")
+              }
+              style={[
+                styles.avatar,
+                !user.coverUrl && styles.avatarWithoutCover,
+              ]}
+            />
+
+            <AppText variant="subtitle">{user.displayName}</AppText>
+
+            <AppText style={styles.username}>@{user.userName}</AppText>
+
+            {user.bio ? <AppText style={styles.bio}>{user.bio}</AppText> : null}
+
+            <View style={styles.stats}>
+              <View style={styles.statItem}>
+                <AppText variant="subtitle">{posts.length}</AppText>
+
+                <AppText style={styles.statLabel}>Bài viết</AppText>
+              </View>
+
+              <View style={styles.statItem}>
+                <AppText variant="subtitle">{user.followerCount}</AppText>
+
+                <AppText style={styles.statLabel}>Người theo dõi</AppText>
+              </View>
+
+              <View style={styles.statItem}>
+                <AppText variant="subtitle">{user.followingCount}</AppText>
+
+                <AppText style={styles.statLabel}>Đang theo dõi</AppText>
+              </View>
+            </View>
+
+            <Pressable
+              style={[
+                styles.followButton,
+                user.isFollowing && styles.followingButton,
+              ]}
+            >
+              <Ionicons
+                name={user.isFollowing ? "checkmark" : "person-add-outline"}
+                size={18}
+                color={user.isFollowing ? COLORS.text : COLORS.background}
+              />
+
+              <AppText
+                style={[
+                  styles.followText,
+                  user.isFollowing && styles.followingText,
+                ]}
+              >
+                {user.isFollowing ? "Đang theo dõi" : "Theo dõi"}
+              </AppText>
+            </Pressable>
+          </View>
+
+          <View style={styles.postsSection}>
+            <AppText variant="subtitle">Bài viết</AppText>
+
+            <AppText variant="caption" color={COLORS.textMuted}>
+              {posts.length} bài viết
+            </AppText>
+          </View>
+
+          {posts.length === 0 ? (
+            <View style={styles.emptyPosts}>
+              <AppText color={COLORS.textMuted}>
+                Người dùng này chưa có bài viết.
+              </AppText>
+            </View>
+          ) : (
+            posts.map((post) => (
+              <PostCard
+                key={post.id}
+                post={post}
+                onPress={() =>
+                  router.push({
+                    pathname: "/post/[id]",
+                    params: {
+                      id: post.id,
+                    },
+                  })
+                }
+              />
+            ))
+          )}
+        </ScrollView>
+      ) : null}
     </SafeAreaView>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -117,11 +271,9 @@ const styles = StyleSheet.create({
   header: {
     height: 64,
     paddingHorizontal: SPACING.lg,
-
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
@@ -137,16 +289,47 @@ const styles = StyleSheet.create({
     width: 40,
   },
 
+  center: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: SPACING.xl,
+  },
+
+  message: {
+    marginTop: SPACING.md,
+    textAlign: "center",
+  },
   profile: {
     alignItems: "center",
-    padding: SPACING.xl,
+    paddingHorizontal: SPACING.xl,
+    paddingBottom: SPACING.xl,
+  },
+
+  profileWithoutCover: {
+    paddingTop: SPACING.xl,
+  },
+
+  cover: {
+    width: "100%",
+    height: 150,
+    backgroundColor: COLORS.surfaceAlt,
   },
 
   avatar: {
     width: 96,
     height: 96,
     borderRadius: 48,
+
+    marginTop: -48,
     marginBottom: SPACING.md,
+
+    borderWidth: 4,
+    borderColor: COLORS.background,
+  },
+
+  avatarWithoutCover: {
+    marginTop: 0,
   },
 
   username: {
@@ -161,33 +344,36 @@ const styles = StyleSheet.create({
 
   stats: {
     width: "100%",
-    marginTop: SPACING.xl,
+    marginTop: 20,
 
     flexDirection: "row",
-    justifyContent: "space-around",
+    alignItems: "flex-start",
   },
 
   statItem: {
+    flex: 1,
     alignItems: "center",
   },
 
   statLabel: {
-    marginTop: 4,
+    marginTop: 6,
     color: COLORS.textMuted,
     fontSize: 13,
+    textAlign: "center",
   },
-
   followButton: {
-    marginTop: SPACING.xl,
+    marginTop: 22,
 
+    minWidth: 180,
     paddingHorizontal: 28,
-    paddingVertical: 10,
+    paddingVertical: 11,
 
     borderRadius: 24,
     backgroundColor: COLORS.primary,
 
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     gap: 8,
   },
 
@@ -195,15 +381,22 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     fontWeight: "600",
   },
+  followingButton: {
+    backgroundColor: COLORS.surfaceAlt,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  followingText: {
+    color: COLORS.text,
+  },
 
   postsSection: {
     padding: SPACING.lg,
-
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: COLORS.border,
-
     gap: SPACING.xs,
   },
+
   emptyPosts: {
     padding: SPACING.xl,
     alignItems: "center",

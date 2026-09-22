@@ -1,11 +1,12 @@
-import { ImageSourcePropType } from "react-native";
-
-export type User = {
+export type UserProfileDto = {
   id: string;
-  name: string;
-  username: string;
-  avatar: ImageSourcePropType;
-  bio: string;
+  userName: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  coverUrl?: string | null;
+  bio?: string | null;
+  dateOfBirth?: string | null;
   followerCount: number;
   followingCount: number;
+  isFollowing: boolean;
 };
