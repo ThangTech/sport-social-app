@@ -18,4 +18,9 @@ export type Post = {
 
   likeCount: number;
   commentCount: number;
+  currentReaction?: number | null;
+};
+export type ReactionResponse = {
+  reactionCount: number;
+  currentReaction?: number | null;
 };

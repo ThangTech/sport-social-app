@@ -1,12 +1,26 @@
 import { api } from "@/services/api";
 import type { FeedPostDto } from "@/types/feed";
+import type { ReactionResponse } from "@/types/post";
 
 export const getPostById = async (id: string) => {
-  return await api<FeedPostDto>(
-    `/posts/${id}`,
-    {
-      method: "GET",
-      auth: true,
-    },
-  );
+  return await api<FeedPostDto>(`/posts/${id}`, {
+    method: "GET",
+    auth: true,
+  });
+};
+export const reactPost = async (id: string, type = 1) => {
+  return await api<ReactionResponse>(`/posts/${id}/reactions`, {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify({
+      type,
+    }),
+  });
+};
+
+export const removePostReaction = async (id: string) => {
+  return await api<ReactionResponse>(`/posts/${id}/reactions`, {
+    method: "DELETE",
+    auth: true,
+  });
 };

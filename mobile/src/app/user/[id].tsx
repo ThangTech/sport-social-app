@@ -99,6 +99,7 @@ export default function UserProfileScreen() {
               likeCount: item.likeCount,
 
               commentCount: item.commentCount,
+              currentReaction: item.currentReaction,
             };
           }),
         );

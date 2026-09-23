@@ -62,6 +62,7 @@ export default function HomeScreen() {
 
             likeCount: item.likeCount,
             commentCount: item.commentCount,
+            currentReaction: item.currentReaction,
           };
         }),
       );

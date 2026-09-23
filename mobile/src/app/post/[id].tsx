@@ -70,6 +70,7 @@ export default function PostDetailScreen() {
 
           likeCount: item.likeCount,
           commentCount: item.commentCount,
+          currentReaction: item.currentReaction,
         });
       } catch (error) {
         setErrorMessage(

@@ -5,7 +5,8 @@ import Avatar from "./Avatar";
 import SportBadge from "./SportBadge";
 import { Post } from "../types/post";
 import Ionicons from "@expo/vector-icons/Ionicons";
-
+import { reactPost, removePostReaction } from "@/services/post.service";
+import { useEffect, useState } from "react";
 type PostCardProps = {
   post: Post;
   onPress?: () => void;
@@ -16,6 +17,40 @@ export default function PostCard({
   onPress,
   onAuthorPress,
 }: PostCardProps) {
+  const [reactionCount, setReactionCount] = useState(post.likeCount);
+
+  const [currentReaction, setCurrentReaction] = useState<number | null>(
+    post.currentReaction ?? null,
+  );
+
+  const [reactionLoading, setReactionLoading] = useState(false);
+  useEffect(() => {
+    setReactionCount(post.likeCount);
+    setCurrentReaction(post.currentReaction ?? null);
+  }, [post.id, post.likeCount, post.currentReaction]);
+  const handleReaction = async () => {
+    if (reactionLoading) return;
+
+    try {
+      setReactionLoading(true);
+
+      const response =
+        currentReaction === 1
+          ? await removePostReaction(post.id)
+          : await reactPost(post.id, 1);
+
+      setReactionCount(response.reactionCount);
+
+      setCurrentReaction(response.currentReaction ?? null);
+    } catch (error) {
+      Alert.alert(
+        "Không thể cập nhật",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    } finally {
+      setReactionLoading(false);
+    }
+  };
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -63,13 +98,24 @@ export default function PostCard({
       </Pressable>
       <View style={styles.actions}>
         <Pressable
-          style={styles.actionButton}
-          onPress={() => Alert.alert("Thích bài viết")}
+          style={[
+            styles.actionButton,
+            reactionLoading && styles.disabledAction,
+          ]}
+          disabled={reactionLoading}
+          onPress={handleReaction}
         >
-          <Ionicons name="heart-outline" size={23} color={COLORS.textMuted} />
+          <Ionicons
+            name={currentReaction ? "heart" : "heart-outline"}
+            size={23}
+            color={currentReaction ? COLORS.danger : COLORS.textMuted}
+          />
 
-          <AppText variant="caption" color={COLORS.textMuted}>
-            {post.likeCount}
+          <AppText
+            variant="caption"
+            color={currentReaction ? COLORS.danger : COLORS.textMuted}
+          >
+            {reactionCount}
           </AppText>
         </Pressable>
 
@@ -170,5 +216,8 @@ const styles = StyleSheet.create({
 
   saveButton: {
     marginLeft: "auto",
+  },
+  disabledAction: {
+    opacity: 0.6,
   },
 });
