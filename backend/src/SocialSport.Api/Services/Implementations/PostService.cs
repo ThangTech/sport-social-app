@@ -92,6 +92,7 @@ namespace SocialSport.Api.Services.Implementations
         }
         public async Task<PostDto> CreateAsync(Guid userId, CreatePostRequest request)
         {
+
             if (request.SportId.HasValue && !await _postRepository.SportExistsAsync(request.SportId.Value))
                 throw new KeyNotFoundException("Không tìm thấy môn thể thao.");
 
@@ -111,7 +112,7 @@ namespace SocialSport.Api.Services.Implementations
 
             var createdPost = await _postRepository.GetByIdAsync(post.Id);
             var user = await _userManager.FindByIdAsync(createdPost!.AuthorId.ToString());
-
+            
             return new PostDto
             {
                 Id = createdPost.Id,
@@ -126,6 +127,7 @@ namespace SocialSport.Api.Services.Implementations
                 Visibility = createdPost.Visibility,
                 LikeCount = createdPost.Reactions.Count,
                 CommentCount = createdPost.Comments.Count(x => x.Status == CommentStatus.Published),
+                CurrentReaction = null,
                 CreatedAt = createdPost.CreatedAt,
                 UpdatedAt = createdPost.UpdatedAt,
                 Media = createdPost.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -163,6 +165,7 @@ namespace SocialSport.Api.Services.Implementations
                 Visibility = post.Visibility,
                 LikeCount = post.Reactions.Count,
                 CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
+                CurrentReaction = currentUserId.HasValue ? post.Reactions.FirstOrDefault(x => x.UserId == currentUserId.Value)?.Type : null,
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -207,6 +210,7 @@ namespace SocialSport.Api.Services.Implementations
                 Visibility = post.Visibility,
                 LikeCount = post.Reactions.Count,
                 CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
+                CurrentReaction = currentUserId.HasValue ? post.Reactions.FirstOrDefault(x => x.UserId == currentUserId.Value)?.Type: null,
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -257,6 +261,7 @@ namespace SocialSport.Api.Services.Implementations
                 Visibility = post.Visibility,
                 LikeCount = post.Reactions.Count,
                 CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
+                CurrentReaction = post.Reactions.FirstOrDefault(x => x.UserId == userId)?.Type,
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -338,6 +343,7 @@ namespace SocialSport.Api.Services.Implementations
                     Visibility = post.Visibility,
                     LikeCount = post.Reactions.Count,
                     CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
+                    CurrentReaction = post.Reactions.FirstOrDefault(x => x.UserId == userId)?.Type,
                     CreatedAt = post.CreatedAt,
                     UpdatedAt = post.UpdatedAt,
                     Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -438,6 +444,7 @@ namespace SocialSport.Api.Services.Implementations
                     Visibility = post.Visibility,
                     LikeCount = post.Reactions.Count,
                     CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
+                    CurrentReaction = post.Reactions.FirstOrDefault(x => x.UserId == userId)?.Type,
                     CreatedAt = post.CreatedAt,
                     UpdatedAt = post.UpdatedAt,
                     Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
