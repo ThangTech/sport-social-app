@@ -10,3 +10,9 @@ export type UserProfileDto = {
   followingCount: number;
   isFollowing: boolean;
 };
+export type UserSummaryDto = {
+  id: string;
+  userName: string;
+  displayName: string;
+  avatarUrl?: string | null;
+};

@@ -2,7 +2,13 @@ import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
 import { COLORS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
-import { getUserPosts, getUserProfile } from "@/services/user.service";
+import {
+  getUserPosts,
+  getUserProfile,
+  followUser,
+  unfollowUser,
+} from "@/services/user.service";
+import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/types/post";
 import type { UserProfileDto } from "@/types/user";
 import { formatRelativeTime } from "@/utils/date";
@@ -20,10 +26,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import UserNotFound from "@/components/UserNotFound";
 import { ApiError } from "@/types/api";
+
 export default function UserProfileScreen() {
-  const params = useLocalSearchParams<{
-    id?: string | string[];
-  }>();
+  const { user: currentUser } = useAuth();
+
+  const params = useLocalSearchParams<{ id?: string | string[] }>();
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -35,6 +42,7 @@ export default function UserProfileScreen() {
 
   const [errorMessage, setErrorMessage] = useState("");
   const [notFound, setNotFound] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
 
   useEffect(() => {
     setNotFound(false);
@@ -112,6 +120,46 @@ export default function UserProfileScreen() {
 
     loadProfile();
   }, [id]);
+
+  const handleFollow = async () => {
+    if (!user || followLoading) return;
+
+    try {
+      setFollowLoading(true);
+
+      if (user.isFollowing) {
+        await unfollowUser(user.id);
+
+        setUser((current) =>
+          current
+            ? {
+                ...current,
+                isFollowing: false,
+                followerCount: Math.max(0, current.followerCount - 1),
+              }
+            : current,
+        );
+      } else {
+        await followUser(user.id);
+
+        setUser((current) =>
+          current
+            ? {
+                ...current,
+                isFollowing: true,
+                followerCount: current.followerCount + 1,
+              }
+            : current,
+        );
+      }
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Không thể cập nhật theo dõi.",
+      );
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -191,40 +239,78 @@ export default function UserProfileScreen() {
                 <AppText style={styles.statLabel}>Bài viết</AppText>
               </View>
 
-              <View style={styles.statItem}>
+              <Pressable
+                style={styles.statItem}
+                onPress={() =>
+                  router.push({
+                    pathname: "/user/connections",
+                    params: {
+                      id: user.id,
+                      type: "followers",
+                    },
+                  })
+                }
+              >
                 <AppText variant="subtitle">{user.followerCount}</AppText>
 
                 <AppText style={styles.statLabel}>Người theo dõi</AppText>
-              </View>
+              </Pressable>
 
-              <View style={styles.statItem}>
+              <Pressable
+                style={styles.statItem}
+                onPress={() =>
+                  router.push({
+                    pathname: "/user/connections",
+                    params: {
+                      id: user.id,
+                      type: "following",
+                    },
+                  })
+                }
+              >
                 <AppText variant="subtitle">{user.followingCount}</AppText>
 
                 <AppText style={styles.statLabel}>Đang theo dõi</AppText>
-              </View>
+              </Pressable>
             </View>
 
-            <Pressable
-              style={[
-                styles.followButton,
-                user.isFollowing && styles.followingButton,
-              ]}
-            >
-              <Ionicons
-                name={user.isFollowing ? "checkmark" : "person-add-outline"}
-                size={18}
-                color={user.isFollowing ? COLORS.text : COLORS.background}
-              />
-
-              <AppText
+            {currentUser?.id !== user.id ? (
+              <Pressable
+                disabled={followLoading}
+                onPress={handleFollow}
                 style={[
-                  styles.followText,
-                  user.isFollowing && styles.followingText,
+                  styles.followButton,
+                  user.isFollowing && styles.followingButton,
+                  followLoading && styles.disabledButton,
                 ]}
               >
-                {user.isFollowing ? "Đang theo dõi" : "Theo dõi"}
-              </AppText>
-            </Pressable>
+                {followLoading ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={user.isFollowing ? COLORS.text : COLORS.background}
+                  />
+                ) : (
+                  <>
+                    <Ionicons
+                      name={
+                        user.isFollowing ? "checkmark" : "person-add-outline"
+                      }
+                      size={18}
+                      color={user.isFollowing ? COLORS.text : COLORS.background}
+                    />
+
+                    <AppText
+                      style={[
+                        styles.followText,
+                        user.isFollowing && styles.followingText,
+                      ]}
+                    >
+                      {user.isFollowing ? "Đang theo dõi" : "Theo dõi"}
+                    </AppText>
+                  </>
+                )}
+              </Pressable>
+            ) : null}
           </View>
 
           <View style={styles.postsSection}>
@@ -262,6 +348,7 @@ export default function UserProfileScreen() {
     </SafeAreaView>
   );
 }
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -300,6 +387,7 @@ const styles = StyleSheet.create({
     marginTop: SPACING.md,
     textAlign: "center",
   },
+
   profile: {
     alignItems: "center",
     paddingHorizontal: SPACING.xl,
@@ -320,10 +408,8 @@ const styles = StyleSheet.create({
     width: 96,
     height: 96,
     borderRadius: 48,
-
     marginTop: -48,
     marginBottom: SPACING.md,
-
     borderWidth: 4,
     borderColor: COLORS.background,
   },
@@ -345,7 +431,6 @@ const styles = StyleSheet.create({
   stats: {
     width: "100%",
     marginTop: 20,
-
     flexDirection: "row",
     alignItems: "flex-start",
   },
@@ -361,16 +446,14 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
   },
+
   followButton: {
     marginTop: 22,
-
     minWidth: 180,
     paddingHorizontal: 28,
     paddingVertical: 11,
-
     borderRadius: 24,
     backgroundColor: COLORS.primary,
-
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
@@ -381,13 +464,19 @@ const styles = StyleSheet.create({
     color: COLORS.background,
     fontWeight: "600",
   },
+
   followingButton: {
     backgroundColor: COLORS.surfaceAlt,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+
   followingText: {
     color: COLORS.text,
+  },
+
+  disabledButton: {
+    opacity: 0.6,
   },
 
   postsSection: {
