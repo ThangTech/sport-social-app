@@ -139,6 +139,14 @@ export default function HomeScreen() {
                 },
               })
             }
+            onCommentPress={() =>
+              router.push({
+                pathname: "/post/[id]",
+                params: {
+                  id: item.id,
+                },
+              })
+            }
             onAuthorPress={() =>
               router.push({
                 pathname: "/user/[id]",

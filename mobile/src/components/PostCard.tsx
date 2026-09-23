@@ -11,11 +11,13 @@ type PostCardProps = {
   post: Post;
   onPress?: () => void;
   onAuthorPress?: () => void;
+  onCommentPress?: () => void;
 };
 export default function PostCard({
   post,
   onPress,
   onAuthorPress,
+  onCommentPress,
 }: PostCardProps) {
   const [reactionCount, setReactionCount] = useState(post.likeCount);
 
@@ -121,7 +123,7 @@ export default function PostCard({
 
         <Pressable
           style={styles.actionButton}
-          onPress={() => Alert.alert("Bình luận")}
+          onPress={onCommentPress ?? onPress}
         >
           <Ionicons
             name="chatbubble-outline"
