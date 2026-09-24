@@ -1,7 +1,13 @@
 import AppText from "@/components/ui/AppText";
 import { useAuth } from "@/contexts/AuthContext";
 import { COLORS, SPACING } from "@/constants/theme";
-import { getPostById, updatePost } from "@/services/post.service";
+import {
+  getPostById,
+  updatePost,
+  deletePostMedia,
+  updatePostMedia,
+  uploadPostMedia,
+} from "@/services/post.service";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -13,9 +19,11 @@ import {
   StyleSheet,
   TextInput,
   View,
+  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import * as ImagePicker from "expo-image-picker";
+import { getFileUrl } from "@/services/api";
 export default function EditPostScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
 
@@ -34,6 +42,15 @@ export default function EditPostScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState("");
+  const [existingMedia, setExistingMedia] = useState<{
+    id: string;
+    url: string;
+  } | null>(null);
+
+  const [selectedImage, setSelectedImage] =
+    useState<ImagePicker.ImagePickerAsset | null>(null);
+
+  const [removeExistingImage, setRemoveExistingImage] = useState(false);
 
   const visibilityLabel =
     visibility === 1
@@ -73,6 +90,14 @@ export default function EditPostScreen() {
         setContent(post.content ?? "");
         setVisibility(post.visibility);
         setSportId(post.sportId ?? null);
+        const image = post.media.find((media) => media.mediaType === 1);
+
+        if (image) {
+          setExistingMedia({
+            id: image.id,
+            url: image.url,
+          });
+        }
       } catch (error) {
         setErrorMessage(
           error instanceof Error ? error.message : "Không thể tải bài viết.",
@@ -123,7 +148,19 @@ export default function EditPostScreen() {
         sportId,
         visibility,
       });
+      if (selectedImage) {
+        if (existingMedia && !removeExistingImage) {
+          await updatePostMedia(id, existingMedia.id, selectedImage);
+        } else {
+          if (existingMedia && removeExistingImage) {
+            await deletePostMedia(id, existingMedia.id);
+          }
 
+          await uploadPostMedia(id, selectedImage);
+        }
+      } else if (existingMedia && removeExistingImage) {
+        await deletePostMedia(id, existingMedia.id);
+      }
       router.replace({
         pathname: "/post/[id]",
         params: {
@@ -181,7 +218,28 @@ export default function EditPostScreen() {
       </SafeAreaView>
     );
   }
+  const handlePickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
+    if (!permission.granted) {
+      Alert.alert(
+        "Cần quyền truy cập",
+        "Bạn cần cho phép ứng dụng truy cập thư viện ảnh.",
+      );
+
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: false,
+      quality: 0.9,
+    });
+
+    if (result.canceled) return;
+
+    setSelectedImage(result.assets[0]);
+  };
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -250,22 +308,67 @@ export default function EditPostScreen() {
         placeholderTextColor={COLORS.textMuted}
         style={styles.input}
       />
+      {selectedImage ? (
+        <View style={styles.imagePreviewContainer}>
+          <Image
+            source={{
+              uri: selectedImage.uri,
+            }}
+            style={styles.imagePreview}
+            resizeMode="cover"
+          />
 
-      <View style={styles.infoBox}>
-        <Ionicons
-          name="information-circle-outline"
-          size={20}
-          color={COLORS.textMuted}
-        />
+          <Pressable
+            style={styles.removeImageButton}
+            onPress={() => setSelectedImage(null)}
+          >
+            <Ionicons name="close" size={18} color={COLORS.white} />
+          </Pressable>
 
-        <AppText
-          variant="caption"
-          color={COLORS.textMuted}
-          style={styles.infoText}
+          <View style={styles.newImageBadge}>
+            <AppText variant="caption" color={COLORS.white}>
+              Ảnh mới
+            </AppText>
+          </View>
+        </View>
+      ) : existingMedia && !removeExistingImage ? (
+        <View style={styles.imagePreviewContainer}>
+          <Image
+            source={{
+              uri: getFileUrl(existingMedia.url)!,
+            }}
+            style={styles.imagePreview}
+            resizeMode="cover"
+          />
+
+          <Pressable
+            style={styles.removeImageButton}
+            onPress={() => setRemoveExistingImage(true)}
+          >
+            <Ionicons name="trash-outline" size={17} color={COLORS.white} />
+          </Pressable>
+        </View>
+      ) : null}
+      <View style={styles.mediaActions}>
+        <Pressable
+          style={styles.mediaButton}
+          disabled={submitting}
+          onPress={handlePickImage}
         >
-          Ảnh và môn thể thao hiện tại sẽ được giữ nguyên. Phần chỉnh sửa media
-          sẽ làm ở bước tiếp theo.
-        </AppText>
+          <Ionicons name="image-outline" size={20} color={COLORS.primary} />
+
+          <AppText variant="caption" color={COLORS.primary}>
+            {existingMedia ? "Thay ảnh" : "Thêm ảnh"}
+          </AppText>
+        </Pressable>
+
+        {removeExistingImage ? (
+          <Pressable onPress={() => setRemoveExistingImage(false)}>
+            <AppText variant="caption" color={COLORS.textMuted}>
+              Hoàn tác xóa ảnh
+            </AppText>
+          </Pressable>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -397,22 +500,68 @@ const styles = StyleSheet.create({
 
     textAlignVertical: "top",
   },
+  imagePreviewContainer: {
+    height: 140,
 
-  infoBox: {
-    margin: SPACING.lg,
-    padding: SPACING.md,
+    marginHorizontal: SPACING.lg,
+    marginTop: SPACING.sm,
 
-    borderRadius: 12,
+    borderRadius: 14,
+
+    overflow: "hidden",
 
     backgroundColor: COLORS.surfaceAlt,
-
-    flexDirection: "row",
-    alignItems: "flex-start",
-
-    gap: SPACING.sm,
   },
 
-  infoText: {
-    flex: 1,
+  imagePreview: {
+    width: "100%",
+    height: "100%",
+  },
+
+  removeImageButton: {
+    position: "absolute",
+
+    top: 8,
+    right: 8,
+
+    width: 30,
+    height: 30,
+
+    borderRadius: 15,
+
+    backgroundColor: "rgba(0,0,0,0.65)",
+
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  newImageBadge: {
+    position: "absolute",
+
+    left: 8,
+    bottom: 8,
+
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+
+    borderRadius: 8,
+
+    backgroundColor: "rgba(0,0,0,0.65)",
+  },
+
+  mediaActions: {
+    marginHorizontal: SPACING.lg,
+    marginTop: SPACING.md,
+
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+
+  mediaButton: {
+    flexDirection: "row",
+    alignItems: "center",
+
+    gap: SPACING.xs,
   },
 });

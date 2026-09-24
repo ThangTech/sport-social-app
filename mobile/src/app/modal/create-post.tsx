@@ -2,7 +2,7 @@ import AppText from "@/components/ui/AppText";
 import { useAuth } from "@/contexts/AuthContext";
 import { COLORS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
-import { createPost } from "@/services/post.service";
+import { createPost, uploadPostMedia } from "@/services/post.service";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
@@ -16,7 +16,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-
+import * as ImagePicker from "expo-image-picker";
 type Props = {
   onClose: () => void;
   onCreated?: () => void;
@@ -29,7 +29,8 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
   const [content, setContent] = useState("");
   const [visibility, setVisibility] = useState(1);
   const [submitting, setSubmitting] = useState(false);
-
+  const [selectedImage, setSelectedImage] =
+    useState<ImagePicker.ImagePickerAsset | null>(null);
   const visibilityLabel =
     visibility === 1
       ? "Công khai"
@@ -37,7 +38,10 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
         ? "Người theo dõi"
         : "Chỉ mình tôi";
 
-  const visibilityIcon: "earth-outline"| "people-outline"| "lock-closed-outline" =
+  const visibilityIcon:
+    | "earth-outline"
+    | "people-outline"
+    | "lock-closed-outline" =
     visibility === 1
       ? "earth-outline"
       : visibility === 2
@@ -72,20 +76,39 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
 
     if (!value || submitting) return;
 
+    let postCreated = false;
+
     try {
       setSubmitting(true);
 
-      await createPost({
+      const post = await createPost({
         content: value,
         sportId: null,
         visibility,
       });
 
+      if (selectedImage) {
+        await uploadPostMedia(post.id, selectedImage);
+      }
+
       setContent("");
+      setSelectedImage(null);
 
       onClose();
       onCreated?.();
     } catch (error) {
+      if (postCreated) {
+        Alert.alert(
+          "Ảnh chưa được tải lên",
+          "Bài viết đã được tạo nhưng ảnh tải lên không thành công. Bạn có thể thử lại sau.",
+        );
+
+        onClose();
+        onCreated?.();
+
+        return;
+      }
+
       Alert.alert(
         "Không thể đăng bài",
         error instanceof Error ? error.message : "Vui lòng thử lại.",
@@ -94,7 +117,30 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
       setSubmitting(false);
     }
   };
+  const handlePickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
+    if (!permission.granted) {
+      Alert.alert(
+        "Cần quyền truy cập",
+        "Bạn cần cho phép ứng dụng truy cập thư viện ảnh.",
+      );
+
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsMultipleSelection: false,
+      quality: 0.9,
+    });
+
+    if (result.canceled) {
+      return;
+    }
+
+    setSelectedImage(result.assets[0]);
+  };
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -170,7 +216,25 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
         editable={!submitting}
         style={styles.input}
       />
+      {selectedImage ? (
+        <View style={styles.imagePreviewContainer}>
+          <Image
+            source={{
+              uri: selectedImage.uri,
+            }}
+            style={styles.imagePreview}
+            resizeMode="cover"
+          />
 
+          <Pressable
+            style={styles.removeImageButton}
+            disabled={submitting}
+            onPress={() => setSelectedImage(null)}
+          >
+            <Ionicons name="close" size={20} color={COLORS.white} />
+          </Pressable>
+        </View>
+      ) : null}
       <View style={styles.actions}>
         <View>
           <AppText variant="subtitle">Thêm vào bài viết</AppText>
@@ -187,14 +251,14 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
         <View style={styles.actionIcons}>
           <Pressable
             style={styles.iconButton}
-            onPress={() =>
-              Alert.alert(
-                "Ảnh",
-                "Chức năng chọn và tải ảnh sẽ được làm ở bước tiếp theo.",
-              )
-            }
+            disabled={submitting}
+            onPress={handlePickImage}
           >
-            <Ionicons name="image-outline" size={26} color={COLORS.primary} />
+            <Ionicons
+              name={selectedImage ? "image" : "image-outline"}
+              size={26}
+              color={COLORS.primary}
+            />
           </Pressable>
 
           <Pressable
@@ -356,5 +420,39 @@ const styles = StyleSheet.create({
 
     borderRadius: 21,
     backgroundColor: COLORS.surfaceAlt,
+  },
+  imagePreviewContainer: {
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+
+    height: 140,
+
+    borderRadius: 16,
+
+    overflow: "hidden",
+
+    backgroundColor: COLORS.surfaceAlt,
+  },
+
+  imagePreview: {
+    width: "100%",
+    height: "100%",
+  },
+
+  removeImageButton: {
+    position: "absolute",
+
+    top: 10,
+    right: 10,
+
+    width: 32,
+    height: 32,
+
+    borderRadius: 16,
+
+    backgroundColor: "rgba(0,0,0,0.65)",
+
+    alignItems: "center",
+    justifyContent: "center",
   },
 });

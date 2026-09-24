@@ -4,8 +4,9 @@ import type {
   ReactionResponse,
   CreatePostRequest,
   UpdatePostRequest,
+  PostMediaUploadResponse,
 } from "@/types/post";
-
+import type { ImagePickerAsset } from "expo-image-picker";
 export const getPostById = async (id: string) => {
   return await api<FeedPostDto>(`/posts/${id}`, {
     method: "GET",
@@ -64,6 +65,60 @@ export const updatePost = async (id: string, request: UpdatePostRequest) => {
 
 export const deletePost = async (id: string) => {
   return await api<void>(`/posts/${id}`, {
+    method: "DELETE",
+    auth: true,
+  });
+};
+export const uploadPostMedia = async (
+  postId: string,
+  asset: ImagePickerAsset,
+) => {
+  const formData = new FormData();
+
+  const extension = asset.mimeType?.split("/")[1] ?? "jpg";
+
+  formData.append("file", {
+    uri: asset.uri,
+    name: asset.fileName ?? `post-${Date.now()}.${extension}`,
+    type: asset.mimeType ?? "image/jpeg",
+  } as any);
+
+  return await api<PostMediaUploadResponse>(`/posts/${postId}/media`, {
+    method: "POST",
+    auth: true,
+    body: formData,
+  });
+};
+const createMediaFormData = (asset: ImagePickerAsset) => {
+  const formData = new FormData();
+
+  const extension = asset.mimeType?.split("/")[1] ?? "jpg";
+
+  formData.append("file", {
+    uri: asset.uri,
+    name: asset.fileName ?? `post-${Date.now()}.${extension}`,
+    type: asset.mimeType ?? "image/jpeg",
+  } as any);
+
+  return formData;
+};
+export const updatePostMedia = async (
+  postId: string,
+  mediaId: string,
+  asset: ImagePickerAsset,
+) => {
+  return await api<PostMediaUploadResponse>(
+    `/posts/${postId}/media/${mediaId}`,
+    {
+      method: "PUT",
+      auth: true,
+      body: createMediaFormData(asset),
+    },
+  );
+};
+
+export const deletePostMedia = async (postId: string, mediaId: string) => {
+  return await api<void>(`/posts/${postId}/media/${mediaId}`, {
     method: "DELETE",
     auth: true,
   });

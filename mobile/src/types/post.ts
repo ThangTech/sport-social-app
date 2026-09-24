@@ -35,3 +35,9 @@ export type UpdatePostRequest = {
   sportId?: string | null;
   visibility: number;
 };
+export type PostMediaUploadResponse = {
+  id: string;
+  url: string;
+  mediaType: number;
+  sortOrder: number;
+};
