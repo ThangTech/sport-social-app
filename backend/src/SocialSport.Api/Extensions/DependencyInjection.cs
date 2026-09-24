@@ -100,6 +100,8 @@ public static class DependencyInjection
         services.AddScoped<IGroupService, GroupService>();
         services.AddScoped<IGroupMemberRepository, GroupMemberRepository>();
         services.AddScoped<IPostAccessService, PostAccessService>();
+        services.AddScoped<ISportRepository, SportRepository>();
+        services.AddScoped<ISportService, SportService>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
         services.AddAuthorization();
         return services;

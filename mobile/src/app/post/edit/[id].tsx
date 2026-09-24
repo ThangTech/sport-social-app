@@ -24,6 +24,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { getFileUrl } from "@/services/api";
+import { getSports } from "@/services/sport.service";
+import type { SportDto } from "@/types/sport";
 export default function EditPostScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
 
@@ -51,6 +53,9 @@ export default function EditPostScreen() {
     useState<ImagePicker.ImagePickerAsset | null>(null);
 
   const [removeExistingImage, setRemoveExistingImage] = useState(false);
+  const [sports, setSports] = useState<SportDto[]>([]);
+
+  const [sportName, setSportName] = useState<string | null>(null);
 
   const visibilityLabel =
     visibility === 1
@@ -90,6 +95,7 @@ export default function EditPostScreen() {
         setContent(post.content ?? "");
         setVisibility(post.visibility);
         setSportId(post.sportId ?? null);
+        setSportName(post.sportName ?? null);
         const image = post.media.find((media) => media.mediaType === 1);
 
         if (image) {
@@ -109,7 +115,17 @@ export default function EditPostScreen() {
 
     loadPost();
   }, [id, user?.id]);
+  useEffect(() => {
+    const loadSports = async () => {
+      try {
+        setSports(await getSports());
+      } catch (error) {
+        console.log("Không thể tải môn thể thao:", error);
+      }
+    };
 
+    loadSports();
+  }, []);
   const handleVisibility = () => {
     showActionSheetWithOptions(
       {
@@ -171,7 +187,39 @@ export default function EditPostScreen() {
       setSubmitting(false);
     }
   };
+  const handleSelectSport = () => {
+    const options = [
+      "Không chọn môn thể thao",
+      ...sports.map((sport) => sport.name),
+      "Hủy",
+    ];
 
+    const cancelIndex = options.length - 1;
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex: cancelIndex,
+        title: "Chọn môn thể thao",
+      },
+      (index) => {
+        if (index === undefined || index === cancelIndex) {
+          return;
+        }
+
+        if (index === 0) {
+          setSportId(null);
+          setSportName(null);
+          return;
+        }
+
+        const sport = sports[index - 1];
+
+        setSportId(sport.id);
+        setSportName(sport.name);
+      },
+    );
+  };
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -288,6 +336,28 @@ export default function EditPostScreen() {
             <AppText style={styles.visibilityText}>{visibilityLabel}</AppText>
 
             <Ionicons name="chevron-down" size={13} color={COLORS.textMuted} />
+          </Pressable>
+
+          {/* Chọn môn thể thao */}
+          <Pressable
+            style={styles.sportSelector}
+            disabled={submitting || sports.length === 0}
+            onPress={handleSelectSport}
+          >
+            <Ionicons
+              name="football-outline"
+              size={16}
+              color={sportId ? COLORS.primary : COLORS.textMuted}
+            />
+
+            <AppText
+              variant="caption"
+              color={sportId ? COLORS.primary : COLORS.textMuted}
+            >
+              {sportName ?? "Chọn môn thể thao"}
+            </AppText>
+
+            <Ionicons name="chevron-down" size={14} color={COLORS.textMuted} />
           </Pressable>
         </View>
       </View>
@@ -476,25 +546,6 @@ const styles = StyleSheet.create({
 
     gap: 4,
   },
-
-  visibilityText: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
-
-  input: {
-    minHeight: 220,
-
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-
-    fontSize: 18,
-    lineHeight: 25,
-
-    color: COLORS.text,
-
-    textAlignVertical: "top",
-  },
   imagePreviewContainer: {
     height: 140,
 
@@ -558,5 +609,41 @@ const styles = StyleSheet.create({
     alignItems: "center",
 
     gap: SPACING.xs,
+  },
+  visibilityText: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+  },
+
+  sportSelector: {
+    alignSelf: "flex-start",
+
+    marginTop: 8,
+
+    paddingHorizontal: 9,
+    paddingVertical: 6,
+
+    borderRadius: 8,
+
+    backgroundColor: COLORS.surfaceAlt,
+
+    flexDirection: "row",
+    alignItems: "center",
+
+    gap: 5,
+  },
+
+  input: {
+    minHeight: 220,
+
+    paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.md,
+
+    fontSize: 18,
+    lineHeight: 25,
+
+    color: COLORS.text,
+
+    textAlignVertical: "top",
   },
 });

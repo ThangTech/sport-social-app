@@ -5,7 +5,7 @@ import { getFileUrl } from "@/services/api";
 import { createPost, uploadPostMedia } from "@/services/post.service";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -17,6 +17,8 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
+import { getSports } from "@/services/sport.service";
+import type { SportDto } from "@/types/sport";
 type Props = {
   onClose: () => void;
   onCreated?: () => void;
@@ -31,6 +33,8 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [selectedImage, setSelectedImage] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [sports, setSports] = useState<SportDto[]>([]);
+  const [selectedSport, setSelectedSport] = useState<SportDto | null>(null);
   const visibilityLabel =
     visibility === 1
       ? "Công khai"
@@ -47,7 +51,18 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
       : visibility === 2
         ? "people-outline"
         : "lock-closed-outline";
+  useEffect(() => {
+    const loadSports = async () => {
+      try {
+        const result = await getSports();
+        setSports(result);
+      } catch (error) {
+        console.log("Không thể tải môn thể thao:", error);
+      }
+    };
 
+    loadSports();
+  }, []);
   const handleVisibility = () => {
     showActionSheetWithOptions(
       {
@@ -83,7 +98,7 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
 
       const post = await createPost({
         content: value,
-        sportId: null,
+        sportId: selectedSport?.id ?? null,
         visibility,
       });
 
@@ -93,6 +108,7 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
 
       setContent("");
       setSelectedImage(null);
+      setSelectedSport(null);
 
       onClose();
       onCreated?.();
@@ -140,6 +156,33 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
     }
 
     setSelectedImage(result.assets[0]);
+  };
+  const handleSelectSport = () => {
+    const sportNames = sports.map((sport) => sport.name);
+
+    const options = ["Không chọn môn thể thao", ...sportNames, "Hủy"];
+
+    const cancelIndex = options.length - 1;
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex: cancelIndex,
+        title: "Chọn môn thể thao",
+      },
+      (index) => {
+        if (index === undefined || index === cancelIndex) {
+          return;
+        }
+
+        if (index === 0) {
+          setSelectedSport(null);
+          return;
+        }
+
+        setSelectedSport(sports[index - 1]);
+      },
+    );
   };
   return (
     <SafeAreaView style={styles.container}>
@@ -237,6 +280,27 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
       ) : null}
       <View style={styles.actions}>
         <View>
+          {selectedSport ? (
+            <View style={styles.selectedSport}>
+              <Ionicons
+                name="football-outline"
+                size={16}
+                color={COLORS.primary}
+              />
+
+              <AppText variant="caption" color={COLORS.primary}>
+                {selectedSport.name}
+              </AppText>
+
+              <Pressable
+                hitSlop={10}
+                disabled={submitting}
+                onPress={() => setSelectedSport(null)}
+              >
+                <Ionicons name="close" size={17} color={COLORS.textMuted} />
+              </Pressable>
+            </View>
+          ) : null}
           <AppText variant="subtitle">Thêm vào bài viết</AppText>
 
           <AppText
@@ -263,14 +327,14 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
 
           <Pressable
             style={styles.iconButton}
-            onPress={() =>
-              Alert.alert(
-                "Môn thể thao",
-                "Chức năng chọn môn thể thao sẽ được nối sau.",
-              )
-            }
+            disabled={submitting || sports.length === 0}
+            onPress={handleSelectSport}
           >
-            <Ionicons name="football-outline" size={26} color="#3b82f6" />
+            <Ionicons
+              name={selectedSport ? "football" : "football-outline"}
+              size={26}
+              color="#3b82f6"
+            />
           </Pressable>
         </View>
       </View>
@@ -454,5 +518,23 @@ const styles = StyleSheet.create({
 
     alignItems: "center",
     justifyContent: "center",
+  },
+  selectedSport: {
+    alignSelf: "flex-start",
+
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.sm,
+
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+
+    flexDirection: "row",
+    alignItems: "center",
+
+    gap: 6,
+
+    borderRadius: 16,
+
+    backgroundColor: COLORS.primarySoft,
   },
 });
