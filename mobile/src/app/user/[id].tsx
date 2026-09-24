@@ -100,6 +100,7 @@ export default function UserProfileScreen() {
 
               commentCount: item.commentCount,
               currentReaction: item.currentReaction,
+              isSaved: item.isSaved,
             };
           }),
         );

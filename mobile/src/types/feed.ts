@@ -25,6 +25,7 @@ export type FeedPostDto = {
   likeCount: number;
   commentCount: number;
   currentReaction?: number | null;
+  isSaved: boolean;
   createdAt: string;
   updatedAt?: string | null;
 

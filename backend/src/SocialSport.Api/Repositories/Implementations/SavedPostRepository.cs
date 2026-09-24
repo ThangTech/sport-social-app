@@ -53,5 +53,16 @@ namespace SocialSport.Api.Repositories.Implementations
         {
             await _context.SaveChangesAsync();
         }
+
+        public async Task<HashSet<Guid>> GetSavedPostIdsAsync(Guid userId, IEnumerable<Guid> postIds)
+        {
+            var ids = postIds.ToList();
+
+            return (await _context.SavedPosts
+                .Where(x => x.UserId == userId && ids.Contains(x.PostId))
+                .Select(x => x.PostId)
+                .ToListAsync())
+                .ToHashSet();
+        }
     }
 }

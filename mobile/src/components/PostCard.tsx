@@ -5,7 +5,12 @@ import Avatar from "./Avatar";
 import SportBadge from "./SportBadge";
 import { Post } from "../types/post";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { reactPost, removePostReaction } from "@/services/post.service";
+import {
+  reactPost,
+  removePostReaction,
+  savePost,
+  unsavePost,
+} from "@/services/post.service";
 import { useEffect, useState } from "react";
 type PostCardProps = {
   post: Post;
@@ -26,10 +31,13 @@ export default function PostCard({
   );
 
   const [reactionLoading, setReactionLoading] = useState(false);
+  const [saved, setSaved] = useState(post.isSaved);
+  const [saveLoading, setSaveLoading] = useState(false);
   useEffect(() => {
     setReactionCount(post.likeCount);
     setCurrentReaction(post.currentReaction ?? null);
-  }, [post.id, post.likeCount, post.currentReaction]);
+    setSaved(post.isSaved);
+  }, [post.id, post.likeCount, post.currentReaction, post.isSaved]);
   const handleReaction = async () => {
     if (reactionLoading) return;
 
@@ -51,6 +59,28 @@ export default function PostCard({
       );
     } finally {
       setReactionLoading(false);
+    }
+  };
+  const handleSave = async () => {
+    if (saveLoading) return;
+
+    try {
+      setSaveLoading(true);
+
+      if (saved) {
+        await unsavePost(post.id);
+        setSaved(false);
+      } else {
+        await savePost(post.id);
+        setSaved(true);
+      }
+    } catch (error) {
+      Alert.alert(
+        "Không thể cập nhật",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    } finally {
+      setSaveLoading(false);
     }
   };
   return (
@@ -148,13 +178,14 @@ export default function PostCard({
         </Pressable>
 
         <Pressable
-          style={styles.saveButton}
-          onPress={() => Alert.alert("Lưu bài viết")}
+          style={[styles.saveButton, saveLoading && styles.disabledAction]}
+          disabled={saveLoading}
+          onPress={handleSave}
         >
           <Ionicons
-            name="bookmark-outline"
+            name={saved ? "bookmark" : "bookmark-outline"}
             size={23}
-            color={COLORS.textMuted}
+            color={saved ? COLORS.primary : COLORS.textMuted}
           />
         </Pressable>
       </View>

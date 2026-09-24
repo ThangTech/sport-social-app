@@ -9,5 +9,6 @@ namespace SocialSport.Api.Repositories.Interfaces
         Task AddAsync(SavedPost savedPost);
         void Remove(SavedPost savedPost);
         Task SaveChangesAsync();
+        Task<HashSet<Guid>> GetSavedPostIdsAsync(Guid userId, IEnumerable<Guid> postIds);
     }
 }

@@ -23,6 +23,7 @@ namespace SocialSport.Api.DTOs.Post
         public int LikeCount { get; set; }
         public int CommentCount { get; set; }
         public ReactionType? CurrentReaction { get; set; }
+        public bool IsSaved { get; set; }
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
 

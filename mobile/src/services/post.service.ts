@@ -24,3 +24,16 @@ export const removePostReaction = async (id: string) => {
     auth: true,
   });
 };
+export const savePost = async (id: string) => {
+  return await api<void>(`/posts/${id}/save`, {
+    method: "POST",
+    auth: true,
+  });
+};
+
+export const unsavePost = async (id: string) => {
+  return await api<void>(`/posts/${id}/save`, {
+    method: "DELETE",
+    auth: true,
+  });
+};

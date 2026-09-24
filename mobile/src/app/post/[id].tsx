@@ -97,6 +97,7 @@ export default function PostDetailScreen() {
           likeCount: item.likeCount,
           commentCount: item.commentCount,
           currentReaction: item.currentReaction,
+          isSaved: item.isSaved,
         });
       } catch (error) {
         setErrorMessage(

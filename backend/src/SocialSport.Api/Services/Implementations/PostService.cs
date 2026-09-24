@@ -127,6 +127,7 @@ namespace SocialSport.Api.Services.Implementations
                 Visibility = createdPost.Visibility,
                 LikeCount = createdPost.Reactions.Count,
                 CommentCount = createdPost.Comments.Count(x => x.Status == CommentStatus.Published),
+                IsSaved = false,
                 CurrentReaction = null,
                 CreatedAt = createdPost.CreatedAt,
                 UpdatedAt = createdPost.UpdatedAt,
@@ -150,7 +151,7 @@ namespace SocialSport.Api.Services.Implementations
             await _postAccessService.EnsureCanViewAsync(currentUserId, post);
 
             var user = await _userManager.FindByIdAsync(post.AuthorId.ToString());
-
+            var isSaved = currentUserId.HasValue && await _savedPostRepository.GetAsync(currentUserId.Value, postId) is not null;
             return new PostDto
             {
                 Id = post.Id,
@@ -166,6 +167,7 @@ namespace SocialSport.Api.Services.Implementations
                 LikeCount = post.Reactions.Count,
                 CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
                 CurrentReaction = currentUserId.HasValue ? post.Reactions.FirstOrDefault(x => x.UserId == currentUserId.Value)?.Type : null,
+                IsSaved = isSaved,
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -195,6 +197,7 @@ namespace SocialSport.Api.Services.Implementations
             }
 
             posts = visiblePosts;
+            var savedPostIds = currentUserId.HasValue? await _savedPostRepository.GetSavedPostIdsAsync(currentUserId.Value,posts.Select(x => x.Id)): [];
 
             return posts.Select(post => new PostDto
             {
@@ -211,6 +214,7 @@ namespace SocialSport.Api.Services.Implementations
                 LikeCount = post.Reactions.Count,
                 CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
                 CurrentReaction = currentUserId.HasValue ? post.Reactions.FirstOrDefault(x => x.UserId == currentUserId.Value)?.Type: null,
+                IsSaved = savedPostIds.Contains(post.Id),
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -262,6 +266,7 @@ namespace SocialSport.Api.Services.Implementations
                 LikeCount = post.Reactions.Count,
                 CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
                 CurrentReaction = post.Reactions.FirstOrDefault(x => x.UserId == userId)?.Type,
+                IsSaved = await _savedPostRepository.GetAsync(userId, postId) is not null,
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -315,6 +320,8 @@ namespace SocialSport.Api.Services.Implementations
             }
 
             var posts = await _postRepository.GetFeedAsync(userId, limit, cursorDate);
+            var savedPostIds = await _savedPostRepository.GetSavedPostIdsAsync(userId,posts.Select(x => x.Id)
+);
             var hasMore = posts.Count > limit;
 
             if (hasMore)
@@ -344,6 +351,7 @@ namespace SocialSport.Api.Services.Implementations
                     LikeCount = post.Reactions.Count,
                     CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
                     CurrentReaction = post.Reactions.FirstOrDefault(x => x.UserId == userId)?.Type,
+                    IsSaved = savedPostIds.Contains(post.Id),
                     CreatedAt = post.CreatedAt,
                     UpdatedAt = post.UpdatedAt,
                     Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -445,6 +453,7 @@ namespace SocialSport.Api.Services.Implementations
                     LikeCount = post.Reactions.Count,
                     CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
                     CurrentReaction = post.Reactions.FirstOrDefault(x => x.UserId == userId)?.Type,
+                    IsSaved = true,
                     CreatedAt = post.CreatedAt,
                     UpdatedAt = post.UpdatedAt,
                     Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
