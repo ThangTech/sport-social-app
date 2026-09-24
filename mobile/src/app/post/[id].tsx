@@ -248,6 +248,14 @@ export default function PostDetailScreen() {
                 })
               }
               onCommentPress={() => commentInputRef.current?.focus()}
+              onDeleted={() => {
+                router.replace({
+                  pathname: "/(tabs)",
+                  params: {
+                    refresh: Date.now().toString(),
+                  },
+                });
+              }}
             />
 
             <View style={styles.commentsHeader}>

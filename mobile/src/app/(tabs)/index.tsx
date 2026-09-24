@@ -27,8 +27,11 @@ export default function HomeScreen() {
   const currentUserIdRef = useRef<string | undefined>(currentUser?.id);
   const { refresh } = useLocalSearchParams<{ refresh?: string }>();
   useEffect(() => {
+    currentUserIdRef.current = currentUser?.id;
+
     if (!currentUser?.id) {
       setPosts([]);
+      setErrorMessage("");
       setLoading(false);
       return;
     }
@@ -102,21 +105,6 @@ export default function HomeScreen() {
       }
     }
   };
-
-  useEffect(() => {
-    if (!currentUser?.id) {
-      setPosts([]);
-      setErrorMessage("");
-      setLoading(false);
-      return;
-    }
-
-    setPosts([]);
-    setErrorMessage("");
-    setLoading(true);
-
-    loadFeed(currentUser.id);
-  }, [currentUser?.id]);
 
   const handleRefresh = async () => {
     if (!currentUser?.id) return;
