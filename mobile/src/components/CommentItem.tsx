@@ -4,21 +4,113 @@ import { COLORS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import type { CommentDto } from "@/types/comment";
 import { formatRelativeTime } from "@/utils/date";
-import { Pressable, StyleSheet, View } from "react-native";
-
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useState } from "react";
+import { Alert, Pressable, StyleSheet, TextInput, View } from "react-native";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 type CommentItemProps = {
   comment: CommentDto;
   depth?: number;
+  currentUserId?: string;
+
   onReply: (comment: CommentDto) => void;
+
+  onUpdate: (commentId: string, content: string) => Promise<void>;
+
+  onDelete: (commentId: string) => Promise<void>;
+
   onAuthorPress: (userId: string) => void;
 };
 
 export default function CommentItem({
   comment,
   depth = 0,
+  currentUserId,
   onReply,
+  onUpdate,
+  onDelete,
   onAuthorPress,
 }: CommentItemProps) {
+  const [editing, setEditing] = useState(false);
+
+  const [editText, setEditText] = useState(comment.content);
+
+  const [loading, setLoading] = useState(false);
+  const { showActionSheetWithOptions } = useActionSheet();
+  const isOwner = currentUserId === comment.authorId;
+  const handleSave = async () => {
+    const content = editText.trim();
+
+    if (!content || loading) return;
+
+    if (content === comment.content) {
+      setEditing(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await onUpdate(comment.id, content);
+
+      setEditing(false);
+    } catch (error) {
+      Alert.alert(
+        "Không thể chỉnh sửa",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+  const handleDelete = () => {
+    Alert.alert("Xóa bình luận", "Bạn có chắc muốn xóa bình luận này?", [
+      {
+        text: "Hủy",
+        style: "cancel",
+      },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            setLoading(true);
+
+            await onDelete(comment.id);
+          } catch (error) {
+            Alert.alert(
+              "Không thể xóa",
+              error instanceof Error ? error.message : "Vui lòng thử lại.",
+            );
+          } finally {
+            setLoading(false);
+          }
+        },
+      },
+    ]);
+  };
+  const handleMenu = () => {
+    const options = ["Chỉnh sửa", "Xóa", "Hủy"];
+
+    showActionSheetWithOptions(
+      {
+        options,
+        cancelButtonIndex: 2,
+        destructiveButtonIndex: 1,
+        title: "Tùy chọn bình luận",
+      },
+      (selectedIndex) => {
+        if (selectedIndex === 0) {
+          setEditText(comment.content);
+          setEditing(true);
+        }
+
+        if (selectedIndex === 1) {
+          handleDelete();
+        }
+      },
+    );
+  };
   return (
     <View
       style={[
@@ -42,15 +134,67 @@ export default function CommentItem({
 
       <View style={styles.body}>
         <View style={styles.bubble}>
-          <Pressable onPress={() => onAuthorPress(comment.authorId)}>
-            <AppText variant="label">{comment.authorName}</AppText>
-          </Pressable>
+          <View style={styles.commentHeader}>
+            <Pressable onPress={() => onAuthorPress(comment.authorId)}>
+              <AppText variant="label">{comment.authorName}</AppText>
+            </Pressable>
 
-          <AppText color={comment.isDeleted ? COLORS.textMuted : COLORS.text}>
-            {comment.content}
-          </AppText>
+            {isOwner && !comment.isDeleted ? (
+              <Pressable hitSlop={10} disabled={loading} onPress={handleMenu}>
+                <Ionicons
+                  name="ellipsis-horizontal"
+                  size={18}
+                  color={COLORS.textMuted}
+                />
+              </Pressable>
+            ) : null}
+          </View>
+
+          {editing ? (
+            <View style={styles.editBox}>
+              <TextInput
+                value={editText}
+                onChangeText={setEditText}
+                multiline
+                maxLength={3000}
+                autoFocus
+                style={styles.editInput}
+                placeholderTextColor={COLORS.textMuted}
+              />
+
+              <View style={styles.editActions}>
+                <Pressable
+                  disabled={loading}
+                  onPress={() => {
+                    setEditText(comment.content);
+                    setEditing(false);
+                  }}
+                >
+                  <AppText variant="caption" color={COLORS.textMuted}>
+                    Hủy
+                  </AppText>
+                </Pressable>
+
+                <Pressable
+                  disabled={loading || !editText.trim()}
+                  onPress={handleSave}
+                >
+                  <AppText
+                    variant="caption"
+                    color={COLORS.primary}
+                    style={styles.saveText}
+                  >
+                    {loading ? "Đang lưu..." : "Lưu"}
+                  </AppText>
+                </Pressable>
+              </View>
+            </View>
+          ) : (
+            <AppText color={comment.isDeleted ? COLORS.textMuted : COLORS.text}>
+              {comment.content}
+            </AppText>
+          )}
         </View>
-
         <View style={styles.actions}>
           <AppText variant="caption" color={COLORS.textMuted}>
             {formatRelativeTime(comment.createdAt)}
@@ -67,6 +211,12 @@ export default function CommentItem({
               </AppText>
             </Pressable>
           ) : null}
+
+          {comment.updatedAt && !comment.isDeleted ? (
+            <AppText variant="caption" color={COLORS.textMuted}>
+              Đã chỉnh sửa
+            </AppText>
+          ) : null}
         </View>
 
         {comment.replies.map((reply) => (
@@ -74,7 +224,10 @@ export default function CommentItem({
             key={reply.id}
             comment={reply}
             depth={depth + 1}
+            currentUserId={currentUserId}
             onReply={onReply}
+            onUpdate={onUpdate}
+            onDelete={onDelete}
             onAuthorPress={onAuthorPress}
           />
         ))}
@@ -89,6 +242,7 @@ const styles = StyleSheet.create({
     alignItems: "flex-start",
     gap: SPACING.sm,
     marginBottom: SPACING.md,
+    marginTop: SPACING.sm,
   },
 
   body: {
@@ -115,6 +269,45 @@ const styles = StyleSheet.create({
   },
 
   replyText: {
+    fontWeight: "600",
+  },
+  commentHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.sm,
+  },
+
+  editBox: {
+    marginTop: SPACING.xs,
+  },
+
+  editInput: {
+    minHeight: 40,
+    maxHeight: 120,
+
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.sm,
+
+    borderRadius: 10,
+
+    backgroundColor: COLORS.surface,
+
+    color: COLORS.text,
+    fontSize: 15,
+  },
+
+  editActions: {
+    marginTop: SPACING.sm,
+
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+
+    gap: SPACING.lg,
+  },
+
+  saveText: {
     fontWeight: "600",
   },
 });

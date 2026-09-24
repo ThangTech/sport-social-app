@@ -18,3 +18,17 @@ export const createComment = async (
     body: JSON.stringify(request),
   });
 };
+export const updateComment = async (commentId: string, content: string) => {
+  return await api<CommentDto>(`/comments/${commentId}`, {
+    method: "PATCH",
+    auth: true,
+    body: JSON.stringify({ content }),
+  });
+};
+
+export const deleteComment = async (commentId: string) => {
+  return await api<void>(`/comments/${commentId}`, {
+    method: "DELETE",
+    auth: true,
+  });
+};

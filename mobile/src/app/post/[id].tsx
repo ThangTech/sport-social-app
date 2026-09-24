@@ -20,11 +20,19 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import CommentItem from "@/components/CommentItem";
-import { createComment, getComments } from "@/services/comment.service";
+import {
+  createComment,
+  getComments,
+  deleteComment,
+  updateComment,
+} from "@/services/comment.service";
 import type { CommentDto } from "@/types/comment";
 import { useRef } from "react";
+import { useAuth } from "@/contexts/AuthContext";
 export default function PostDetailScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
+
+  const { user: currentUser } = useAuth();
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -163,6 +171,30 @@ export default function PostDetailScreen() {
       setCommentLoading(false);
     }
   };
+  const handleUpdateComment = async (commentId: string, content: string) => {
+    if (!id) return;
+
+    await updateComment(commentId, content);
+
+    await loadComments(id);
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    if (!id) return;
+
+    await deleteComment(commentId);
+
+    await loadComments(id);
+
+    setPost((current) =>
+      current
+        ? {
+            ...current,
+            commentCount: Math.max(0, current.commentCount - 1),
+          }
+        : current,
+    );
+  };
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -255,7 +287,10 @@ export default function PostDetailScreen() {
                   <CommentItem
                     key={comment.id}
                     comment={comment}
+                    currentUserId={currentUser?.id}
                     onReply={handleReply}
+                    onUpdate={handleUpdateComment}
+                    onDelete={handleDeleteComment}
                     onAuthorPress={(userId) =>
                       router.push({
                         pathname: "/user/[id]",

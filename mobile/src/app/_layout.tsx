@@ -11,6 +11,7 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
+import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -89,8 +90,12 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <StatusBar style="auto" />
-      <RootNavigator />
+      <ActionSheetProvider>
+        <View style={{ flex: 1 }}>
+          <StatusBar style="auto" />
+          <RootNavigator />
+        </View>
+      </ActionSheetProvider>
     </AuthProvider>
   );
 }
