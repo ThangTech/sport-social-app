@@ -7,7 +7,8 @@ import type { Post } from "@/types/post";
 import { formatRelativeTime } from "@/utils/date";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -81,9 +82,11 @@ export default function SavedPostsScreen() {
     }
   };
 
-  useEffect(() => {
-    loadSavedPosts();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      loadSavedPosts();
+    }, []),
+  );
 
   const handleRefresh = async () => {
     setRefreshing(true);

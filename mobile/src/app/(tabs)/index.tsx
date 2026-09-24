@@ -7,7 +7,7 @@ import { getFileUrl } from "@/services/api";
 import { getFeed } from "@/services/feed.service";
 import type { Post } from "@/types/post";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { formatRelativeTime } from "@/utils/date";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFocusEffect } from "@react-navigation/native";
 export default function HomeScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,22 +27,7 @@ export default function HomeScreen() {
   const { user: currentUser } = useAuth();
   const currentUserIdRef = useRef<string | undefined>(currentUser?.id);
   const { refresh } = useLocalSearchParams<{ refresh?: string }>();
-  useEffect(() => {
-    currentUserIdRef.current = currentUser?.id;
 
-    if (!currentUser?.id) {
-      setPosts([]);
-      setErrorMessage("");
-      setLoading(false);
-      return;
-    }
-
-    setPosts([]);
-    setErrorMessage("");
-    setLoading(true);
-
-    loadFeed(currentUser.id);
-  }, [currentUser?.id, refresh]);
   const loadFeed = async (userId: string) => {
     try {
       setErrorMessage("");
@@ -105,7 +91,27 @@ export default function HomeScreen() {
       }
     }
   };
+  useFocusEffect(
+    useCallback(() => {
+      const previousUserId = currentUserIdRef.current;
 
+      currentUserIdRef.current = currentUser?.id;
+
+      if (!currentUser?.id) {
+        setPosts([]);
+        setErrorMessage("");
+        setLoading(false);
+        return;
+      }
+
+      if (previousUserId !== currentUser.id) {
+        setPosts([]);
+        setLoading(true);
+      }
+
+      loadFeed(currentUser.id);
+    }, [currentUser?.id, refresh]),
+  );
   const handleRefresh = async () => {
     if (!currentUser?.id) return;
 

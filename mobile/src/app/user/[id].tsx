@@ -14,7 +14,8 @@ import type { UserProfileDto } from "@/types/user";
 import { formatRelativeTime } from "@/utils/date";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -43,86 +44,106 @@ export default function UserProfileScreen() {
   const [errorMessage, setErrorMessage] = useState("");
   const [notFound, setNotFound] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const loadedUserIdRef = useRef<string | undefined>(undefined);
+  const loadProfile = useCallback(async () => {
+    if (!id) {
+      setErrorMessage("Không tìm thấy người dùng.");
+      setLoading(false);
+      return;
+    }
 
-  useEffect(() => {
-    setNotFound(false);
-    const loadProfile = async () => {
+    try {
+      setNotFound(false);
+      setErrorMessage("");
+
+      const [profileResult, postsResult] = await Promise.all([
+        getUserProfile(id),
+        getUserPosts(id),
+      ]);
+
+      setUser(profileResult);
+
+      setPosts(
+        postsResult.map((item) => {
+          const firstImage = item.media.find((media) => media.mediaType === 1);
+
+          return {
+            id: item.id,
+
+            authorId: item.authorId,
+            authorName: item.authorName,
+
+            authorAvatar: item.authorAvatar
+              ? {
+                  uri: getFileUrl(item.authorAvatar)!,
+                }
+              : require("@/assets/images/icon.png"),
+
+            groupId: item.groupId ?? undefined,
+
+            groupName: item.groupName ?? undefined,
+
+            createdAt: formatRelativeTime(item.createdAt),
+
+            content: item.content ?? "",
+
+            visibility: item.visibility,
+
+            image: firstImage
+              ? {
+                  uri: getFileUrl(firstImage.url)!,
+                }
+              : undefined,
+
+            sport: item.sportName ?? undefined,
+
+            likeCount: item.likeCount,
+
+            commentCount: item.commentCount,
+
+            currentReaction: item.currentReaction,
+
+            isSaved: item.isSaved,
+          };
+        }),
+      );
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) {
+        setNotFound(true);
+        return;
+      }
+
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải thông tin người dùng.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+  useFocusEffect(
+    useCallback(() => {
       if (!id) {
         setErrorMessage("Không tìm thấy người dùng.");
+
         setLoading(false);
         return;
       }
 
-      try {
-        setErrorMessage("");
+      const isNewUser = loadedUserIdRef.current !== id;
 
-        const [profileResult, postsResult] = await Promise.all([
-          getUserProfile(id),
-          getUserPosts(id),
-        ]);
+      if (isNewUser) {
+        loadedUserIdRef.current = id;
 
-        setUser(profileResult);
-
-        setPosts(
-          postsResult.map((item) => {
-            const firstImage = item.media.find(
-              (media) => media.mediaType === 1,
-            );
-
-            return {
-              id: item.id,
-              authorId: item.authorId,
-              authorName: item.authorName,
-
-              authorAvatar: item.authorAvatar
-                ? {
-                    uri: getFileUrl(item.authorAvatar)!,
-                  }
-                : require("@/assets/images/icon.png"),
-
-              groupId: item.groupId ?? undefined,
-
-              groupName: item.groupName ?? undefined,
-
-              createdAt: formatRelativeTime(item.createdAt),
-
-              content: item.content ?? "",
-              visibility: item.visibility,
-              image: firstImage
-                ? {
-                    uri: getFileUrl(firstImage.url)!,
-                  }
-                : undefined,
-
-              sport: item.sportName ?? undefined,
-
-              likeCount: item.likeCount,
-
-              commentCount: item.commentCount,
-              currentReaction: item.currentReaction,
-              isSaved: item.isSaved,
-            };
-          }),
-        );
-      } catch (error) {
-        if (error instanceof ApiError && error.status === 404) {
-          setNotFound(true);
-          return;
-        }
-
-        setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Không thể tải thông tin người dùng.",
-        );
-      } finally {
-        setLoading(false);
+        setLoading(true);
+        setUser(null);
+        setPosts([]);
       }
-    };
 
-    loadProfile();
-  }, [id]);
-
+      loadProfile();
+    }, [id, loadProfile]),
+  );
   const handleFollow = async () => {
     if (!user || followLoading) return;
 
@@ -342,6 +363,11 @@ export default function UserProfileScreen() {
                     },
                   })
                 }
+                onDeleted={(postId) => {
+                  setPosts((current) =>
+                    current.filter((item) => item.id !== postId),
+                  );
+                }}
               />
             ))
           )}

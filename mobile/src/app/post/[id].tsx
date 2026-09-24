@@ -7,7 +7,6 @@ import type { Post } from "@/types/post";
 import { formatRelativeTime } from "@/utils/date";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -27,7 +26,8 @@ import {
   updateComment,
 } from "@/services/comment.service";
 import type { CommentDto } from "@/types/comment";
-import { useRef } from "react";
+import { useFocusEffect } from "@react-navigation/native";
+import { useCallback, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 export default function PostDetailScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -52,68 +52,61 @@ export default function PostDetailScreen() {
   const [replyingTo, setReplyingTo] = useState<CommentDto | null>(null);
 
   const commentInputRef = useRef<TextInput>(null);
-  useEffect(() => {
-    const loadPost = async () => {
-      if (!id) {
-        setErrorMessage("Không tìm thấy bài viết.");
-        setLoading(false);
-        return;
-      }
+  const loadPost = useCallback(async (postId: string) => {
+    try {
+      setErrorMessage("");
 
-      try {
-        setErrorMessage("");
+      const item = await getPostById(postId);
 
-        const item = await getPostById(id);
+      const firstImage = item.media.find((media) => media.mediaType === 1);
 
-        const firstImage = item.media.find((media) => media.mediaType === 1);
+      setPost({
+        id: item.id,
 
-        setPost({
-          id: item.id,
+        authorId: item.authorId,
+        authorName: item.authorName,
 
-          authorId: item.authorId,
-          authorName: item.authorName,
+        authorAvatar: item.authorAvatar
+          ? {
+              uri: getFileUrl(item.authorAvatar)!,
+            }
+          : require("@/assets/images/icon.png"),
 
-          authorAvatar: item.authorAvatar
-            ? {
-                uri: getFileUrl(item.authorAvatar)!,
-              }
-            : require("@/assets/images/icon.png"),
+        groupId: item.groupId ?? undefined,
 
-          groupId: item.groupId ?? undefined,
-          groupName: item.groupName ?? undefined,
+        groupName: item.groupName ?? undefined,
 
-          createdAt: formatRelativeTime(item.createdAt),
+        createdAt: formatRelativeTime(item.createdAt),
 
-          content: item.content ?? "",
-          visibility: item.visibility,
-          image: firstImage
-            ? {
-                uri: getFileUrl(firstImage.url)!,
-              }
-            : undefined,
+        content: item.content ?? "",
 
-          sport: item.sportName ?? undefined,
+        visibility: item.visibility,
 
-          likeCount: item.likeCount,
-          commentCount: item.commentCount,
-          currentReaction: item.currentReaction,
-          isSaved: item.isSaved,
-        });
-      } catch (error) {
-        setErrorMessage(
-          error instanceof Error ? error.message : "Không thể tải bài viết.",
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
+        image: firstImage
+          ? {
+              uri: getFileUrl(firstImage.url)!,
+            }
+          : undefined,
 
-    loadPost();
-    if (id) {
-      loadComments(id);
+        sport: item.sportName ?? undefined,
+
+        likeCount: item.likeCount,
+
+        commentCount: item.commentCount,
+
+        currentReaction: item.currentReaction,
+
+        isSaved: item.isSaved,
+      });
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Không thể tải bài viết.",
+      );
+    } finally {
+      setLoading(false);
     }
-  }, [id]);
-  const loadComments = async (postId: string) => {
+  }, []);
+  const loadComments = useCallback(async (postId: string) => {
     try {
       setCommentError("");
 
@@ -127,7 +120,20 @@ export default function PostDetailScreen() {
     } finally {
       setCommentsLoading(false);
     }
-  };
+  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) {
+        setErrorMessage("Không tìm thấy bài viết.");
+
+        setLoading(false);
+        return;
+      }
+
+      loadPost(id);
+      loadComments(id);
+    }, [id, loadPost, loadComments]),
+  );
   const handleReply = (comment: CommentDto) => {
     setReplyingTo(comment);
 

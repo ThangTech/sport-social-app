@@ -161,12 +161,7 @@ export default function EditPostScreen() {
       } else if (existingMedia && removeExistingImage) {
         await deletePostMedia(id, existingMedia.id);
       }
-      router.replace({
-        pathname: "/post/[id]",
-        params: {
-          id,
-        },
-      });
+      router.back();
     } catch (error) {
       Alert.alert(
         "Không thể cập nhật bài viết",
