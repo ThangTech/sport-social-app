@@ -12,7 +12,7 @@ export type Post = {
 
   createdAt: string;
   content: string;
-
+  visibility: number;
   image?: ImageSourcePropType;
   sport?: string;
 

@@ -87,7 +87,7 @@ export default function UserProfileScreen() {
               createdAt: formatRelativeTime(item.createdAt),
 
               content: item.content ?? "",
-
+              visibility: item.visibility,
               image: firstImage
                 ? {
                     uri: getFileUrl(firstImage.url)!,

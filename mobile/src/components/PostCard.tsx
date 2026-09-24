@@ -46,6 +46,15 @@ export default function PostCard({
   const [reactionLoading, setReactionLoading] = useState(false);
   const [saved, setSaved] = useState(post.isSaved);
   const [saveLoading, setSaveLoading] = useState(false);
+  const visibilityIcon:
+    | "earth-outline"
+    | "people-outline"
+    | "lock-closed-outline" =
+    post.visibility === 1
+      ? "earth-outline"
+      : post.visibility === 2
+        ? "people-outline"
+        : "lock-closed-outline";
   useEffect(() => {
     setReactionCount(post.likeCount);
     setCurrentReaction(post.currentReaction ?? null);
@@ -168,13 +177,19 @@ export default function PostCard({
                 {post.groupName}
               </AppText>
             )}
-            <AppText
-              variant="caption"
-              color={COLORS.textMuted}
-              style={{ marginLeft: 2, marginTop: 5 }}
-            >
-              {post.createdAt}
-            </AppText>
+            <View style={styles.postMeta}>
+              <AppText variant="caption" color={COLORS.textMuted}>
+                {post.createdAt}
+              </AppText>
+
+              <View style={styles.metaDot} />
+
+              <Ionicons
+                name={visibilityIcon}
+                size={13}
+                color={COLORS.textMuted}
+              />
+            </View>
           </View>
         </Pressable>
         <View style={styles.headerActions}>
@@ -334,5 +349,23 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.sm,
+  },
+  postMeta: {
+    marginLeft: 2,
+    marginTop: 5,
+
+    flexDirection: "row",
+    alignItems: "center",
+
+    gap: 6,
+  },
+
+  metaDot: {
+    width: 3,
+    height: 3,
+
+    borderRadius: 2,
+
+    backgroundColor: COLORS.textMuted,
   },
 });

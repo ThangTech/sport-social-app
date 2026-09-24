@@ -52,7 +52,7 @@ export default function SavedPostsScreen() {
             createdAt: formatRelativeTime(item.createdAt),
 
             content: item.content ?? "",
-
+            visibility: item.visibility,
             image: firstImage
               ? {
                   uri: getFileUrl(firstImage.url)!,
