@@ -30,3 +30,8 @@ export type CreatePostRequest = {
   sportId?: string | null;
   visibility: number;
 };
+export type UpdatePostRequest = {
+  content: string;
+  sportId?: string | null;
+  visibility: number;
+};

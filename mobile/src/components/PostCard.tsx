@@ -10,14 +10,19 @@ import {
   removePostReaction,
   savePost,
   unsavePost,
+  deletePost,
 } from "@/services/post.service";
 import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useActionSheet } from "@expo/react-native-action-sheet";
+import { router } from "expo-router";
 type PostCardProps = {
   post: Post;
   onPress?: () => void;
   onAuthorPress?: () => void;
   onCommentPress?: () => void;
   onSavedChange?: (saved: boolean) => void;
+  onDeleted?: (postId: string) => void;
 };
 export default function PostCard({
   post,
@@ -25,7 +30,13 @@ export default function PostCard({
   onAuthorPress,
   onCommentPress,
   onSavedChange,
+  onDeleted,
 }: PostCardProps) {
+  const { user: currentUser } = useAuth();
+
+  const { showActionSheetWithOptions } = useActionSheet();
+
+  const isOwner = currentUser?.id === post.authorId;
   const [reactionCount, setReactionCount] = useState(post.likeCount);
 
   const [currentReaction, setCurrentReaction] = useState<number | null>(
@@ -89,6 +100,54 @@ export default function PostCard({
       setSaveLoading(false);
     }
   };
+  const handleDeletePost = () => {
+    Alert.alert("Xóa bài viết", "Bạn có chắc muốn xóa bài viết này?", [
+      {
+        text: "Hủy",
+        style: "cancel",
+      },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            await deletePost(post.id);
+
+            onDeleted?.(post.id);
+          } catch (error) {
+            Alert.alert(
+              "Không thể xóa bài viết",
+              error instanceof Error ? error.message : "Vui lòng thử lại.",
+            );
+          }
+        },
+      },
+    ]);
+  };
+  const handlePostMenu = () => {
+    showActionSheetWithOptions(
+      {
+        options: ["Chỉnh sửa", "Xóa bài viết", "Hủy"],
+        cancelButtonIndex: 2,
+        destructiveButtonIndex: 1,
+        title: "Tùy chọn bài viết",
+      },
+      (index) => {
+        if (index === 0) {
+          router.push({
+            pathname: "../../post/edit/[id]",
+            params: {
+              id: post.id,
+            },
+          });
+        }
+
+        if (index === 1) {
+          handleDeletePost();
+        }
+      },
+    );
+  };
   return (
     <View style={styles.card}>
       <View style={styles.header}>
@@ -118,7 +177,19 @@ export default function PostCard({
             </AppText>
           </View>
         </Pressable>
-        {post.sport ? <SportBadge name={post.sport} /> : null}
+        <View style={styles.headerActions}>
+          {post.sport ? <SportBadge name={post.sport} /> : null}
+
+          {isOwner ? (
+            <Pressable hitSlop={10} onPress={handlePostMenu}>
+              <Ionicons
+                name="ellipsis-horizontal"
+                size={22}
+                color={COLORS.textMuted}
+              />
+            </Pressable>
+          ) : null}
+        </View>
       </View>
       <Pressable onPress={onPress}>
         <View style={styles.content}>
@@ -258,5 +329,10 @@ const styles = StyleSheet.create({
   },
   disabledAction: {
     opacity: 0.6,
+  },
+  headerActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
   },
 });

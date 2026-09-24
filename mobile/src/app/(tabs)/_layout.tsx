@@ -6,6 +6,7 @@ import { Modal, Pressable, StyleSheet, View } from "react-native";
 import CreatePostScreen from "../modal/create-post";
 import { router } from "expo-router";
 import { CreatePostProvider } from "@/contexts/CreatePostContext";
+import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 export default function TabsLayout() {
   const [showCreate, setShowCreate] = useState(false);
 
@@ -92,23 +93,25 @@ export default function TabsLayout() {
           animationType="slide"
           onRequestClose={() => setShowCreate(false)}
         >
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <CreatePostScreen
-                onClose={() => setShowCreate(false)}
-                onCreated={() => {
-                  setShowCreate(false);
+          <ActionSheetProvider>
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <CreatePostScreen
+                  onClose={() => setShowCreate(false)}
+                  onCreated={() => {
+                    setShowCreate(false);
 
-                  router.replace({
-                    pathname: "/(tabs)",
-                    params: {
-                      refresh: Date.now().toString(),
-                    },
-                  });
-                }}
-              />
+                    router.replace({
+                      pathname: "/(tabs)",
+                      params: {
+                        refresh: Date.now().toString(),
+                      },
+                    });
+                  }}
+                />
+              </View>
             </View>
-          </View>
+          </ActionSheetProvider>
         </Modal>
       </View>
     </CreatePostProvider>

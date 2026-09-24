@@ -1,6 +1,10 @@
 import { api } from "@/services/api";
 import type { FeedPostDto } from "@/types/feed";
-import type { ReactionResponse, CreatePostRequest } from "@/types/post";
+import type {
+  ReactionResponse,
+  CreatePostRequest,
+  UpdatePostRequest,
+} from "@/types/post";
 
 export const getPostById = async (id: string) => {
   return await api<FeedPostDto>(`/posts/${id}`, {
@@ -48,5 +52,19 @@ export const createPost = async (request: CreatePostRequest) => {
     method: "POST",
     auth: true,
     body: JSON.stringify(request),
+  });
+};
+export const updatePost = async (id: string, request: UpdatePostRequest) => {
+  return await api<FeedPostDto>(`/posts/${id}`, {
+    method: "PATCH",
+    auth: true,
+    body: JSON.stringify(request),
+  });
+};
+
+export const deletePost = async (id: string) => {
+  return await api<void>(`/posts/${id}`, {
+    method: "DELETE",
+    auth: true,
   });
 };

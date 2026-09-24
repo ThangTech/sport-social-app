@@ -197,6 +197,11 @@ export default function HomeScreen() {
                 },
               })
             }
+            onDeleted={(postId) => {
+              setPosts((current) =>
+                current.filter((post) => post.id !== postId),
+              );
+            }}
           />
         )}
         refreshControl={
