@@ -112,127 +112,125 @@ export default function CommentItem({
     );
   };
   return (
-    <View
-      style={[
-        styles.container,
-        {
-          marginLeft: Math.min(depth, 3) * 20,
-        },
-      ]}
-    >
-      <Pressable onPress={() => onAuthorPress(comment.authorId)}>
-        <Avatar
-          source={
-            comment.authorAvatar
-              ? {
-                  uri: getFileUrl(comment.authorAvatar)!,
-                }
-              : require("@/assets/images/icon.png")
-          }
-        />
-      </Pressable>
+    <>
+      <View style={[styles.container, depth > 0 && styles.replyContainer]}>
+        <Pressable onPress={() => onAuthorPress(comment.authorId)}>
+          <Avatar
+            source={
+              comment.authorAvatar
+                ? {
+                    uri: getFileUrl(comment.authorAvatar)!,
+                  }
+                : require("@/assets/images/icon.png")
+            }
+          />
+        </Pressable>
 
-      <View style={styles.body}>
-        <View style={styles.bubble}>
-          <View style={styles.commentHeader}>
-            <Pressable onPress={() => onAuthorPress(comment.authorId)}>
-              <AppText variant="label">{comment.authorName}</AppText>
-            </Pressable>
-
-            {isOwner && !comment.isDeleted ? (
-              <Pressable hitSlop={10} disabled={loading} onPress={handleMenu}>
-                <Ionicons
-                  name="ellipsis-horizontal"
-                  size={18}
-                  color={COLORS.textMuted}
-                />
+        <View style={styles.body}>
+          <View style={styles.bubble}>
+            <View style={styles.commentHeader}>
+              <Pressable onPress={() => onAuthorPress(comment.authorId)}>
+                <AppText variant="label">{comment.authorName}</AppText>
               </Pressable>
-            ) : null}
+
+              {isOwner && !comment.isDeleted ? (
+                <Pressable hitSlop={10} disabled={loading} onPress={handleMenu}>
+                  <Ionicons
+                    name="ellipsis-horizontal"
+                    size={18}
+                    color={COLORS.textMuted}
+                  />
+                </Pressable>
+              ) : null}
+            </View>
+
+            {editing ? (
+              <View style={styles.editBox}>
+                <TextInput
+                  value={editText}
+                  onChangeText={setEditText}
+                  multiline
+                  maxLength={3000}
+                  autoFocus
+                  style={styles.editInput}
+                  placeholderTextColor={COLORS.textMuted}
+                />
+
+                <View style={styles.editActions}>
+                  <Pressable
+                    disabled={loading}
+                    onPress={() => {
+                      setEditText(comment.content);
+                      setEditing(false);
+                    }}
+                  >
+                    <AppText variant="caption" color={COLORS.textMuted}>
+                      Hủy
+                    </AppText>
+                  </Pressable>
+
+                  <Pressable
+                    disabled={loading || !editText.trim()}
+                    onPress={handleSave}
+                  >
+                    <AppText
+                      variant="caption"
+                      color={COLORS.primary}
+                      style={styles.saveText}
+                    >
+                      {loading ? "Đang lưu..." : "Lưu"}
+                    </AppText>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <AppText
+                color={comment.isDeleted ? COLORS.textMuted : COLORS.text}
+              >
+                {comment.content}
+              </AppText>
+            )}
           </View>
 
-          {editing ? (
-            <View style={styles.editBox}>
-              <TextInput
-                value={editText}
-                onChangeText={setEditText}
-                multiline
-                maxLength={3000}
-                autoFocus
-                style={styles.editInput}
-                placeholderTextColor={COLORS.textMuted}
-              />
-
-              <View style={styles.editActions}>
-                <Pressable
-                  disabled={loading}
-                  onPress={() => {
-                    setEditText(comment.content);
-                    setEditing(false);
-                  }}
-                >
-                  <AppText variant="caption" color={COLORS.textMuted}>
-                    Hủy
-                  </AppText>
-                </Pressable>
-
-                <Pressable
-                  disabled={loading || !editText.trim()}
-                  onPress={handleSave}
-                >
-                  <AppText
-                    variant="caption"
-                    color={COLORS.primary}
-                    style={styles.saveText}
-                  >
-                    {loading ? "Đang lưu..." : "Lưu"}
-                  </AppText>
-                </Pressable>
-              </View>
-            </View>
-          ) : (
-            <AppText color={comment.isDeleted ? COLORS.textMuted : COLORS.text}>
-              {comment.content}
-            </AppText>
-          )}
-        </View>
-        <View style={styles.actions}>
-          <AppText variant="caption" color={COLORS.textMuted}>
-            {formatRelativeTime(comment.createdAt)}
-          </AppText>
-
-          {!comment.isDeleted ? (
-            <Pressable onPress={() => onReply(comment)}>
-              <AppText
-                variant="caption"
-                color={COLORS.textMuted}
-                style={styles.replyText}
-              >
-                Trả lời
-              </AppText>
-            </Pressable>
-          ) : null}
-
-          {comment.updatedAt && !comment.isDeleted ? (
+          <View style={styles.actions}>
             <AppText variant="caption" color={COLORS.textMuted}>
-              Đã chỉnh sửa
+              {formatRelativeTime(comment.createdAt)}
             </AppText>
-          ) : null}
-        </View>
 
-        {comment.replies.map((reply) => (
-          <CommentItem
-            key={reply.id}
-            comment={reply}
-            depth={depth + 1}
-            currentUserId={currentUserId}
-            onReply={onReply}
-            onUpdate={onUpdate}
-            onDelete={onDelete}
-            onAuthorPress={onAuthorPress}
-          />
-        ))}
+            {!comment.isDeleted ? (
+              <Pressable onPress={() => onReply(comment)}>
+                <AppText
+                  variant="caption"
+                  color={COLORS.textMuted}
+                  style={styles.replyText}
+                >
+                  Trả lời
+                </AppText>
+              </Pressable>
+            ) : null}
+
+            {comment.updatedAt && !comment.isDeleted ? (
+              <AppText variant="caption" color={COLORS.textMuted}>
+                Đã chỉnh sửa
+              </AppText>
+            ) : null}
+          </View>
+        </View>
       </View>
-    </View>
+
+      {comment.replies.map((reply) => (
+        <CommentItem
+          key={reply.id}
+          comment={reply}
+          depth={1}
+          currentUserId={currentUserId}
+          onReply={onReply}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+          onAuthorPress={onAuthorPress}
+        />
+      ))}
+    </>
   );
 }
 
@@ -310,4 +308,7 @@ const styles = StyleSheet.create({
   saveText: {
     fontWeight: "600",
   },
+  replyContainer: {
+  marginLeft: 28,
+},
 });

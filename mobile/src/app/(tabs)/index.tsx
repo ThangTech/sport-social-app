@@ -7,7 +7,7 @@ import { getFileUrl } from "@/services/api";
 import { getFeed } from "@/services/feed.service";
 import type { Post } from "@/types/post";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -17,17 +17,27 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { formatRelativeTime } from "@/utils/date";
+import { useAuth } from "@/contexts/AuthContext";
 export default function HomeScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const { user: currentUser } = useAuth();
+  const currentUserIdRef = useRef<string | undefined>(currentUser?.id);
 
-  const loadFeed = async () => {
+  useEffect(() => {
+    currentUserIdRef.current = currentUser?.id;
+  }, [currentUser?.id]);
+  const loadFeed = async (userId: string) => {
     try {
       setErrorMessage("");
 
       const response = await getFeed(20);
+
+      if (currentUserIdRef.current !== userId) {
+        return;
+      }
 
       setPosts(
         response.items.map((item) => {
@@ -68,22 +78,42 @@ export default function HomeScreen() {
         }),
       );
     } catch (error) {
+      if (currentUserIdRef.current !== userId) {
+        return;
+      }
+
       setErrorMessage(
         error instanceof Error ? error.message : "Không thể tải bảng tin.",
       );
     } finally {
-      setLoading(false);
-      setRefreshing(false);
+      if (currentUserIdRef.current === userId) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
   };
 
   useEffect(() => {
-    loadFeed();
-  }, []);
+    if (!currentUser?.id) {
+      setPosts([]);
+      setErrorMessage("");
+      setLoading(false);
+      return;
+    }
+
+    setPosts([]);
+    setErrorMessage("");
+    setLoading(true);
+
+    loadFeed(currentUser.id);
+  }, [currentUser?.id]);
 
   const handleRefresh = async () => {
+    if (!currentUser?.id) return;
+
     setRefreshing(true);
-    await loadFeed();
+
+    await loadFeed(currentUser.id);
   };
 
   if (loading) {
@@ -108,7 +138,8 @@ export default function HomeScreen() {
 
       <FlatList
         data={posts}
-        keyExtractor={(item) => item.id}
+        extraData={currentUser?.id}
+        keyExtractor={(item) => `${currentUser?.id}-${item.id}`}
         ListHeaderComponent={
           <>
             <CreatePostPrompt />
