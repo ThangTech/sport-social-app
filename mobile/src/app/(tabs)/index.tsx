@@ -6,7 +6,7 @@ import { COLORS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import { getFeed } from "@/services/feed.service";
 import type { Post } from "@/types/post";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, useRef } from "react";
 import {
   ActivityIndicator,
@@ -25,10 +25,20 @@ export default function HomeScreen() {
   const [errorMessage, setErrorMessage] = useState("");
   const { user: currentUser } = useAuth();
   const currentUserIdRef = useRef<string | undefined>(currentUser?.id);
-
+  const { refresh } = useLocalSearchParams<{ refresh?: string }>();
   useEffect(() => {
-    currentUserIdRef.current = currentUser?.id;
-  }, [currentUser?.id]);
+    if (!currentUser?.id) {
+      setPosts([]);
+      setLoading(false);
+      return;
+    }
+
+    setPosts([]);
+    setErrorMessage("");
+    setLoading(true);
+
+    loadFeed(currentUser.id);
+  }, [currentUser?.id, refresh]);
   const loadFeed = async (userId: string) => {
     try {
       setErrorMessage("");

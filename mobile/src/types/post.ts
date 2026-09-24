@@ -25,3 +25,8 @@ export type ReactionResponse = {
   reactionCount: number;
   currentReaction?: number | null;
 };
+export type CreatePostRequest = {
+  content: string;
+  sportId?: string | null;
+  visibility: number;
+};

@@ -1,8 +1,13 @@
 import AppText from "@/components/ui/AppText";
+import { useAuth } from "@/contexts/AuthContext";
 import { COLORS, SPACING } from "@/constants/theme";
+import { getFileUrl } from "@/services/api";
+import { createPost } from "@/services/post.service";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   Pressable,
@@ -13,29 +18,91 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type Props = {
-       onPress: () => void,
-       onClose: () => void
-}
-export default function CreatePostScreen({onPress, onClose}: Props) {
+  onClose: () => void;
+  onCreated?: () => void;
+};
+
+export default function CreatePostScreen({ onClose, onCreated }: Props) {
+  const { user } = useAuth();
+  const { showActionSheetWithOptions } = useActionSheet();
+
   const [content, setContent] = useState("");
+  const [visibility, setVisibility] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleCreatePost = () => {
-    if (!content.trim()) {
-      Alert.alert("Thông báo", "Bạn chưa nhập nội dung bài viết.");
-      return;
+  const visibilityLabel =
+    visibility === 1
+      ? "Công khai"
+      : visibility === 2
+        ? "Người theo dõi"
+        : "Chỉ mình tôi";
+
+  const visibilityIcon: "earth-outline"| "people-outline"| "lock-closed-outline" =
+    visibility === 1
+      ? "earth-outline"
+      : visibility === 2
+        ? "people-outline"
+        : "lock-closed-outline";
+
+  const handleVisibility = () => {
+    showActionSheetWithOptions(
+      {
+        options: ["Công khai", "Người theo dõi", "Chỉ mình tôi", "Hủy"],
+        cancelButtonIndex: 3,
+        title: "Ai có thể xem bài viết này?",
+      },
+      (index) => {
+        if (index === 0) {
+          setVisibility(1);
+        }
+
+        if (index === 1) {
+          setVisibility(2);
+        }
+
+        if (index === 2) {
+          setVisibility(3);
+        }
+      },
+    );
+  };
+
+  const handleCreatePost = async () => {
+    const value = content.trim();
+
+    if (!value || submitting) return;
+
+    try {
+      setSubmitting(true);
+
+      await createPost({
+        content: value,
+        sportId: null,
+        visibility,
+      });
+
+      setContent("");
+
+      onClose();
+      onCreated?.();
+    } catch (error) {
+      Alert.alert(
+        "Không thể đăng bài",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    } finally {
+      setSubmitting(false);
     }
-
-    console.log("Post content:", content);
-
-    Alert.alert("Thành công", "Đã đăng bài viết.");
-
-    onClose();
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Pressable style={styles.headerButton} onPress={onPress}>
+        <Pressable
+          style={styles.headerButton}
+          onPress={onClose}
+          disabled={submitting}
+        >
           <Ionicons name="close" size={28} color={COLORS.text} />
         </Pressable>
 
@@ -44,31 +111,51 @@ export default function CreatePostScreen({onPress, onClose}: Props) {
         <Pressable
           style={[
             styles.postButton,
-            !content.trim() && styles.postButtonDisabled,
+            (!content.trim() || submitting) && styles.postButtonDisabled,
           ]}
           onPress={handleCreatePost}
-          disabled={!content.trim()}
+          disabled={!content.trim() || submitting}
         >
-          <AppText style={styles.postButtonText}>Đăng</AppText>
+          {submitting ? (
+            <ActivityIndicator size="small" color={COLORS.background} />
+          ) : (
+            <AppText style={styles.postButtonText}>Đăng</AppText>
+          )}
         </Pressable>
       </View>
 
       <View style={styles.userSection}>
         <Image
-          source={{
-            uri: "https://i.pravatar.cc/150?img=12",
-          }}
+          source={
+            user?.avatarUrl
+              ? {
+                  uri: getFileUrl(user.avatarUrl)!,
+                }
+              : require("@/assets/images/icon.png")
+          }
           style={styles.avatar}
         />
 
-        <View>
-          <AppText variant="subtitle">Nguyen Van Thang</AppText>
+        <View style={styles.userInfo}>
+          <AppText variant="subtitle">
+            {user?.displayName || "Người dùng"}
+          </AppText>
 
-          <View style={styles.visibility}>
-            <Ionicons name="earth-outline" size={14} color={COLORS.textMuted} />
+          <Pressable
+            style={styles.visibility}
+            onPress={handleVisibility}
+            disabled={submitting}
+          >
+            <Ionicons
+              name={visibilityIcon}
+              size={14}
+              color={COLORS.textMuted}
+            />
 
-            <AppText style={styles.visibilityText}>Công khai</AppText>
-          </View>
+            <AppText style={styles.visibilityText}>{visibilityLabel}</AppText>
+
+            <Ionicons name="chevron-down" size={13} color={COLORS.textMuted} />
+          </Pressable>
         </View>
       </View>
 
@@ -79,23 +166,47 @@ export default function CreatePostScreen({onPress, onClose}: Props) {
         placeholderTextColor={COLORS.textMuted}
         multiline
         autoFocus
+        maxLength={5000}
+        editable={!submitting}
         style={styles.input}
       />
 
       <View style={styles.actions}>
-        <AppText variant="subtitle">Thêm vào bài viết</AppText>
+        <View>
+          <AppText variant="subtitle">Thêm vào bài viết</AppText>
+
+          <AppText
+            variant="caption"
+            color={COLORS.textMuted}
+            style={styles.actionsDescription}
+          >
+            Ảnh và môn thể thao
+          </AppText>
+        </View>
 
         <View style={styles.actionIcons}>
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="image-outline" size={26} color="#22c55e" />
+          <Pressable
+            style={styles.iconButton}
+            onPress={() =>
+              Alert.alert(
+                "Ảnh",
+                "Chức năng chọn và tải ảnh sẽ được làm ở bước tiếp theo.",
+              )
+            }
+          >
+            <Ionicons name="image-outline" size={26} color={COLORS.primary} />
           </Pressable>
 
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="pricetag-outline" size={26} color="#3b82f6" />
-          </Pressable>
-
-          <Pressable style={styles.iconButton}>
-            <Ionicons name="location-outline" size={26} color="#ef4444" />
+          <Pressable
+            style={styles.iconButton}
+            onPress={() =>
+              Alert.alert(
+                "Môn thể thao",
+                "Chức năng chọn môn thể thao sẽ được nối sau.",
+              )
+            }
+          >
+            <Ionicons name="football-outline" size={26} color="#3b82f6" />
           </Pressable>
         </View>
       </View>
@@ -112,9 +223,11 @@ const styles = StyleSheet.create({
   header: {
     height: 64,
     paddingHorizontal: SPACING.lg,
+
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
   },
@@ -122,13 +235,20 @@ const styles = StyleSheet.create({
   headerButton: {
     width: 40,
     height: 40,
+
     alignItems: "center",
     justifyContent: "center",
   },
 
   postButton: {
+    minWidth: 68,
+
     paddingHorizontal: 16,
     paddingVertical: 8,
+
+    alignItems: "center",
+    justifyContent: "center",
+
     borderRadius: 20,
     backgroundColor: COLORS.primary,
   },
@@ -138,29 +258,48 @@ const styles = StyleSheet.create({
   },
 
   postButtonText: {
-    color: "#ffffff",
+    color: COLORS.background,
     fontWeight: "600",
   },
 
   userSection: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
+
+    gap: SPACING.md,
+
     paddingHorizontal: SPACING.lg,
     paddingVertical: SPACING.lg,
+  },
+
+  userInfo: {
+    flex: 1,
   },
 
   avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
+
+    backgroundColor: COLORS.surfaceAlt,
   },
 
   visibility: {
-    marginTop: 4,
+    alignSelf: "flex-start",
+
+    marginTop: 6,
+
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+
     flexDirection: "row",
     alignItems: "center",
+
     gap: 4,
+
+    borderRadius: 8,
+
+    backgroundColor: COLORS.surfaceAlt,
   },
 
   visibilityText: {
@@ -170,32 +309,52 @@ const styles = StyleSheet.create({
 
   input: {
     minHeight: 180,
+
     paddingHorizontal: SPACING.lg,
+    paddingTop: SPACING.sm,
+
     fontSize: 18,
+    lineHeight: 25,
+
     color: COLORS.text,
+
     textAlignVertical: "top",
   },
 
   actions: {
     margin: SPACING.lg,
     padding: SPACING.lg,
+
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: COLORS.border,
     borderRadius: 16,
+
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+
+    backgroundColor: COLORS.surface,
+  },
+
+  actionsDescription: {
+    marginTop: 4,
   },
 
   actionIcons: {
     flexDirection: "row",
     alignItems: "center",
+
+    gap: SPACING.xs,
   },
 
   iconButton: {
     width: 42,
     height: 42,
+
     alignItems: "center",
     justifyContent: "center",
+
+    borderRadius: 21,
+    backgroundColor: COLORS.surfaceAlt,
   },
 });

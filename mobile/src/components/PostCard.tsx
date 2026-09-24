@@ -17,12 +17,14 @@ type PostCardProps = {
   onPress?: () => void;
   onAuthorPress?: () => void;
   onCommentPress?: () => void;
+  onSavedChange?: (saved: boolean) => void;
 };
 export default function PostCard({
   post,
   onPress,
   onAuthorPress,
   onCommentPress,
+  onSavedChange,
 }: PostCardProps) {
   const [reactionCount, setReactionCount] = useState(post.likeCount);
 
@@ -69,10 +71,14 @@ export default function PostCard({
 
       if (saved) {
         await unsavePost(post.id);
+
         setSaved(false);
+        onSavedChange?.(false);
       } else {
         await savePost(post.id);
+
         setSaved(true);
+        onSavedChange?.(true);
       }
     } catch (error) {
       Alert.alert(

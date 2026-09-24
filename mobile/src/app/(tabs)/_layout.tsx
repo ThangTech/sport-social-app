@@ -4,99 +4,114 @@ import { Tabs } from "expo-router";
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import CreatePostScreen from "../modal/create-post";
-
+import { router } from "expo-router";
+import { CreatePostProvider } from "@/contexts/CreatePostContext";
 export default function TabsLayout() {
   const [showCreate, setShowCreate] = useState(false);
 
   return (
-    <View style={styles.container}>
-      <Tabs
-        screenOptions={{
-          headerShown: false,
-          tabBarActiveTintColor: COLORS.primary,
-          tabBarInactiveTintColor: COLORS.textMuted,
+    <CreatePostProvider openCreatePost={() => setShowCreate(true)}>
+      <View style={styles.container}>
+        <Tabs
+          screenOptions={{
+            headerShown: false,
+            tabBarActiveTintColor: COLORS.primary,
+            tabBarInactiveTintColor: COLORS.textMuted,
 
-          tabBarStyle: {
-            height: 68,
-            paddingTop: 8,
-            backgroundColor: COLORS.surface,
-            borderTopColor: COLORS.border,
-          },
-        }}
-      >
-        <Tabs.Screen
-          name="index"
-          options={{
-            title: "Bảng tin",
-            tabBarItemStyle: {
-              transform: [{ translateX: -10 }],
+            tabBarStyle: {
+              height: 68,
+              paddingTop: 8,
+              backgroundColor: COLORS.surface,
+              borderTopColor: COLORS.border,
             },
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="home-outline" color={color} size={size} />
-            ),
           }}
-        />
+        >
+          <Tabs.Screen
+            name="index"
+            options={{
+              title: "Bảng tin",
+              tabBarItemStyle: {
+                transform: [{ translateX: -10 }],
+              },
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="home-outline" color={color} size={size} />
+              ),
+            }}
+          />
 
-        <Tabs.Screen
-          name="explore"
-          options={{
-            title: "Khám phá",
-            tabBarItemStyle: {
-              transform: [{ translateX: -18 }],
-            },
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="compass-outline" color={color} size={size} />
-            ),
-          }}
-        />
+          <Tabs.Screen
+            name="explore"
+            options={{
+              title: "Khám phá",
+              tabBarItemStyle: {
+                transform: [{ translateX: -18 }],
+              },
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="compass-outline" color={color} size={size} />
+              ),
+            }}
+          />
 
-        <Tabs.Screen
-          name="community"
-          options={{
-            title: "Cộng đồng",
-            tabBarItemStyle: {
-              transform: [{ translateX: 18 }],
-            },
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="people-outline" color={color} size={size} />
-            ),
-          }}
-        />
+          <Tabs.Screen
+            name="community"
+            options={{
+              title: "Cộng đồng",
+              tabBarItemStyle: {
+                transform: [{ translateX: 18 }],
+              },
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="people-outline" color={color} size={size} />
+              ),
+            }}
+          />
 
-        <Tabs.Screen
-          name="profile"
-          options={{
-            title: "Cá nhân",
-            tabBarItemStyle: {
-              transform: [{ translateX: 10 }],
-            },
-            tabBarIcon: ({ color, size }) => (
-              <Ionicons name="person-outline" color={color} size={size} />
-            ),
-          }}
-        />
-      </Tabs>
+          <Tabs.Screen
+            name="profile"
+            options={{
+              title: "Cá nhân",
+              tabBarItemStyle: {
+                transform: [{ translateX: 10 }],
+              },
+              tabBarIcon: ({ color, size }) => (
+                <Ionicons name="person-outline" color={color} size={size} />
+              ),
+            }}
+          />
+        </Tabs>
 
-      <Pressable
-        style={styles.createButton}
-        onPress={() => setShowCreate(true)}
-      >
-        <Ionicons name="add" size={32} color={COLORS.background} />
-      </Pressable>
+        <Pressable
+          style={styles.createButton}
+          onPress={() => setShowCreate(true)}
+        >
+          <Ionicons name="add" size={32} color={COLORS.background} />
+        </Pressable>
 
-      <Modal
-        visible={showCreate}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setShowCreate(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <CreatePostScreen onPress={() => setShowCreate(false)} onClose={() => setShowCreate(false)}/>
+        <Modal
+          visible={showCreate}
+          transparent
+          animationType="slide"
+          onRequestClose={() => setShowCreate(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <CreatePostScreen
+                onClose={() => setShowCreate(false)}
+                onCreated={() => {
+                  setShowCreate(false);
+
+                  router.replace({
+                    pathname: "/(tabs)",
+                    params: {
+                      refresh: Date.now().toString(),
+                    },
+                  });
+                }}
+              />
+            </View>
           </View>
-        </View>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </CreatePostProvider>
   );
 }
 const styles = StyleSheet.create({

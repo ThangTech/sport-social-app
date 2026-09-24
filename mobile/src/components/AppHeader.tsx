@@ -1,35 +1,40 @@
+import Avatar from "@/components/Avatar";
+import AppText from "@/components/ui/AppText";
+import { useAuth } from "@/contexts/AuthContext";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { getFileUrl } from "@/services/api";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Alert, Pressable, StyleSheet, View, Image } from "react-native";
-import AppText from "./ui/AppText";
-import Avatar from "./Avatar";
 import { router } from "expo-router";
+import { Image, Pressable, StyleSheet, View } from "react-native";
+
 export default function AppHeader() {
+  const { user } = useAuth();
+
   return (
     <View style={styles.container}>
       <View style={styles.brand}>
-        <View style={styles.logo}>
-          <Image
-            source={require("../../assets/images/logo.png")}
-            style={styles.logo}
-          />
-        </View>
+        <Image
+          source={require("../../assets/images/logo.png")}
+          style={styles.logo}
+        />
 
-        <AppText variant="subtitle">
-          Bảng tin
+        <AppText
+          variant="subtitle"
+          color={COLORS.primary}
+          style={styles.brandName}
+        >
+          SocialSport
         </AppText>
       </View>
 
       <View style={styles.actions}>
         <Pressable
           style={styles.iconButton}
-          onPress={() => Alert.alert("Tìm kiếm")}
+          onPress={() => {
+            // Search sẽ triển khai sau.
+          }}
         >
-          <Ionicons
-            name="search-outline"
-            size={24}
-            color={COLORS.text}
-          />
+          <Ionicons name="search-outline" size={24} color={COLORS.text} />
         </Pressable>
 
         <Pressable
@@ -42,14 +47,20 @@ export default function AppHeader() {
             color={COLORS.text}
           />
 
-          <View style={styles.badge}>
-            <AppText variant="caption" color={COLORS.white}>
-              2
-            </AppText>
-          </View>
+          {/* Chưa có notification API thì chưa hiện badge giả */}
         </Pressable>
 
-        <Avatar source={require("../../assets/images/icon.png")} />
+        <Pressable onPress={() => router.push("/(tabs)/profile")}>
+          <Avatar
+            source={
+              user?.avatarUrl
+                ? {
+                    uri: getFileUrl(user.avatarUrl)!,
+                  }
+                : require("../../assets/images/icon.png")
+            }
+          />
+        </Pressable>
       </View>
     </View>
   );
@@ -58,10 +69,14 @@ export default function AppHeader() {
 const styles = StyleSheet.create({
   container: {
     height: 64,
+
     paddingHorizontal: SPACING.lg,
+
     backgroundColor: COLORS.background,
+
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
+
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
@@ -70,41 +85,34 @@ const styles = StyleSheet.create({
   brand: {
     flexDirection: "row",
     alignItems: "center",
+
     gap: SPACING.sm,
   },
 
   logo: {
-    width: 40,
-    height: 40,
+    width: 38,
+    height: 38,
+
     borderRadius: RADIUS.md,
-    backgroundColor: COLORS.primarySoft,
-    alignItems: "center",
-    justifyContent: "center",
+  },
+
+  brandName: {
+    fontWeight: "700",
   },
 
   actions: {
     flexDirection: "row",
     alignItems: "center",
-    gap: SPACING.sm,
+
+    gap: SPACING.xs,
   },
 
   iconButton: {
     width: 40,
     height: 40,
-    borderRadius: RADIUS.full,
-    alignItems: "center",
-    justifyContent: "center",
-  },
 
-  badge: {
-    position: "absolute",
-    top: 1,
-    right: 1,
-    minWidth: 17,
-    height: 17,
-    paddingHorizontal: 4,
     borderRadius: RADIUS.full,
-    backgroundColor: COLORS.danger,
+
     alignItems: "center",
     justifyContent: "center",
   },
