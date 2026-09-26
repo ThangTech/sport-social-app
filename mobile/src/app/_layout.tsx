@@ -78,6 +78,12 @@ function RootNavigator() {
         }}
       />
       <Stack.Screen
+        name="user/blocked-users"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="create-post"
         options={{
           presentation: "modal",

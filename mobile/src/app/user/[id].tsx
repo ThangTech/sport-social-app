@@ -4,20 +4,24 @@ import ProfileSummary from "@/components/profile/ProfileSummary";
 import { COLORS, SPACING } from "@/constants/theme";
 import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import {
+  blockUser,
   getUserPosts,
   getUserProfile,
   followUser,
+  unblockUser,
   unfollowUser,
 } from "@/services/user.service";
 import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/types/post";
 import type { UserProfileDto } from "@/types/user";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useActionSheet } from "@expo/react-native-action-sheet";
 import { router, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -29,6 +33,7 @@ import { ApiError } from "@/types/api";
 
 export default function UserProfileScreen() {
   const { user: currentUser } = useAuth();
+  const { showActionSheetWithOptions } = useActionSheet();
 
   const params = useLocalSearchParams<{ id?: string | string[] }>();
 
@@ -41,9 +46,12 @@ export default function UserProfileScreen() {
   const [loading, setLoading] = useState(true);
 
   const [errorMessage, setErrorMessage] = useState("");
+  const [postsErrorMessage, setPostsErrorMessage] = useState("");
   const [notFound, setNotFound] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
   const loadedUserIdRef = useRef<string | undefined>(undefined);
+
   const loadProfile = useCallback(async () => {
     if (!id) {
       setErrorMessage("Không tìm thấy người dùng.");
@@ -54,25 +62,41 @@ export default function UserProfileScreen() {
     try {
       setNotFound(false);
       setErrorMessage("");
+      setPostsErrorMessage("");
 
-      const [profileResult, postsResult] = await Promise.all([
-        getUserProfile(id),
-        getUserPosts(id),
-      ]);
+      const profileResult = await getUserProfile(id);
 
       setUser(profileResult);
 
-      setPosts(postsResult.map(mapFeedPostToPost));
+      try {
+        const postsResult = await getUserPosts(id);
+
+        setPosts(postsResult.map(mapFeedPostToPost));
+      } catch (error) {
+        setPosts([]);
+        setPostsErrorMessage(
+          error instanceof ApiError && error.status === 403
+            ? "Bạn không thể xem bài viết của người dùng này."
+            : error instanceof Error
+              ? error.message
+              : "Không thể tải bài viết.",
+        );
+      }
     } catch (error) {
+      setUser(null);
+      setPosts([]);
+
       if (error instanceof ApiError && error.status === 404) {
         setNotFound(true);
         return;
       }
 
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Không thể tải thông tin người dùng.",
+        error instanceof ApiError && error.status === 403
+          ? "Bạn không thể xem trang cá nhân này vì quyền truy cập đã thay đổi."
+          : error instanceof Error
+            ? error.message
+            : "Không thể tải thông tin người dùng.",
       );
     } finally {
       setLoading(false);
@@ -100,8 +124,16 @@ export default function UserProfileScreen() {
       loadProfile();
     }, [id, loadProfile]),
   );
+
   const handleFollow = async () => {
-    if (!user || followLoading) return;
+    if (
+      !user ||
+      followLoading ||
+      blockLoading ||
+      user.isBlockedByCurrentUser
+    ) {
+      return;
+    }
 
     try {
       setFollowLoading(true);
@@ -132,12 +164,84 @@ export default function UserProfileScreen() {
         );
       }
     } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "Không thể cập nhật theo dõi.",
+      Alert.alert(
+        "Không thể cập nhật theo dõi",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     } finally {
       setFollowLoading(false);
     }
+  };
+
+  const updateBlockStatus = async (shouldBlock: boolean) => {
+    if (!user || blockLoading || followLoading) return;
+
+    try {
+      setBlockLoading(true);
+      await (shouldBlock ? blockUser(user.id) : unblockUser(user.id));
+
+      setUser((current) =>
+        current
+          ? {
+              ...current,
+              isFollowing: shouldBlock ? false : current.isFollowing,
+              isBlockedByCurrentUser: shouldBlock,
+            }
+          : current,
+      );
+
+      await loadProfile();
+    } catch (error) {
+      Alert.alert(
+        shouldBlock ? "Không thể chặn người dùng" : "Không thể bỏ chặn",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  const confirmBlock = () => {
+    if (!user || blockLoading || followLoading) return;
+
+    Alert.alert(
+      "Chặn người dùng",
+      `Bạn có chắc muốn chặn ${user.displayName}? Hai tài khoản sẽ không còn theo dõi nhau.`,
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Chặn",
+          style: "destructive",
+          onPress: () => updateBlockStatus(true),
+        },
+      ],
+    );
+  };
+
+  const openUserMenu = () => {
+    if (!user || blockLoading || followLoading) return;
+
+    const blockLabel = user.isBlockedByCurrentUser
+      ? "Bỏ chặn"
+      : "Chặn người dùng";
+
+    showActionSheetWithOptions(
+      {
+        options: [blockLabel, "Hủy"],
+        cancelButtonIndex: 1,
+        destructiveButtonIndex: user.isBlockedByCurrentUser ? undefined : 0,
+        title: "Tùy chọn người dùng",
+      },
+      (index) => {
+        if (index !== 0) return;
+
+        if (user.isBlockedByCurrentUser) {
+          updateBlockStatus(false);
+        } else {
+          confirmBlock();
+        }
+      },
+    );
   };
 
   return (
@@ -149,7 +253,25 @@ export default function UserProfileScreen() {
 
         <AppText variant="subtitle">Trang cá nhân</AppText>
 
-        <View style={styles.headerSpace} />
+        {user && currentUser?.id !== user.id ? (
+          <Pressable
+            disabled={blockLoading || followLoading}
+            onPress={openUserMenu}
+            style={styles.backButton}
+          >
+            {blockLoading ? (
+              <ActivityIndicator size="small" color={COLORS.text} />
+            ) : (
+              <Ionicons
+                name="ellipsis-horizontal"
+                size={24}
+                color={COLORS.text}
+              />
+            )}
+          </Pressable>
+        ) : (
+          <View style={styles.headerSpace} />
+        )}
       </View>
 
       {loading ? (
@@ -193,9 +315,30 @@ export default function UserProfileScreen() {
             }
           />
 
-          {currentUser?.id !== user.id ? (
+          {currentUser?.id !== user.id && user.isBlockedByCurrentUser ? (
             <Pressable
-              disabled={followLoading}
+              disabled={blockLoading}
+              onPress={() => updateBlockStatus(false)}
+              style={[
+                styles.blockedButton,
+                blockLoading && styles.disabledButton,
+              ]}
+            >
+              {blockLoading ? (
+                <ActivityIndicator size="small" color={COLORS.text} />
+              ) : (
+                <Ionicons
+                  name="ban-outline"
+                  size={18}
+                  color={COLORS.textMuted}
+                />
+              )}
+
+              <AppText color={COLORS.textMuted}>Đã chặn · Bỏ chặn</AppText>
+            </Pressable>
+          ) : currentUser?.id !== user.id ? (
+            <Pressable
+              disabled={followLoading || blockLoading}
               onPress={handleFollow}
               style={[
                 styles.followButton,
@@ -231,21 +374,27 @@ export default function UserProfileScreen() {
             </Pressable>
           ) : null}
 
-          <ProfilePostList
-            posts={posts}
-            emptyMessage="Người dùng này chưa có bài viết."
-            onPostPress={(postId) =>
-              router.push({
-                pathname: "/post/[id]",
-                params: { id: postId },
-              })
-            }
-            onPostDeleted={(postId) =>
-              setPosts((current) =>
-                current.filter((item) => item.id !== postId),
-              )
-            }
-          />
+          {postsErrorMessage ? (
+            <AppText color={COLORS.textMuted} style={styles.postsError}>
+              {postsErrorMessage}
+            </AppText>
+          ) : (
+            <ProfilePostList
+              posts={posts}
+              emptyMessage="Người dùng này chưa có bài viết."
+              onPostPress={(postId) =>
+                router.push({
+                  pathname: "/post/[id]",
+                  params: { id: postId },
+                })
+              }
+              onPostDeleted={(postId) =>
+                setPosts((current) =>
+                  current.filter((item) => item.id !== postId),
+                )
+              }
+            />
+          )}
         </ScrollView>
       ) : null}
     </SafeAreaView>
@@ -324,4 +473,25 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 
+  blockedButton: {
+    alignSelf: "center",
+    marginTop: 22,
+    minWidth: 180,
+    paddingHorizontal: 24,
+    paddingVertical: 11,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.surfaceAlt,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+
+  postsError: {
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.lg,
+    textAlign: "center",
+  },
 });

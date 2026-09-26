@@ -29,6 +29,8 @@ import type { CommentDto } from "@/types/comment";
 import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
+import { ApiError } from "@/types/api";
+
 export default function PostDetailScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
 
@@ -61,7 +63,11 @@ export default function PostDetailScreen() {
       setPost(mapFeedPostToPost(item));
     } catch (error) {
       setErrorMessage(
-        error instanceof Error ? error.message : "Không thể tải bài viết.",
+        error instanceof ApiError && error.status === 403
+          ? "Bạn không thể xem bài viết này vì quyền truy cập đã thay đổi."
+          : error instanceof Error
+            ? error.message
+            : "Không thể tải bài viết.",
       );
     } finally {
       setLoading(false);

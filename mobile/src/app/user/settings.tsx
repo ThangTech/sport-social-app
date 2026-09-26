@@ -43,6 +43,24 @@ export default function AccountSettingsScreen() {
           />
         </Pressable>
 
+        <Pressable
+          style={styles.menuItem}
+          onPress={() => router.push("/user/blocked-users")}
+        >
+          <View style={styles.menuLeft}>
+            <View style={styles.menuIcon}>
+              <Ionicons name="ban-outline" size={22} color={COLORS.primary} />
+            </View>
+            <AppText variant="label">Tài khoản đã chặn</AppText>
+          </View>
+
+          <Ionicons
+            name="chevron-forward"
+            size={20}
+            color={COLORS.textMuted}
+          />
+        </Pressable>
+
         <Pressable style={styles.logoutButton} onPress={signOut}>
           <Ionicons name="log-out-outline" size={20} color={COLORS.danger} />
           <AppText variant="label" color={COLORS.danger}>

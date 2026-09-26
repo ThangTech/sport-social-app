@@ -9,6 +9,7 @@ export type UserProfileDto = {
   followerCount: number;
   followingCount: number;
   isFollowing: boolean;
+  isBlockedByCurrentUser: boolean;
 };
 export type UserSummaryDto = {
   id: string;

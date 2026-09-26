@@ -88,6 +88,28 @@ export const unfollowUser = async (id: string) => {
     auth: true,
   });
 };
+
+export const blockUser = async (id: string) => {
+  return await api<void>(`/users/${id}/block`, {
+    method: "POST",
+    auth: true,
+  });
+};
+
+export const unblockUser = async (id: string) => {
+  return await api<void>(`/users/${id}/block`, {
+    method: "DELETE",
+    auth: true,
+  });
+};
+
+export const getBlockedUsers = async () => {
+  return await api<UserSummaryDto[]>("/users/me/blocked-users", {
+    method: "GET",
+    auth: true,
+  });
+};
+
 export const getFollowers = async (id: string) => {
   return await api<UserSummaryDto[]>(`/users/${id}/followers`, {
     method: "GET",
