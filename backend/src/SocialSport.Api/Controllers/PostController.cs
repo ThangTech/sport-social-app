@@ -69,6 +69,17 @@ namespace SocialSport.Api.Controllers
             return Ok(post);
         }
 
+        [HttpGet("{id:guid}/reactions")]
+        public async Task<ActionResult<PostReactionsResponse>> GetReactions(Guid id, [FromQuery] int limit = 20, [FromQuery] string? cursor = null)
+        {
+            var reactions = await _postService.GetReactionsAsync(id, TryGetCurrentUserId(), limit, cursor);
+
+            if (reactions is null)
+                return NotFound();
+
+            return Ok(reactions);
+        }
+
         [Authorize]
         [HttpPatch("{id:guid}")]
         public async Task<ActionResult<PostDto>> Update(Guid id, UpdatePostRequest request)

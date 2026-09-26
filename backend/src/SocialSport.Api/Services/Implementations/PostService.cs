@@ -6,6 +6,7 @@ using SocialSport.Api.Models.Entities;
 using SocialSport.Api.Models.Enums;
 using SocialSport.Api.Repositories.Interfaces;
 using SocialSport.Api.Services.Interfaces;
+using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.Http;
 
@@ -179,6 +180,82 @@ namespace SocialSport.Api.Services.Implementations
                 }).ToList()
             };
         }
+
+        public async Task<PostReactionsResponse?> GetReactionsAsync(Guid postId, Guid? currentUserId, int limit, string? cursor)
+        {
+            var post = await _postRepository.GetByIdForAccessAsync(postId);
+
+            if (post is null || post.Status != PostStatus.Published)
+                return null;
+
+            await _postAccessService.EnsureCanViewAsync(currentUserId, post);
+
+            limit = Math.Clamp(limit, 1, 50);
+            var (cursorReactedAt, cursorUserId) = DecodeReactionCursor(cursor);
+            var reactions = await _postRepository.GetReactionsAsync(postId, limit, cursorReactedAt, cursorUserId);
+            var hasMore = reactions.Count > limit;
+
+            if (hasMore)
+                reactions = reactions.Take(limit).ToList();
+
+            var userIds = reactions.Select(x => x.UserId).Distinct().ToList();
+            var users = await _userManager.Users
+                .Where(x => userIds.Contains(x.Id))
+                .ToDictionaryAsync(x => x.Id);
+
+            var items = reactions.Select(reaction =>
+            {
+                users.TryGetValue(reaction.UserId, out var user);
+
+                return new PostReactionDto
+                {
+                    UserId = reaction.UserId,
+                    DisplayName = user?.DisplayName ?? string.Empty,
+                    AvatarUrl = user?.AvatarUrl,
+                    ReactedAt = reaction.CreatedAt
+                };
+            }).ToList();
+
+            return new PostReactionsResponse
+            {
+                Items = items,
+                NextCursor = hasMore && reactions.Count > 0
+                    ? EncodeReactionCursor(reactions[^1].CreatedAt, reactions[^1].UserId)
+                    : null
+            };
+        }
+
+        private static (DateTimeOffset? ReactedAt, Guid? UserId) DecodeReactionCursor(string? cursor)
+        {
+            if (string.IsNullOrWhiteSpace(cursor))
+                return (null, null);
+
+            try
+            {
+                var value = Encoding.UTF8.GetString(Convert.FromBase64String(cursor));
+                var parts = value.Split('|', 2);
+
+                if (parts.Length != 2 ||
+                    !DateTimeOffset.TryParseExact(parts[0], "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var reactedAt) ||
+                    !Guid.TryParseExact(parts[1], "D", out var userId))
+                {
+                    throw new InvalidOperationException("Cursor không hợp lệ.");
+                }
+
+                return (reactedAt, userId);
+            }
+            catch (FormatException)
+            {
+                throw new InvalidOperationException("Cursor không hợp lệ.");
+            }
+        }
+
+        private static string EncodeReactionCursor(DateTimeOffset reactedAt, Guid userId)
+        {
+            var value = $"{reactedAt:O}|{userId:D}";
+            return Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
+        }
+
         public async Task<List<PostDto>> GetUserPostsAsync(Guid userId, Guid? currentUserId)
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());

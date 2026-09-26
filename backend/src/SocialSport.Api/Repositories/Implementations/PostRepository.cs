@@ -44,6 +44,33 @@ namespace SocialSport.Api.Repositories.Implementations
                 .FirstOrDefaultAsync(x => x.Id == id);
         }
 
+        public async Task<Post?> GetByIdForAccessAsync(Guid id)
+        {
+            return await _context.Posts
+                .AsNoTracking()
+                .FirstOrDefaultAsync(x => x.Id == id);
+        }
+
+        public async Task<List<PostReaction>> GetReactionsAsync(Guid postId, int limit, DateTimeOffset? cursorReactedAt, Guid? cursorUserId)
+        {
+            var query = _context.PostReactions
+                .AsNoTracking()
+                .Where(x => x.PostId == postId);
+
+            if (cursorReactedAt.HasValue && cursorUserId.HasValue)
+            {
+                query = query.Where(x =>
+                    x.CreatedAt < cursorReactedAt.Value ||
+                    (x.CreatedAt == cursorReactedAt.Value && x.UserId.CompareTo(cursorUserId.Value) < 0));
+            }
+
+            return await query
+                .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.UserId)
+                .Take(limit + 1)
+                .ToListAsync();
+        }
+
         public async Task<List<Post>> GetByUserIdAsync(Guid userId)
         {
             return await _context.Posts

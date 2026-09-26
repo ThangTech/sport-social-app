@@ -32,5 +32,8 @@ public class PostReactionConfiguration
             .OnDelete(DeleteBehavior.Restrict);
 
         builder.HasIndex(x => x.UserId);
+
+        builder.HasIndex(x => new { x.PostId, x.CreatedAt, x.UserId })
+            .IsDescending(false, true, true);
     }
 }
