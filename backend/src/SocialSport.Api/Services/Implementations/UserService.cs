@@ -58,7 +58,15 @@ namespace SocialSport.Api.Services.Implementations
             if (user is null)
                 throw new InvalidOperationException("Không tìm thấy người dùng.");
 
-            user.DisplayName = request.DisplayName.Trim();
+            var displayName = request.DisplayName.Trim();
+
+            if (displayName.Length < 2)
+                throw new InvalidOperationException("Tên hiển thị phải có ít nhất 2 ký tự sau khi loại bỏ khoảng trắng ở đầu và cuối.");
+
+            if (request.DateOfBirth > DateOnly.FromDateTime(DateTime.UtcNow))
+                throw new InvalidOperationException("Ngày sinh không được lớn hơn ngày hiện tại.");
+
+            user.DisplayName = displayName;
             user.Bio = request.Bio?.Trim();
             user.DateOfBirth = request.DateOfBirth;
             user.UpdatedAt = DateTimeOffset.UtcNow;
