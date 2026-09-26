@@ -8,7 +8,6 @@ import {
   updatePostMedia,
   uploadPostMedia,
 } from "@/services/post.service";
-import { useActionSheet } from "@expo/react-native-action-sheet";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -17,23 +16,23 @@ import {
   Alert,
   Pressable,
   StyleSheet,
-  TextInput,
   View,
-  Image,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { getFileUrl } from "@/services/api";
 import { getSports } from "@/services/sport.service";
 import type { SportDto } from "@/types/sport";
+import PostSportSelector from "@/components/post/editor/PostSportSelector";
+import PostImagePickerButton from "@/components/post/editor/PostImagePickerButton";
+import PostImagePreview from "@/components/post/editor/PostImagePreview";
+import PostEditorHeader from "@/components/post/editor/PostEditorHeader";
+import PostEditorForm from "@/components/post/editor/PostEditorForm";
 export default function EditPostScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const { user } = useAuth();
-
-  const { showActionSheetWithOptions } = useActionSheet();
 
   const [content, setContent] = useState("");
   const [visibility, setVisibility] = useState(1);
@@ -56,23 +55,6 @@ export default function EditPostScreen() {
   const [sports, setSports] = useState<SportDto[]>([]);
 
   const [sportName, setSportName] = useState<string | null>(null);
-
-  const visibilityLabel =
-    visibility === 1
-      ? "Công khai"
-      : visibility === 2
-        ? "Người theo dõi"
-        : "Chỉ mình tôi";
-
-  const visibilityIcon:
-    | "earth-outline"
-    | "people-outline"
-    | "lock-closed-outline" =
-    visibility === 1
-      ? "earth-outline"
-      : visibility === 2
-        ? "people-outline"
-        : "lock-closed-outline";
 
   useEffect(() => {
     const loadPost = async () => {
@@ -126,29 +108,6 @@ export default function EditPostScreen() {
 
     loadSports();
   }, []);
-  const handleVisibility = () => {
-    showActionSheetWithOptions(
-      {
-        options: ["Công khai", "Người theo dõi", "Chỉ mình tôi", "Hủy"],
-        cancelButtonIndex: 3,
-        title: "Ai có thể xem bài viết này?",
-      },
-      (index) => {
-        if (index === 0) {
-          setVisibility(1);
-        }
-
-        if (index === 1) {
-          setVisibility(2);
-        }
-
-        if (index === 2) {
-          setVisibility(3);
-        }
-      },
-    );
-  };
-
   const handleUpdate = async () => {
     const value = content.trim();
 
@@ -187,39 +146,6 @@ export default function EditPostScreen() {
       setSubmitting(false);
     }
   };
-  const handleSelectSport = () => {
-    const options = [
-      "Không chọn môn thể thao",
-      ...sports.map((sport) => sport.name),
-      "Hủy",
-    ];
-
-    const cancelIndex = options.length - 1;
-
-    showActionSheetWithOptions(
-      {
-        options,
-        cancelButtonIndex: cancelIndex,
-        title: "Chọn môn thể thao",
-      },
-      (index) => {
-        if (index === undefined || index === cancelIndex) {
-          return;
-        }
-
-        if (index === 0) {
-          setSportId(null);
-          setSportName(null);
-          return;
-        }
-
-        const sport = sports[index - 1];
-
-        setSportId(sport.id);
-        setSportName(sport.name);
-      },
-    );
-  };
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -237,15 +163,11 @@ export default function EditPostScreen() {
   if (errorMessage) {
     return (
       <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <Pressable style={styles.headerButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color={COLORS.text} />
-          </Pressable>
-
-          <AppText variant="subtitle">Chỉnh sửa bài viết</AppText>
-
-          <View style={styles.headerSpace} />
-        </View>
+        <PostEditorHeader
+          title="Chỉnh sửa bài viết"
+          onClose={() => router.back()}
+          closeIcon="arrow-back"
+        />
 
         <View style={styles.center}>
           <Ionicons
@@ -261,171 +183,55 @@ export default function EditPostScreen() {
       </SafeAreaView>
     );
   }
-  const handlePickImage = async () => {
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (!permission.granted) {
-      Alert.alert(
-        "Cần quyền truy cập",
-        "Bạn cần cho phép ứng dụng truy cập thư viện ảnh.",
-      );
-
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsMultipleSelection: false,
-      quality: 0.9,
-    });
-
-    if (result.canceled) return;
-
-    setSelectedImage(result.assets[0]);
-  };
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Pressable
-          style={styles.headerButton}
-          disabled={submitting}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="close" size={27} color={COLORS.text} />
-        </Pressable>
-
-        <AppText variant="subtitle">Chỉnh sửa bài viết</AppText>
-
-        <Pressable
-          style={[
-            styles.saveButton,
-            (!content.trim() || submitting) && styles.saveButtonDisabled,
-          ]}
-          disabled={!content.trim() || submitting}
-          onPress={handleUpdate}
-        >
-          {submitting ? (
-            <ActivityIndicator size="small" color={COLORS.background} />
-          ) : (
-            <AppText style={styles.saveButtonText}>Lưu</AppText>
-          )}
-        </Pressable>
-      </View>
-
-      <View style={styles.userSection}>
-        <View style={styles.avatar}>
-          <Ionicons name="person" size={24} color={COLORS.textMuted} />
-        </View>
-
-        <View>
-          <AppText variant="subtitle">
-            {user?.displayName ?? "Người dùng"}
-          </AppText>
-
-          <Pressable
-            style={styles.visibility}
-            disabled={submitting}
-            onPress={handleVisibility}
-          >
-            <Ionicons
-              name={visibilityIcon}
-              size={14}
-              color={COLORS.textMuted}
-            />
-
-            <AppText style={styles.visibilityText}>{visibilityLabel}</AppText>
-
-            <Ionicons name="chevron-down" size={13} color={COLORS.textMuted} />
-          </Pressable>
-
-          {/* Chọn môn thể thao */}
-          <Pressable
-            style={styles.sportSelector}
-            disabled={submitting || sports.length === 0}
-            onPress={handleSelectSport}
-          >
-            <Ionicons
-              name="football-outline"
-              size={16}
-              color={sportId ? COLORS.primary : COLORS.textMuted}
-            />
-
-            <AppText
-              variant="caption"
-              color={sportId ? COLORS.primary : COLORS.textMuted}
-            >
-              {sportName ?? "Chọn môn thể thao"}
-            </AppText>
-
-            <Ionicons name="chevron-down" size={14} color={COLORS.textMuted} />
-          </Pressable>
-        </View>
-      </View>
-
-      <TextInput
-        value={content}
-        onChangeText={setContent}
-        multiline
-        autoFocus
-        maxLength={5000}
-        editable={!submitting}
-        placeholder="Nội dung bài viết..."
-        placeholderTextColor={COLORS.textMuted}
-        style={styles.input}
+      <PostEditorHeader
+        title="Chỉnh sửa bài viết"
+        onClose={() => router.back()}
+        submitLabel="Lưu"
+        onSubmit={handleUpdate}
+        submitDisabled={!content.trim() || submitting}
+        submitting={submitting}
       />
-      {selectedImage ? (
-        <View style={styles.imagePreviewContainer}>
-          <Image
-            source={{
-              uri: selectedImage.uri,
+
+      <PostEditorForm
+        content={content}
+        onContentChange={setContent}
+        visibility={visibility}
+        onVisibilityChange={setVisibility}
+        displayName={user?.displayName}
+        disabled={submitting}
+        placeholder="Nội dung bài viết..."
+        variant="edit"
+      >
+          <PostSportSelector
+            sports={sports}
+            value={
+              sportId && sportName ? { id: sportId, name: sportName } : null
+            }
+            onChange={(sport) => {
+              setSportId(sport?.id ?? null);
+              setSportName(sport?.name ?? null);
             }}
-            style={styles.imagePreview}
-            resizeMode="cover"
+            disabled={submitting}
           />
-
-          <Pressable
-            style={styles.removeImageButton}
-            onPress={() => setSelectedImage(null)}
-          >
-            <Ionicons name="close" size={18} color={COLORS.white} />
-          </Pressable>
-
-          <View style={styles.newImageBadge}>
-            <AppText variant="caption" color={COLORS.white}>
-              Ảnh mới
-            </AppText>
-          </View>
-        </View>
-      ) : existingMedia && !removeExistingImage ? (
-        <View style={styles.imagePreviewContainer}>
-          <Image
-            source={{
-              uri: getFileUrl(existingMedia.url)!,
-            }}
-            style={styles.imagePreview}
-            resizeMode="cover"
-          />
-
-          <Pressable
-            style={styles.removeImageButton}
-            onPress={() => setRemoveExistingImage(true)}
-          >
-            <Ionicons name="trash-outline" size={17} color={COLORS.white} />
-          </Pressable>
-        </View>
-      ) : null}
+      </PostEditorForm>
+      <PostImagePreview
+        selectedImage={selectedImage}
+        onRemoveSelected={() => setSelectedImage(null)}
+        existingMedia={existingMedia}
+        removeExistingImage={removeExistingImage}
+        onRemoveExisting={() => setRemoveExistingImage(true)}
+        variant="edit"
+      />
       <View style={styles.mediaActions}>
-        <Pressable
-          style={styles.mediaButton}
+        <PostImagePickerButton
+          value={selectedImage}
+          onChange={setSelectedImage}
           disabled={submitting}
-          onPress={handlePickImage}
-        >
-          <Ionicons name="image-outline" size={20} color={COLORS.primary} />
-
-          <AppText variant="caption" color={COLORS.primary}>
-            {existingMedia ? "Thay ảnh" : "Thêm ảnh"}
-          </AppText>
-        </Pressable>
+          variant="label"
+          label={existingMedia ? "Thay ảnh" : "Thêm ảnh"}
+        />
 
         {removeExistingImage ? (
           <Pressable onPress={() => setRemoveExistingImage(false)}>
@@ -445,54 +251,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
 
-  header: {
-    height: 64,
-
-    paddingHorizontal: SPACING.lg,
-
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-
-  headerButton: {
-    width: 40,
-    height: 40,
-
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  headerSpace: {
-    width: 40,
-  },
-
-  saveButton: {
-    minWidth: 64,
-
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-
-    alignItems: "center",
-    justifyContent: "center",
-
-    borderRadius: 20,
-
-    backgroundColor: COLORS.primary,
-  },
-
-  saveButtonDisabled: {
-    opacity: 0.4,
-  },
-
-  saveButtonText: {
-    color: COLORS.background,
-    fontWeight: "600",
-  },
-
   center: {
     flex: 1,
 
@@ -507,94 +265,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  userSection: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.lg,
-
-    flexDirection: "row",
-    alignItems: "center",
-
-    gap: SPACING.md,
-  },
-
-  avatar: {
-    width: 48,
-    height: 48,
-
-    borderRadius: 24,
-
-    backgroundColor: COLORS.surfaceAlt,
-
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  visibility: {
-    alignSelf: "flex-start",
-
-    marginTop: 6,
-
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-
-    borderRadius: 8,
-
-    backgroundColor: COLORS.surfaceAlt,
-
-    flexDirection: "row",
-    alignItems: "center",
-
-    gap: 4,
-  },
-  imagePreviewContainer: {
-    height: 140,
-
-    marginHorizontal: SPACING.lg,
-    marginTop: SPACING.sm,
-
-    borderRadius: 14,
-
-    overflow: "hidden",
-
-    backgroundColor: COLORS.surfaceAlt,
-  },
-
-  imagePreview: {
-    width: "100%",
-    height: "100%",
-  },
-
-  removeImageButton: {
-    position: "absolute",
-
-    top: 8,
-    right: 8,
-
-    width: 30,
-    height: 30,
-
-    borderRadius: 15,
-
-    backgroundColor: "rgba(0,0,0,0.65)",
-
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  newImageBadge: {
-    position: "absolute",
-
-    left: 8,
-    bottom: 8,
-
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-
-    borderRadius: 8,
-
-    backgroundColor: "rgba(0,0,0,0.65)",
-  },
-
   mediaActions: {
     marginHorizontal: SPACING.lg,
     marginTop: SPACING.md,
@@ -604,46 +274,4 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
 
-  mediaButton: {
-    flexDirection: "row",
-    alignItems: "center",
-
-    gap: SPACING.xs,
-  },
-  visibilityText: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
-
-  sportSelector: {
-    alignSelf: "flex-start",
-
-    marginTop: 8,
-
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-
-    borderRadius: 8,
-
-    backgroundColor: COLORS.surfaceAlt,
-
-    flexDirection: "row",
-    alignItems: "center",
-
-    gap: 5,
-  },
-
-  input: {
-    minHeight: 220,
-
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.md,
-
-    fontSize: 18,
-    lineHeight: 25,
-
-    color: COLORS.text,
-
-    textAlignVertical: "top",
-  },
 });

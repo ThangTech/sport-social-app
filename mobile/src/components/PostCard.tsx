@@ -1,10 +1,7 @@
 import { COLORS, SPACING } from "@/constants/theme";
 import { Image, StyleSheet, View, Alert, Pressable } from "react-native";
 import AppText from "./ui/AppText";
-import Avatar from "./Avatar";
-import SportBadge from "./SportBadge";
 import { Post } from "../types/post";
-import Ionicons from "@expo/vector-icons/Ionicons";
 import {
   reactPost,
   removePostReaction,
@@ -16,6 +13,8 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { router } from "expo-router";
+import PostCardHeader from "@/components/post/PostCardHeader";
+import PostCardActions from "@/components/post/PostCardActions";
 type PostCardProps = {
   post: Post;
   onPress?: () => void;
@@ -46,15 +45,6 @@ export default function PostCard({
   const [reactionLoading, setReactionLoading] = useState(false);
   const [saved, setSaved] = useState(post.isSaved);
   const [saveLoading, setSaveLoading] = useState(false);
-  const visibilityIcon:
-    | "earth-outline"
-    | "people-outline"
-    | "lock-closed-outline" =
-    post.visibility === 1
-      ? "earth-outline"
-      : post.visibility === 2
-        ? "people-outline"
-        : "lock-closed-outline";
   useEffect(() => {
     setReactionCount(post.likeCount);
     setCurrentReaction(post.currentReaction ?? null);
@@ -159,53 +149,12 @@ export default function PostCard({
   };
   return (
     <View style={styles.card}>
-      <View style={styles.header}>
-        <Pressable
-          style={styles.userInfo}
-          disabled={!onAuthorPress}
-          onPress={onAuthorPress}
-        >
-          <Avatar source={post.authorAvatar} />
-          <View style={styles.author}>
-            <AppText variant="label"> {post.authorName}</AppText>
-            {post.groupName && (
-              <AppText
-                variant="caption"
-                color={COLORS.primary}
-                style={{ marginLeft: 2, marginTop: 5 }}
-              >
-                {post.groupName}
-              </AppText>
-            )}
-            <View style={styles.postMeta}>
-              <AppText variant="caption" color={COLORS.textMuted}>
-                {post.createdAt}
-              </AppText>
-
-              <View style={styles.metaDot} />
-
-              <Ionicons
-                name={visibilityIcon}
-                size={13}
-                color={COLORS.textMuted}
-              />
-            </View>
-          </View>
-        </Pressable>
-        <View style={styles.headerActions}>
-          {post.sport ? <SportBadge name={post.sport} /> : null}
-
-          {isOwner ? (
-            <Pressable hitSlop={10} onPress={handlePostMenu}>
-              <Ionicons
-                name="ellipsis-horizontal"
-                size={22}
-                color={COLORS.textMuted}
-              />
-            </Pressable>
-          ) : null}
-        </View>
-      </View>
+      <PostCardHeader
+        post={post}
+        isOwner={isOwner}
+        onAuthorPress={onAuthorPress}
+        onMenuPress={handlePostMenu}
+      />
       <Pressable onPress={onPress}>
         <View style={styles.content}>
           <AppText>{post.content}</AppText>
@@ -220,67 +169,17 @@ export default function PostCard({
           </View>
         ) : null}
       </Pressable>
-      <View style={styles.actions}>
-        <Pressable
-          style={[
-            styles.actionButton,
-            reactionLoading && styles.disabledAction,
-          ]}
-          disabled={reactionLoading}
-          onPress={handleReaction}
-        >
-          <Ionicons
-            name={currentReaction ? "heart" : "heart-outline"}
-            size={23}
-            color={currentReaction ? COLORS.danger : COLORS.textMuted}
-          />
-
-          <AppText
-            variant="caption"
-            color={currentReaction ? COLORS.danger : COLORS.textMuted}
-          >
-            {reactionCount}
-          </AppText>
-        </Pressable>
-
-        <Pressable
-          style={styles.actionButton}
-          onPress={onCommentPress ?? onPress}
-        >
-          <Ionicons
-            name="chatbubble-outline"
-            size={22}
-            color={COLORS.textMuted}
-          />
-
-          <AppText variant="caption" color={COLORS.textMuted}>
-            {post.commentCount}
-          </AppText>
-        </Pressable>
-
-        <Pressable
-          style={styles.actionButton}
-          onPress={() => Alert.alert("Chia sẻ")}
-        >
-          <Ionicons
-            name="share-social-outline"
-            size={22}
-            color={COLORS.textMuted}
-          />
-        </Pressable>
-
-        <Pressable
-          style={[styles.saveButton, saveLoading && styles.disabledAction]}
-          disabled={saveLoading}
-          onPress={handleSave}
-        >
-          <Ionicons
-            name={saved ? "bookmark" : "bookmark-outline"}
-            size={23}
-            color={saved ? COLORS.primary : COLORS.textMuted}
-          />
-        </Pressable>
-      </View>
+      <PostCardActions
+        reactionCount={reactionCount}
+        currentReaction={currentReaction}
+        reactionLoading={reactionLoading}
+        saved={saved}
+        saveLoading={saveLoading}
+        commentCount={post.commentCount}
+        onReaction={handleReaction}
+        onComment={onCommentPress ?? onPress}
+        onSave={handleSave}
+      />
     </View>
   );
 }
@@ -293,21 +192,6 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
 
-  header: {
-    padding: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  userInfo: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  author: {
-    flex: 1,
-  },
 
   content: {
     paddingHorizontal: SPACING.lg,
@@ -324,48 +208,5 @@ const styles = StyleSheet.create({
   postImage: {
     width: "100%",
     height: "100%",
-  },
-  actions: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.lg,
-  },
-
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-  },
-
-  saveButton: {
-    marginLeft: "auto",
-  },
-  disabledAction: {
-    opacity: 0.6,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  postMeta: {
-    marginLeft: 2,
-    marginTop: 5,
-
-    flexDirection: "row",
-    alignItems: "center",
-
-    gap: 6,
-  },
-
-  metaDot: {
-    width: 3,
-    height: 3,
-
-    borderRadius: 2,
-
-    backgroundColor: COLORS.textMuted,
   },
 });

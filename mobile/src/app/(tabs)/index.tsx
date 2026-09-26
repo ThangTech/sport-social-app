@@ -3,11 +3,11 @@ import CreatePostPrompt from "@/components/CreatePostPrompt";
 import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
 import { COLORS, SPACING } from "@/constants/theme";
-import { getFileUrl } from "@/services/api";
 import { getFeed } from "@/services/feed.service";
+import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import type { Post } from "@/types/post";
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -16,66 +16,47 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { formatRelativeTime } from "@/utils/date";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFocusEffect } from "@react-navigation/native";
 export default function HomeScreen() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
   const { user: currentUser } = useAuth();
   const currentUserIdRef = useRef<string | undefined>(currentUser?.id);
+  const loadingMoreRef = useRef(false);
   const { refresh } = useLocalSearchParams<{ refresh?: string }>();
 
-  const loadFeed = async (userId: string) => {
+  const loadFeed = async (
+    userId: string,
+    cursor: string | null = null,
+    append = false,
+  ) => {
     try {
-      setErrorMessage("");
+      if (!append) {
+        setErrorMessage("");
+      }
 
-      const response = await getFeed(20);
+      const response = await getFeed(20, cursor);
 
       if (currentUserIdRef.current !== userId) {
         return;
       }
 
-      setPosts(
-        response.items.map((item) => {
-          const firstImage = item.media.find((media) => media.mediaType === 1);
+      const mappedPosts = response.items.map(mapFeedPostToPost);
 
-          return {
-            id: item.id,
+      setPosts((current) => {
+        if (!append) return mappedPosts;
 
-            authorId: item.authorId,
-            authorName: item.authorName,
+        const existingIds = new Set(current.map((post) => post.id));
+        const newPosts = mappedPosts.filter((post) => !existingIds.has(post.id));
 
-            authorAvatar: item.authorAvatar
-              ? {
-                  uri: getFileUrl(item.authorAvatar)!,
-                }
-              : require("@/assets/images/icon.png"),
-
-            groupId: item.groupId ?? undefined,
-            groupName: item.groupName ?? undefined,
-
-            createdAt: formatRelativeTime(item.createdAt),
-
-            content: item.content ?? "",
-            visibility: item.visibility,
-            image: firstImage
-              ? {
-                  uri: getFileUrl(firstImage.url)!,
-                }
-              : undefined,
-
-            sport: item.sportName ?? undefined,
-
-            likeCount: item.likeCount,
-            commentCount: item.commentCount,
-            currentReaction: item.currentReaction,
-            isSaved: item.isSaved,
-          };
-        }),
-      );
+        return [...current, ...newPosts];
+      });
+      setNextCursor(response.nextCursor ?? null);
     } catch (error) {
       if (currentUserIdRef.current !== userId) {
         return;
@@ -88,6 +69,8 @@ export default function HomeScreen() {
       if (currentUserIdRef.current === userId) {
         setLoading(false);
         setRefreshing(false);
+        setLoadingMore(false);
+        loadingMoreRef.current = false;
       }
     }
   };
@@ -99,6 +82,7 @@ export default function HomeScreen() {
 
       if (!currentUser?.id) {
         setPosts([]);
+        setNextCursor(null);
         setErrorMessage("");
         setLoading(false);
         return;
@@ -118,6 +102,22 @@ export default function HomeScreen() {
     setRefreshing(true);
 
     await loadFeed(currentUser.id);
+  };
+
+  const handleLoadMore = async () => {
+    if (
+      !currentUser?.id ||
+      !nextCursor ||
+      loading ||
+      refreshing ||
+      loadingMoreRef.current
+    ) {
+      return;
+    }
+
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    await loadFeed(currentUser.id, nextCursor, true);
   };
 
   if (loading) {
@@ -198,6 +198,15 @@ export default function HomeScreen() {
             }}
           />
         )}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={styles.listFooter}>
+              <ActivityIndicator color={COLORS.primary} />
+            </View>
+          ) : null
+        }
+        onEndReached={handleLoadMore}
+        onEndReachedThreshold={0.4}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -235,5 +244,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.danger,
     borderRadius: 10,
+  },
+  listFooter: {
+    padding: SPACING.lg,
+    alignItems: "center",
   },
 });

@@ -1,10 +1,9 @@
 import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
 import { COLORS, SPACING } from "@/constants/theme";
-import { getFileUrl } from "@/services/api";
 import { getSavedPosts } from "@/services/post.service";
+import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import type { Post } from "@/types/post";
-import { formatRelativeTime } from "@/utils/date";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
@@ -32,43 +31,12 @@ export default function SavedPostsScreen() {
       const response = await getSavedPosts();
 
       setPosts(
-        response.map((item) => {
-          const firstImage = item.media.find((media) => media.mediaType === 1);
-
-          return {
-            id: item.id,
-
-            authorId: item.authorId,
-            authorName: item.authorName,
-
-            authorAvatar: item.authorAvatar
-              ? {
-                  uri: getFileUrl(item.authorAvatar)!,
-                }
-              : require("@/assets/images/icon.png"),
-
-            groupId: item.groupId ?? undefined,
-            groupName: item.groupName ?? undefined,
-
-            createdAt: formatRelativeTime(item.createdAt),
-
-            content: item.content ?? "",
-            visibility: item.visibility,
-            image: firstImage
-              ? {
-                  uri: getFileUrl(firstImage.url)!,
-                }
-              : undefined,
-
-            sport: item.sportName ?? undefined,
-
-            likeCount: item.likeCount,
-            commentCount: item.commentCount,
-            currentReaction: item.currentReaction,
-
+        response.map((item) =>
+          mapFeedPostToPost({
+            ...item,
             isSaved: true,
-          };
-        }),
+          }),
+        ),
       );
     } catch (error) {
       setErrorMessage(

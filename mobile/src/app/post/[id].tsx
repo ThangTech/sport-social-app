@@ -1,10 +1,9 @@
 import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
 import { COLORS, SPACING } from "@/constants/theme";
-import { getFileUrl } from "@/services/api";
 import { getPostById } from "@/services/post.service";
 import type { Post } from "@/types/post";
-import { formatRelativeTime } from "@/utils/date";
+import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import {
@@ -18,7 +17,8 @@ import {
   TextInput,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import CommentItem from "@/components/CommentItem";
+import PostCommentsSection from "@/components/post/PostCommentsSection";
+import CommentComposer from "@/components/post/CommentComposer";
 import {
   createComment,
   getComments,
@@ -58,46 +58,7 @@ export default function PostDetailScreen() {
 
       const item = await getPostById(postId);
 
-      const firstImage = item.media.find((media) => media.mediaType === 1);
-
-      setPost({
-        id: item.id,
-
-        authorId: item.authorId,
-        authorName: item.authorName,
-
-        authorAvatar: item.authorAvatar
-          ? {
-              uri: getFileUrl(item.authorAvatar)!,
-            }
-          : require("@/assets/images/icon.png"),
-
-        groupId: item.groupId ?? undefined,
-
-        groupName: item.groupName ?? undefined,
-
-        createdAt: formatRelativeTime(item.createdAt),
-
-        content: item.content ?? "",
-
-        visibility: item.visibility,
-
-        image: firstImage
-          ? {
-              uri: getFileUrl(firstImage.url)!,
-            }
-          : undefined,
-
-        sport: item.sportName ?? undefined,
-
-        likeCount: item.likeCount,
-
-        commentCount: item.commentCount,
-
-        currentReaction: item.currentReaction,
-
-        isSaved: item.isSaved,
-      });
+      setPost(mapFeedPostToPost(item));
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Không thể tải bài viết.",
@@ -264,116 +225,33 @@ export default function PostDetailScreen() {
               }}
             />
 
-            <View style={styles.commentsHeader}>
-              <AppText variant="subtitle">Bình luận</AppText>
-
-              <AppText variant="caption" color={COLORS.textMuted}>
-                {post.commentCount} bình luận
-              </AppText>
-            </View>
-
-            {commentsLoading ? (
-              <View style={styles.commentsLoading}>
-                <ActivityIndicator color={COLORS.primary} />
-              </View>
-            ) : commentError && comments.length === 0 ? (
-              <View style={styles.commentMessage}>
-                <AppText color={COLORS.danger}>{commentError}</AppText>
-              </View>
-            ) : comments.length === 0 ? (
-              <View style={styles.commentMessage}>
-                <Ionicons
-                  name="chatbubbles-outline"
-                  size={42}
-                  color={COLORS.textMuted}
-                />
-
-                <AppText color={COLORS.textMuted} style={styles.message}>
-                  Chưa có bình luận nào.
-                </AppText>
-
-                <AppText variant="caption" color={COLORS.textMuted}>
-                  Hãy là người đầu tiên bình luận.
-                </AppText>
-              </View>
-            ) : (
-              <View style={styles.commentsList}>
-                {comments.map((comment) => (
-                  <CommentItem
-                    key={comment.id}
-                    comment={comment}
-                    currentUserId={currentUser?.id}
-                    onReply={handleReply}
-                    onUpdate={handleUpdateComment}
-                    onDelete={handleDeleteComment}
-                    onAuthorPress={(userId) =>
-                      router.push({
-                        pathname: "/user/[id]",
-                        params: {
-                          id: userId,
-                        },
-                      })
-                    }
-                  />
-                ))}
-              </View>
-            )}
-
-            {commentError && comments.length > 0 ? (
-              <View style={styles.inlineError}>
-                <AppText variant="caption" color={COLORS.danger}>
-                  {commentError}
-                </AppText>
-              </View>
-            ) : null}
+            <PostCommentsSection
+              comments={comments}
+              count={post.commentCount}
+              loading={commentsLoading}
+              error={commentError}
+              currentUserId={currentUser?.id}
+              onReply={handleReply}
+              onUpdate={handleUpdateComment}
+              onDelete={handleDeleteComment}
+              onAuthorPress={(userId) =>
+                router.push({
+                  pathname: "/user/[id]",
+                  params: { id: userId },
+                })
+              }
+            />
           </ScrollView>
 
-          <View style={styles.commentComposer}>
-            {replyingTo ? (
-              <View style={styles.replyingBox}>
-                <AppText variant="caption" color={COLORS.textMuted}>
-                  Đang trả lời {replyingTo.authorName}
-                </AppText>
-
-                <Pressable onPress={() => setReplyingTo(null)}>
-                  <Ionicons name="close" size={20} color={COLORS.textMuted} />
-                </Pressable>
-              </View>
-            ) : null}
-
-            <View style={styles.inputRow}>
-              <TextInput
-                ref={commentInputRef}
-                value={commentText}
-                onChangeText={setCommentText}
-                placeholder={
-                  replyingTo
-                    ? `Trả lời ${replyingTo.authorName}...`
-                    : "Viết bình luận..."
-                }
-                placeholderTextColor={COLORS.textMuted}
-                style={styles.commentInput}
-                multiline
-                maxLength={3000}
-              />
-
-              <Pressable
-                onPress={handleSubmitComment}
-                disabled={!commentText.trim() || commentLoading}
-                style={[
-                  styles.sendButton,
-                  (!commentText.trim() || commentLoading) &&
-                    styles.sendButtonDisabled,
-                ]}
-              >
-                {commentLoading ? (
-                  <ActivityIndicator size="small" color={COLORS.background} />
-                ) : (
-                  <Ionicons name="send" size={20} color={COLORS.background} />
-                )}
-              </Pressable>
-            </View>
-          </View>
+          <CommentComposer
+            ref={commentInputRef}
+            value={commentText}
+            onChangeText={setCommentText}
+            replyingTo={replyingTo}
+            onCancelReply={() => setReplyingTo(null)}
+            onSubmit={handleSubmitComment}
+            loading={commentLoading}
+          />
         </KeyboardAvoidingView>
       ) : null}
     </SafeAreaView>
@@ -427,94 +305,4 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.lg,
   },
 
-  commentsHeader: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-
-  commentsList: {
-    padding: SPACING.lg,
-  },
-
-  commentsLoading: {
-    padding: SPACING.xl,
-    alignItems: "center",
-  },
-
-  commentMessage: {
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-
-  inlineError: {
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.md,
-  },
-
-  commentComposer: {
-    backgroundColor: COLORS.surface,
-
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLORS.border,
-
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-  },
-
-  replyingBox: {
-    paddingHorizontal: SPACING.sm,
-    paddingBottom: SPACING.sm,
-
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-
-  inputRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: SPACING.sm,
-  },
-
-  commentInput: {
-    flex: 1,
-
-    minHeight: 42,
-    maxHeight: 110,
-
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
-
-    borderRadius: 20,
-
-    backgroundColor: COLORS.surfaceAlt,
-
-    color: COLORS.text,
-
-    fontSize: 15,
-  },
-
-  sendButton: {
-    width: 42,
-    height: 42,
-
-    borderRadius: 21,
-
-    alignItems: "center",
-    justifyContent: "center",
-
-    backgroundColor: COLORS.primary,
-  },
-
-  sendButtonDisabled: {
-    opacity: 0.4,
-  },
 });

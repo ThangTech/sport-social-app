@@ -73,23 +73,13 @@ export const uploadPostMedia = async (
   postId: string,
   asset: ImagePickerAsset,
 ) => {
-  const formData = new FormData();
-
-  const extension = asset.mimeType?.split("/")[1] ?? "jpg";
-
-  formData.append("file", {
-    uri: asset.uri,
-    name: asset.fileName ?? `post-${Date.now()}.${extension}`,
-    type: asset.mimeType ?? "image/jpeg",
-  } as any);
-
   return await api<PostMediaUploadResponse>(`/posts/${postId}/media`, {
     method: "POST",
     auth: true,
-    body: formData,
+    body: createMediaFormData(asset),
   });
 };
-const createMediaFormData = (asset: ImagePickerAsset) => {
+function createMediaFormData(asset: ImagePickerAsset) {
   const formData = new FormData();
 
   const extension = asset.mimeType?.split("/")[1] ?? "jpg";
@@ -101,7 +91,7 @@ const createMediaFormData = (asset: ImagePickerAsset) => {
   } as any);
 
   return formData;
-};
+}
 export const updatePostMedia = async (
   postId: string,
   mediaId: string,

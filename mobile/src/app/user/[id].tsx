@@ -1,7 +1,8 @@
-import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
+import ProfilePostList from "@/components/profile/ProfilePostList";
 import { COLORS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
+import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import {
   getUserPosts,
   getUserProfile,
@@ -11,7 +12,6 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import type { Post } from "@/types/post";
 import type { UserProfileDto } from "@/types/user";
-import { formatRelativeTime } from "@/utils/date";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
 import { useFocusEffect } from "@react-navigation/native";
@@ -63,50 +63,7 @@ export default function UserProfileScreen() {
 
       setUser(profileResult);
 
-      setPosts(
-        postsResult.map((item) => {
-          const firstImage = item.media.find((media) => media.mediaType === 1);
-
-          return {
-            id: item.id,
-
-            authorId: item.authorId,
-            authorName: item.authorName,
-
-            authorAvatar: item.authorAvatar
-              ? {
-                  uri: getFileUrl(item.authorAvatar)!,
-                }
-              : require("@/assets/images/icon.png"),
-
-            groupId: item.groupId ?? undefined,
-
-            groupName: item.groupName ?? undefined,
-
-            createdAt: formatRelativeTime(item.createdAt),
-
-            content: item.content ?? "",
-
-            visibility: item.visibility,
-
-            image: firstImage
-              ? {
-                  uri: getFileUrl(firstImage.url)!,
-                }
-              : undefined,
-
-            sport: item.sportName ?? undefined,
-
-            likeCount: item.likeCount,
-
-            commentCount: item.commentCount,
-
-            currentReaction: item.currentReaction,
-
-            isSaved: item.isSaved,
-          };
-        }),
-      );
+      setPosts(postsResult.map(mapFeedPostToPost));
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         setNotFound(true);
@@ -336,41 +293,21 @@ export default function UserProfileScreen() {
             ) : null}
           </View>
 
-          <View style={styles.postsSection}>
-            <AppText variant="subtitle">Bài viết</AppText>
-
-            <AppText variant="caption" color={COLORS.textMuted}>
-              {posts.length} bài viết
-            </AppText>
-          </View>
-
-          {posts.length === 0 ? (
-            <View style={styles.emptyPosts}>
-              <AppText color={COLORS.textMuted}>
-                Người dùng này chưa có bài viết.
-              </AppText>
-            </View>
-          ) : (
-            posts.map((post) => (
-              <PostCard
-                key={post.id}
-                post={post}
-                onPress={() =>
-                  router.push({
-                    pathname: "/post/[id]",
-                    params: {
-                      id: post.id,
-                    },
-                  })
-                }
-                onDeleted={(postId) => {
-                  setPosts((current) =>
-                    current.filter((item) => item.id !== postId),
-                  );
-                }}
-              />
-            ))
-          )}
+          <ProfilePostList
+            posts={posts}
+            emptyMessage="Người dùng này chưa có bài viết."
+            onPostPress={(postId) =>
+              router.push({
+                pathname: "/post/[id]",
+                params: { id: postId },
+              })
+            }
+            onPostDeleted={(postId) =>
+              setPosts((current) =>
+                current.filter((item) => item.id !== postId),
+              )
+            }
+          />
         </ScrollView>
       ) : null}
     </SafeAreaView>
@@ -507,15 +444,4 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
 
-  postsSection: {
-    padding: SPACING.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLORS.border,
-    gap: SPACING.xs,
-  },
-
-  emptyPosts: {
-    padding: SPACING.xl,
-    alignItems: "center",
-  },
 });
