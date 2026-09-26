@@ -161,6 +161,7 @@ const styles = StyleSheet.create({
 
   header: {
     padding: SPACING.lg,
+    alignItems: "center",
   },
 
   list: {

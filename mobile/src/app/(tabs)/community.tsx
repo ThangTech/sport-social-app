@@ -1,12 +1,14 @@
 import AppText from "@/components/ui/AppText";
-import { COLORS } from "@/constants/theme";
-import { StyleSheet } from "react-native";
+import { COLORS, SPACING } from "@/constants/theme";
+import { StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CommunityScreen() {
   return (
     <SafeAreaView style={styles.container}>
-      <AppText variant="title">Cộng đồng</AppText>
+      <View style={styles.header}>
+        <AppText variant="title">Cộng đồng</AppText>
+      </View>
     </SafeAreaView>
   );
 }
@@ -14,7 +16,14 @@ export default function CommunityScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 16,
     backgroundColor: COLORS.background,
+  },
+  header: {
+    height: 64,
+    paddingHorizontal: SPACING.lg,
+    alignItems: "center",
+    justifyContent: "center",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
   },
 });

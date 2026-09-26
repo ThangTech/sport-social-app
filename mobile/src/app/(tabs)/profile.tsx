@@ -137,6 +137,7 @@ const styles = StyleSheet.create({
   header: {
     height: 64,
     paddingHorizontal: SPACING.lg,
+    alignItems: "center",
     justifyContent: "center",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,

@@ -130,7 +130,9 @@ export default function EditProfileScreen() {
           <Ionicons name="close" size={27} color={COLORS.text} />
         </Pressable>
 
-        <AppText variant="subtitle">Chỉnh sửa hồ sơ</AppText>
+        <AppText variant="subtitle" style={styles.headerTitle}>
+          Chỉnh sửa hồ sơ
+        </AppText>
 
         <Pressable
           style={[styles.saveButton, submitting && styles.disabledButton]}
@@ -242,6 +244,12 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
+  },
+  headerTitle: {
+    position: "absolute",
+    left: 88,
+    right: 88,
+    textAlign: "center",
   },
   saveButton: {
     minWidth: 64,

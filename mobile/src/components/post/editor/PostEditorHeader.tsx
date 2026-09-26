@@ -38,7 +38,9 @@ export default function PostEditorHeader({
         />
       </Pressable>
 
-      <AppText variant="subtitle">{title}</AppText>
+      <AppText variant="subtitle" style={styles.headerTitle}>
+        {title}
+      </AppText>
 
       {submitLabel && onSubmit ? (
         <Pressable
@@ -80,6 +82,12 @@ const styles = StyleSheet.create({
     height: 40,
     alignItems: "center",
     justifyContent: "center",
+  },
+  headerTitle: {
+    position: "absolute",
+    left: 88,
+    right: 88,
+    textAlign: "center",
   },
   headerSpace: {
     width: 40,
