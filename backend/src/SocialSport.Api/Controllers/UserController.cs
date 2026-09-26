@@ -73,6 +73,34 @@ public class UsersController : ControllerBase
     }
 
     [Authorize]
+    [HttpPut("me/avatar")]
+    public async Task<ActionResult<UserProfileDto>> UpdateAvatar([FromForm] IFormFile file)
+    {
+        return Ok(await _userService.UpdateAvatarAsync(GetCurrentUserId(), file));
+    }
+
+    [Authorize]
+    [HttpDelete("me/avatar")]
+    public async Task<ActionResult<UserProfileDto>> DeleteAvatar()
+    {
+        return Ok(await _userService.DeleteAvatarAsync(GetCurrentUserId()));
+    }
+
+    [Authorize]
+    [HttpPut("me/cover")]
+    public async Task<ActionResult<UserProfileDto>> UpdateCover([FromForm] IFormFile file)
+    {
+        return Ok(await _userService.UpdateCoverAsync(GetCurrentUserId(), file));
+    }
+
+    [Authorize]
+    [HttpDelete("me/cover")]
+    public async Task<ActionResult<UserProfileDto>> DeleteCover()
+    {
+        return Ok(await _userService.DeleteCoverAsync(GetCurrentUserId()));
+    }
+
+    [Authorize]
     [HttpPost("{id:guid}/follow")]
     public async Task<IActionResult> Follow(Guid id)
     {

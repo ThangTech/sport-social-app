@@ -10,15 +10,20 @@ namespace SocialSport.Api.Services.Implementations
 {
     public class UserService : IUserService
     {
+        private const long MaxAvatarFileSize = 5 * 1024 * 1024;
+        private const long MaxCoverFileSize = 10 * 1024 * 1024;
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly IFollowRepository _followRepository;
         private readonly IUserBlockRepository _userBlockRepository;
+        private readonly IWebHostEnvironment _environment;
 
-        public UserService(UserManager<ApplicationUser> userManager, IFollowRepository followRepository, IUserBlockRepository userBlockRepository)
+        public UserService(UserManager<ApplicationUser> userManager, IFollowRepository followRepository, IUserBlockRepository userBlockRepository, IWebHostEnvironment environment)
         {
             _userManager = userManager;
             _followRepository = followRepository;
             _userBlockRepository = userBlockRepository;
+            _environment = environment;
         }
 
         public async Task<UserProfileDto?> GetProfileAsync(Guid userId, Guid? currentUserId)
@@ -77,6 +82,190 @@ namespace SocialSport.Api.Services.Implementations
                 throw new InvalidOperationException(string.Join("; ", result.Errors.Select(x => x.Description)));
 
             return (await GetProfileAsync(userId, userId))!;
+        }
+
+        public Task<UserProfileDto> UpdateAvatarAsync(Guid userId, IFormFile file)
+        {
+            return UpdateProfileImageAsync(userId, file, ProfileImageKind.Avatar);
+        }
+
+        public Task<UserProfileDto> DeleteAvatarAsync(Guid userId)
+        {
+            return DeleteProfileImageAsync(userId, ProfileImageKind.Avatar);
+        }
+
+        public Task<UserProfileDto> UpdateCoverAsync(Guid userId, IFormFile file)
+        {
+            return UpdateProfileImageAsync(userId, file, ProfileImageKind.Cover);
+        }
+
+        public Task<UserProfileDto> DeleteCoverAsync(Guid userId)
+        {
+            return DeleteProfileImageAsync(userId, ProfileImageKind.Cover);
+        }
+
+        private async Task<UserProfileDto> UpdateProfileImageAsync(Guid userId, IFormFile file, ProfileImageKind imageKind)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+
+            if (user is null)
+                throw new InvalidOperationException("Không tìm thấy người dùng.");
+
+            var maxFileSize = imageKind == ProfileImageKind.Avatar ? MaxAvatarFileSize : MaxCoverFileSize;
+            var extension = await ValidateImageAsync(file, maxFileSize);
+            var folderName = GetFolderName(imageKind);
+            var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+            var uploadFolder = Path.Combine(webRoot, "uploads", folderName);
+
+            Directory.CreateDirectory(uploadFolder);
+
+            var fileName = $"{Guid.NewGuid():N}{extension}";
+            var newFilePath = Path.Combine(uploadFolder, fileName);
+            var oldUrl = imageKind == ProfileImageKind.Avatar ? user.AvatarUrl : user.CoverUrl;
+
+            try
+            {
+                await using (var stream = new FileStream(newFilePath, FileMode.CreateNew))
+                {
+                    await file.CopyToAsync(stream);
+                }
+
+                var newUrl = $"/uploads/{folderName}/{fileName}";
+
+                if (imageKind == ProfileImageKind.Avatar)
+                    user.AvatarUrl = newUrl;
+                else
+                    user.CoverUrl = newUrl;
+
+                user.UpdatedAt = DateTimeOffset.UtcNow;
+
+                var result = await _userManager.UpdateAsync(user);
+
+                if (!result.Succeeded)
+                    throw new InvalidOperationException(string.Join("; ", result.Errors.Select(x => x.Description)));
+            }
+            catch
+            {
+                DeleteFileIfExists(newFilePath);
+                throw;
+            }
+
+            DeleteOwnedProfileImage(oldUrl, imageKind);
+            return (await GetProfileAsync(userId, userId))!;
+        }
+
+        private async Task<UserProfileDto> DeleteProfileImageAsync(Guid userId, ProfileImageKind imageKind)
+        {
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+
+            if (user is null)
+                throw new InvalidOperationException("Không tìm thấy người dùng.");
+
+            var oldUrl = imageKind == ProfileImageKind.Avatar ? user.AvatarUrl : user.CoverUrl;
+
+            if (imageKind == ProfileImageKind.Avatar)
+                user.AvatarUrl = null;
+            else
+                user.CoverUrl = null;
+
+            user.UpdatedAt = DateTimeOffset.UtcNow;
+
+            var result = await _userManager.UpdateAsync(user);
+
+            if (!result.Succeeded)
+                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(x => x.Description)));
+
+            DeleteOwnedProfileImage(oldUrl, imageKind);
+            return (await GetProfileAsync(userId, userId))!;
+        }
+
+        private static async Task<string> ValidateImageAsync(IFormFile file, long maxFileSize)
+        {
+            if (file.Length == 0)
+                throw new InvalidOperationException("File ảnh không hợp lệ.");
+
+            if (file.Length > maxFileSize)
+                throw new InvalidOperationException($"File ảnh không được vượt quá {maxFileSize / (1024 * 1024)}MB.");
+
+            var expectedExtension = file.ContentType.ToLowerInvariant() switch
+            {
+                "image/jpeg" or "image/jpg" => ".jpg",
+                "image/png" => ".png",
+                "image/webp" => ".webp",
+                _ => throw new InvalidOperationException("Chỉ hỗ trợ ảnh JPEG, PNG hoặc WebP.")
+            };
+
+            var header = new byte[12];
+            await using var stream = file.OpenReadStream();
+            var bytesRead = await stream.ReadAsync(header.AsMemory(0, header.Length));
+
+            var actualExtension = GetImageExtensionFromHeader(header, bytesRead);
+
+            if (actualExtension != expectedExtension)
+                throw new InvalidOperationException("Nội dung file không khớp với định dạng ảnh được khai báo.");
+
+            return actualExtension;
+        }
+
+        private static string? GetImageExtensionFromHeader(byte[] header, int bytesRead)
+        {
+            if (bytesRead >= 3 && header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF)
+                return ".jpg";
+
+            if (bytesRead >= 8 && header.AsSpan(0, 8).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }))
+                return ".png";
+
+            if (bytesRead >= 12 &&
+                header.AsSpan(0, 4).SequenceEqual("RIFF"u8) &&
+                header.AsSpan(8, 4).SequenceEqual("WEBP"u8))
+            {
+                return ".webp";
+            }
+
+            return null;
+        }
+
+        private void DeleteOwnedProfileImage(string? imageUrl, ProfileImageKind imageKind)
+        {
+            if (string.IsNullOrWhiteSpace(imageUrl))
+                return;
+
+            var folderName = GetFolderName(imageKind);
+            var expectedPrefix = $"/uploads/{folderName}/";
+
+            if (!imageUrl.StartsWith(expectedPrefix, StringComparison.Ordinal))
+                return;
+
+            var fileName = Path.GetFileName(imageUrl);
+
+            if (string.IsNullOrWhiteSpace(fileName) || imageUrl != $"{expectedPrefix}{fileName}")
+                return;
+
+            var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+            var expectedFolder = Path.GetFullPath(Path.Combine(webRoot, "uploads", folderName));
+            var fullPath = Path.GetFullPath(Path.Combine(expectedFolder, fileName));
+
+            if (!fullPath.StartsWith(expectedFolder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            DeleteFileIfExists(fullPath);
+        }
+
+        private static void DeleteFileIfExists(string filePath)
+        {
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+        }
+
+        private static string GetFolderName(ProfileImageKind imageKind)
+        {
+            return imageKind == ProfileImageKind.Avatar ? "avatars" : "covers";
+        }
+
+        private enum ProfileImageKind
+        {
+            Avatar,
+            Cover
         }
 
         public async Task FollowAsync(Guid currentUserId, Guid targetUserId)

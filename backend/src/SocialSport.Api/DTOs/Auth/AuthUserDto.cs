@@ -12,6 +12,8 @@
 
         public string? AvatarUrl { get; set; }
 
+        public string? CoverUrl { get; set; }
+
         public IList<string> Roles { get; set; } = [];
     }
 }

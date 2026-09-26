@@ -157,6 +157,7 @@ public class AuthService : IAuthService
             Email = user.Email ?? string.Empty,
             DisplayName = user.DisplayName,
             AvatarUrl = user.AvatarUrl,
+            CoverUrl = user.CoverUrl,
             Roles = roles
         };
     }
@@ -198,6 +199,7 @@ public class AuthService : IAuthService
                 Email = user.Email ?? string.Empty,
                 DisplayName = user.DisplayName,
                 AvatarUrl = user.AvatarUrl,
+                CoverUrl = user.CoverUrl,
                 Roles = roles
             }
         };
