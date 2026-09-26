@@ -15,6 +15,7 @@ import { useActionSheet } from "@expo/react-native-action-sheet";
 import { router } from "expo-router";
 import PostCardHeader from "@/components/post/PostCardHeader";
 import PostCardActions from "@/components/post/PostCardActions";
+import { getFileUrl } from "@/services/api";
 type PostCardProps = {
   post: Post;
   onPress?: () => void;
@@ -31,11 +32,21 @@ export default function PostCard({
   onSavedChange,
   onDeleted,
 }: PostCardProps) {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, profileImageVersion } = useAuth();
 
   const { showActionSheetWithOptions } = useActionSheet();
 
   const isOwner = currentUser?.id === post.authorId;
+  const displayedPost = isOwner
+    ? {
+        ...post,
+        authorAvatar: currentUser.avatarUrl
+          ? {
+              uri: getFileUrl(currentUser.avatarUrl, profileImageVersion)!,
+            }
+          : require("@/assets/images/icon.png"),
+      }
+    : post;
   const [reactionCount, setReactionCount] = useState(post.likeCount);
 
   const [currentReaction, setCurrentReaction] = useState<number | null>(
@@ -158,7 +169,7 @@ export default function PostCard({
   return (
     <View style={styles.card}>
       <PostCardHeader
-        post={post}
+        post={displayedPost}
         isOwner={isOwner}
         onAuthorPress={onAuthorPress}
         onMenuPress={handlePostMenu}

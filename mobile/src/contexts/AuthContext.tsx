@@ -20,6 +20,11 @@ type AuthContextType = {
   signIn: (request: LoginRequest) => Promise<void>;
   signOut: () => Promise<void>;
   updateDisplayName: (displayName: string) => void;
+  updateProfileImages: (
+    avatarUrl: string | null,
+    coverUrl: string | null,
+  ) => void;
+  profileImageVersion: number;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,6 +32,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileImageVersion, setProfileImageVersion] = useState(Date.now());
 
   useEffect(() => {
     restoreSession();
@@ -83,6 +89,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     );
   };
 
+  const updateProfileImages = (
+    avatarUrl: string | null,
+    coverUrl: string | null,
+  ) => {
+    setUser((current) =>
+      current
+        ? {
+            ...current,
+            avatarUrl,
+            coverUrl,
+          }
+        : current,
+    );
+    setProfileImageVersion(Date.now());
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -91,6 +113,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         updateDisplayName,
+        updateProfileImages,
+        profileImageVersion,
       }}
     >
       {children}

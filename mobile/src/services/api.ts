@@ -14,14 +14,18 @@ if (!API_URL) {
 }
 const SERVER_URL = API_URL.replace(/\/api\/v1\/?$/, "");
 
-export const getFileUrl = (url?: string | null) => {
+export const getFileUrl = (url?: string | null, cacheKey?: number) => {
   if (!url) return null;
 
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url;
-  }
+  const fileUrl =
+    url.startsWith("http://") || url.startsWith("https://")
+      ? url
+      : `${SERVER_URL}${url.startsWith("/") ? "" : "/"}${url}`;
 
-  return `${SERVER_URL}${url.startsWith("/") ? "" : "/"}${url}`;
+  if (!cacheKey) return fileUrl;
+
+  const separator = fileUrl.includes("?") ? "&" : "?";
+  return `${fileUrl}${separator}v=${cacheKey}`;
 };
 type ApiOptions = RequestInit & {
   auth?: boolean;

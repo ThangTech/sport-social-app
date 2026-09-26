@@ -8,7 +8,7 @@ import { router } from "expo-router";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 
 export default function AppHeader() {
-  const { user } = useAuth();
+  const { user, profileImageVersion } = useAuth();
 
   return (
     <View style={styles.container}>
@@ -55,7 +55,7 @@ export default function AppHeader() {
             source={
               user?.avatarUrl
                 ? {
-                    uri: getFileUrl(user.avatarUrl)!,
+                    uri: getFileUrl(user.avatarUrl, profileImageVersion)!,
                   }
                 : require("../../assets/images/icon.png")
             }

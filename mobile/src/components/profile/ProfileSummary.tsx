@@ -11,6 +11,7 @@ type Props = {
   postCount: number;
   onFollowersPress: () => void;
   onFollowingPress: () => void;
+  imageVersion?: number;
   onAvatarPress?: () => void;
   onEditPress?: () => void;
 };
@@ -20,6 +21,7 @@ export default function ProfileSummary({
   postCount,
   onFollowersPress,
   onFollowingPress,
+  imageVersion,
   onAvatarPress,
   onEditPress,
 }: Props) {
@@ -27,7 +29,7 @@ export default function ProfileSummary({
     <>
       {profile.coverUrl ? (
         <Image
-          source={{ uri: getFileUrl(profile.coverUrl)! }}
+          source={{ uri: getFileUrl(profile.coverUrl, imageVersion)! }}
           style={styles.cover}
         />
       ) : null}
@@ -48,7 +50,7 @@ export default function ProfileSummary({
             <Image
               source={
                 profile.avatarUrl
-                  ? { uri: getFileUrl(profile.avatarUrl)! }
+                  ? { uri: getFileUrl(profile.avatarUrl, imageVersion)! }
                   : require("@/assets/images/icon.png")
               }
               style={styles.avatar}

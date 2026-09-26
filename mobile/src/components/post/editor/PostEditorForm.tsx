@@ -14,6 +14,7 @@ type Props = {
   onVisibilityChange: (visibility: number) => void;
   displayName?: string | null;
   avatarUrl?: string | null;
+  avatarVersion?: number;
   disabled?: boolean;
   placeholder: string;
   variant: "create" | "edit";
@@ -27,6 +28,7 @@ export default function PostEditorForm({
   onVisibilityChange,
   displayName,
   avatarUrl,
+  avatarVersion,
   disabled = false,
   placeholder,
   variant,
@@ -39,7 +41,7 @@ export default function PostEditorForm({
           <Image
             source={
               avatarUrl
-                ? { uri: getFileUrl(avatarUrl)! }
+                ? { uri: getFileUrl(avatarUrl, avatarVersion)! }
                 : require("@/assets/images/icon.png")
             }
             style={styles.avatar}

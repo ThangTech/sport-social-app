@@ -1,7 +1,9 @@
 import AppText from "@/components/ui/AppText";
+import ProfileImageEditor from "@/components/profile/ProfileImageEditor";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { getUserProfile, updateMyProfile } from "@/services/user.service";
+import type { UserProfileDto } from "@/types/user";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -18,13 +20,21 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function EditProfileScreen() {
-  const { user, updateDisplayName } = useAuth();
+  const {
+    user,
+    updateDisplayName,
+    updateProfileImages,
+    profileImageVersion,
+  } = useAuth();
 
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const [coverUrl, setCoverUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [imageSubmitting, setImageSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
@@ -42,6 +52,8 @@ export default function EditProfileScreen() {
         setDisplayName(profile.displayName);
         setBio(profile.bio ?? "");
         setDateOfBirth(profile.dateOfBirth ?? "");
+        setAvatarUrl(profile.avatarUrl ?? null);
+        setCoverUrl(profile.coverUrl ?? null);
       } catch (error) {
         setErrorMessage(
           error instanceof Error
@@ -81,7 +93,7 @@ export default function EditProfileScreen() {
     const trimmedBio = bio.trim();
     const trimmedDateOfBirth = dateOfBirth.trim();
 
-    if (submitting) return;
+    if (submitting || imageSubmitting) return;
 
     if (trimmedDisplayName.length < 2 || trimmedDisplayName.length > 100) {
       setErrorMessage("Tên hiển thị phải có từ 2 đến 100 ký tự.");
@@ -119,12 +131,20 @@ export default function EditProfileScreen() {
     }
   };
 
+  const handleProfileImagesUpdated = (profile: UserProfileDto) => {
+    setAvatarUrl(profile.avatarUrl ?? null);
+    setCoverUrl(profile.coverUrl ?? null);
+    updateProfileImages(profile.avatarUrl ?? null, profile.coverUrl ?? null);
+  };
+
+  const formDisabled = submitting || imageSubmitting;
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Pressable
           style={styles.headerButton}
-          disabled={submitting}
+          disabled={formDisabled}
           onPress={() => router.back()}
         >
           <Ionicons name="close" size={27} color={COLORS.text} />
@@ -135,8 +155,8 @@ export default function EditProfileScreen() {
         </AppText>
 
         <Pressable
-          style={[styles.saveButton, submitting && styles.disabledButton]}
-          disabled={submitting || loading}
+          style={[styles.saveButton, formDisabled && styles.disabledButton]}
+          disabled={formDisabled || loading}
           onPress={handleSave}
         >
           {submitting ? (
@@ -169,12 +189,23 @@ export default function EditProfileScreen() {
               </View>
             ) : null}
 
+            <ProfileImageEditor
+              avatarUrl={avatarUrl}
+              coverUrl={coverUrl}
+              imageVersion={profileImageVersion}
+              disabled={submitting}
+              onUploadingChange={setImageSubmitting}
+              onProfileUpdated={handleProfileImagesUpdated}
+            />
+
+            <AppText variant="subtitle">Thông tin cá nhân</AppText>
+
             <View style={styles.field}>
               <AppText variant="label">Tên hiển thị</AppText>
               <TextInput
                 value={displayName}
                 onChangeText={setDisplayName}
-                editable={!submitting}
+                editable={!formDisabled}
                 maxLength={100}
                 placeholder="Tên hiển thị"
                 placeholderTextColor={COLORS.textMuted}
@@ -190,7 +221,7 @@ export default function EditProfileScreen() {
               <TextInput
                 value={bio}
                 onChangeText={setBio}
-                editable={!submitting}
+                editable={!formDisabled}
                 maxLength={500}
                 multiline
                 placeholder="Viết vài dòng về bạn"
@@ -207,7 +238,7 @@ export default function EditProfileScreen() {
               <TextInput
                 value={dateOfBirth}
                 onChangeText={setDateOfBirth}
-                editable={!submitting}
+                editable={!formDisabled}
                 maxLength={10}
                 keyboardType="numbers-and-punctuation"
                 placeholder="YYYY-MM-DD"

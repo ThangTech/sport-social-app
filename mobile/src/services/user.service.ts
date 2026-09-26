@@ -5,6 +5,7 @@ import type {
   UserProfileDto,
   UserSummaryDto,
 } from "@/types/user";
+import type { ImagePickerAsset } from "expo-image-picker";
 
 export const getUserProfile = async (id: string) => {
   return await api<UserProfileDto>(`/users/${id}`, {
@@ -25,6 +26,52 @@ export const updateMyProfile = async (request: UpdateProfileRequest) => {
     method: "PATCH",
     auth: true,
     body: JSON.stringify(request),
+  });
+};
+
+const createProfileImageFormData = (
+  asset: ImagePickerAsset,
+  filePrefix: string,
+) => {
+  const formData = new FormData();
+  const extension = asset.mimeType?.split("/")[1] ?? "jpg";
+
+  formData.append("file", {
+    uri: asset.uri,
+    name: asset.fileName ?? `${filePrefix}-${Date.now()}.${extension}`,
+    type: asset.mimeType ?? "image/jpeg",
+  } as any);
+
+  return formData;
+};
+
+export const updateMyAvatar = async (asset: ImagePickerAsset) => {
+  return await api<UserProfileDto>("/users/me/avatar", {
+    method: "PUT",
+    auth: true,
+    body: createProfileImageFormData(asset, "avatar"),
+  });
+};
+
+export const deleteMyAvatar = async () => {
+  return await api<UserProfileDto>("/users/me/avatar", {
+    method: "DELETE",
+    auth: true,
+  });
+};
+
+export const updateMyCover = async (asset: ImagePickerAsset) => {
+  return await api<UserProfileDto>("/users/me/cover", {
+    method: "PUT",
+    auth: true,
+    body: createProfileImageFormData(asset, "cover"),
+  });
+};
+
+export const deleteMyCover = async () => {
+  return await api<UserProfileDto>("/users/me/cover", {
+    method: "DELETE",
+    auth: true,
   });
 };
 

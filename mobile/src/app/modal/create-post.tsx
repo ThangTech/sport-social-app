@@ -25,7 +25,7 @@ type Props = {
 };
 
 export default function CreatePostScreen({ onClose, onCreated }: Props) {
-  const { user } = useAuth();
+  const { user, profileImageVersion } = useAuth();
   const [content, setContent] = useState("");
   const [visibility, setVisibility] = useState(1);
   const [submitting, setSubmitting] = useState(false);
@@ -113,6 +113,7 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
         onVisibilityChange={setVisibility}
         displayName={user?.displayName}
         avatarUrl={user?.avatarUrl}
+        avatarVersion={profileImageVersion}
         disabled={submitting}
         placeholder="Bạn đang nghĩ gì về thể thao?"
         variant="create"

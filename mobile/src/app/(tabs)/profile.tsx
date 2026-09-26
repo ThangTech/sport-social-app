@@ -21,7 +21,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, profileImageVersion } = useAuth();
   const [profile, setProfile] = useState<UserProfileDto | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -100,10 +100,15 @@ export default function ProfileScreen() {
       ) : profile ? (
         <ScrollView showsVerticalScrollIndicator={false}>
           <ProfileSummary
-            profile={profile}
+            profile={{
+              ...profile,
+              avatarUrl: currentUser?.avatarUrl,
+              coverUrl: currentUser?.coverUrl,
+            }}
             postCount={posts.length}
             onFollowersPress={() => openConnections("followers")}
             onFollowingPress={() => openConnections("following")}
+            imageVersion={profileImageVersion}
             onAvatarPress={() => router.push("/user/settings")}
             onEditPress={() => router.push("/user/edit-profile")}
           />

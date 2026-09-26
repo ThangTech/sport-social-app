@@ -7,7 +7,7 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function CreatePostPrompt() {
-  const { user } = useAuth();
+  const { user, profileImageVersion } = useAuth();
 
   const { openCreatePost } = useCreatePost();
 
@@ -18,7 +18,7 @@ export default function CreatePostPrompt() {
           source={
             user?.avatarUrl
               ? {
-                  uri: getFileUrl(user.avatarUrl)!,
+                  uri: getFileUrl(user.avatarUrl, profileImageVersion)!,
                 }
               : require("../../assets/images/icon.png")
           }
