@@ -41,6 +41,17 @@ namespace SocialSport.Api.Repositories.Implementations
             return await _context.Follows.FirstOrDefaultAsync(x => x.FollowerId == followerId && x.FollowingId == followingId);
         }
 
+        public async Task RemoveBetweenUsersAsync(Guid firstUserId, Guid secondUserId)
+        {
+            var follows = await _context.Follows
+                .Where(x =>
+                    (x.FollowerId == firstUserId && x.FollowingId == secondUserId) ||
+                    (x.FollowerId == secondUserId && x.FollowingId == firstUserId))
+                .ToListAsync();
+
+            _context.Follows.RemoveRange(follows);
+        }
+
         public void Remove(Follow follow)
         {
             _context.Follows.Remove(follow);

@@ -12,6 +12,7 @@ namespace SocialSport.Api.Repositories.Interfaces
         Task<int> GetFollowingCountAsync(Guid userId);
         Task AddAsync(Follow follow);
         Task<Follow?> GetAsync(Guid followerId, Guid followingId);
+        Task RemoveBetweenUsersAsync(Guid firstUserId, Guid secondUserId);
         void Remove(Follow follow);
         Task SaveChangesAsync();
     }

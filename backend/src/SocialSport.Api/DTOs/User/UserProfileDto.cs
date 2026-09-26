@@ -12,5 +12,6 @@
         public int FollowerCount { get; set; }
         public int FollowingCount { get; set; }
         public bool IsFollowing { get; set; }
+        public bool IsBlockedByCurrentUser { get; set; }
     }
 }

@@ -37,9 +37,13 @@ namespace SocialSport.Api.Services.Implementations
             var followingCount = await _followRepository.GetFollowingCountAsync(userId);
 
             var isFollowing = false;
+            var isBlockedByCurrentUser = false;
 
             if (currentUserId.HasValue && currentUserId.Value != userId)
+            {
                 isFollowing = await _followRepository.IsFollowingAsync(currentUserId.Value, userId);
+                isBlockedByCurrentUser = await _userBlockRepository.IsBlockedAsync(currentUserId.Value, userId);
+            }
 
             return new UserProfileDto
             {
@@ -52,7 +56,8 @@ namespace SocialSport.Api.Services.Implementations
                 DateOfBirth = user.DateOfBirth,
                 FollowerCount = followerCount,
                 FollowingCount = followingCount,
-                IsFollowing = isFollowing
+                IsFollowing = isFollowing,
+                IsBlockedByCurrentUser = isBlockedByCurrentUser
             };
         }
 
@@ -278,6 +283,12 @@ namespace SocialSport.Api.Services.Implementations
             if (targetUser is null || targetUser.Status != UserStatus.Active)
                 throw new InvalidOperationException("Không tìm thấy người dùng.");
 
+            var blockedByCurrentUser = await _userBlockRepository.IsBlockedAsync(currentUserId, targetUserId);
+            var blockedByTargetUser = await _userBlockRepository.IsBlockedAsync(targetUserId, currentUserId);
+
+            if (blockedByCurrentUser || blockedByTargetUser)
+                throw new InvalidOperationException("Không thể theo dõi khi một trong hai tài khoản đã chặn tài khoản còn lại.");
+
             if (await _followRepository.IsFollowingAsync(currentUserId, targetUserId))
                 return;
 
@@ -337,17 +348,21 @@ namespace SocialSport.Api.Services.Implementations
             if (targetUser is null)
                 throw new InvalidOperationException("Không tìm thấy người dùng.");
 
-            if (await _userBlockRepository.IsBlockedAsync(currentUserId, targetUserId))
-                return;
+            var isAlreadyBlocked = await _userBlockRepository.IsBlockedAsync(currentUserId, targetUserId);
 
-            var userBlock = new UserBlock
+            if (!isAlreadyBlocked)
             {
-                BlockerId = currentUserId,
-                BlockedId = targetUserId,
-                CreatedAt = DateTimeOffset.UtcNow
-            };
+                var userBlock = new UserBlock
+                {
+                    BlockerId = currentUserId,
+                    BlockedId = targetUserId,
+                    CreatedAt = DateTimeOffset.UtcNow
+                };
 
-            await _userBlockRepository.AddAsync(userBlock);
+                await _userBlockRepository.AddAsync(userBlock);
+            }
+
+            await _followRepository.RemoveBetweenUsersAsync(currentUserId, targetUserId);
             await _userBlockRepository.SaveChangesAsync();
         }
 
