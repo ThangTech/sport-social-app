@@ -5,6 +5,7 @@ import type {
   CreatePostRequest,
   UpdatePostRequest,
   PostMediaUploadResponse,
+  PostReactionsResponse,
 } from "@/types/post";
 import type { ImagePickerAsset } from "expo-image-picker";
 export const getPostById = async (id: string) => {
@@ -29,6 +30,29 @@ export const removePostReaction = async (id: string) => {
     auth: true,
   });
 };
+
+export const getPostReactions = async (
+  id: string,
+  limit = 20,
+  cursor?: string | null,
+) => {
+  const query = new URLSearchParams({
+    limit: limit.toString(),
+  });
+
+  if (cursor) {
+    query.append("cursor", cursor);
+  }
+
+  return await api<PostReactionsResponse>(
+    `/posts/${id}/reactions?${query.toString()}`,
+    {
+      method: "GET",
+      auth: true,
+    },
+  );
+};
+
 export const savePost = async (id: string) => {
   return await api<void>(`/posts/${id}/save`, {
     method: "POST",
@@ -79,6 +103,7 @@ export const uploadPostMedia = async (
     body: createMediaFormData(asset),
   });
 };
+
 function createMediaFormData(asset: ImagePickerAsset) {
   const formData = new FormData();
 

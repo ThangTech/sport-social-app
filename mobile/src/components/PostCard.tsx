@@ -99,6 +99,14 @@ export default function PostCard({
       setSaveLoading(false);
     }
   };
+  const handleReactionCountPress = () => {
+    router.push({
+      pathname: "/post/reactions/[id]",
+      params: {
+        id: post.id,
+      },
+    });
+  };
   const handleDeletePost = () => {
     Alert.alert("Xóa bài viết", "Bạn có chắc muốn xóa bài viết này?", [
       {
@@ -177,6 +185,7 @@ export default function PostCard({
         saveLoading={saveLoading}
         commentCount={post.commentCount}
         onReaction={handleReaction}
+        onReactionCountPress={handleReactionCountPress}
         onComment={onCommentPress ?? onPress}
         onSave={handleSave}
       />

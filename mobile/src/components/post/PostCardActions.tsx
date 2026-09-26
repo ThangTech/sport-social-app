@@ -12,6 +12,7 @@ type Props = {
   saveLoading: boolean;
   commentCount: number;
   onReaction: () => void;
+  onReactionCountPress: () => void;
   onComment?: () => void;
   onSave: () => void;
 };
@@ -19,26 +20,37 @@ type Props = {
 export default function PostCardActions(props: Props) {
   return (
     <View style={styles.actions}>
-      <Pressable
+      <View
         style={[
-          styles.actionButton,
+          styles.reactionGroup,
           props.reactionLoading && styles.disabled,
         ]}
-        disabled={props.reactionLoading}
-        onPress={props.onReaction}
       >
-        <Ionicons
-          name={props.currentReaction ? "heart" : "heart-outline"}
-          size={23}
-          color={props.currentReaction ? COLORS.danger : COLORS.textMuted}
-        />
-        <AppText
-          variant="caption"
-          color={props.currentReaction ? COLORS.danger : COLORS.textMuted}
+        <Pressable
+          hitSlop={8}
+          disabled={props.reactionLoading}
+          onPress={props.onReaction}
         >
-          {props.reactionCount}
-        </AppText>
-      </Pressable>
+          <Ionicons
+            name={props.currentReaction ? "heart" : "heart-outline"}
+            size={23}
+            color={props.currentReaction ? COLORS.danger : COLORS.textMuted}
+          />
+        </Pressable>
+
+        <Pressable
+          hitSlop={8}
+          disabled={props.reactionLoading}
+          onPress={props.onReactionCountPress}
+        >
+          <AppText
+            variant="caption"
+            color={props.currentReaction ? COLORS.danger : COLORS.textMuted}
+          >
+            {props.reactionCount}
+          </AppText>
+        </Pressable>
+      </View>
       <Pressable style={styles.actionButton} onPress={props.onComment}>
         <Ionicons name="chatbubble-outline" size={22} color={COLORS.textMuted} />
         <AppText variant="caption" color={COLORS.textMuted}>
@@ -75,6 +87,11 @@ const styles = StyleSheet.create({
     gap: SPACING.lg,
   },
   actionButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
+  },
+  reactionGroup: {
     flexDirection: "row",
     alignItems: "center",
     gap: SPACING.xs,

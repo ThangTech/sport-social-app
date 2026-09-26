@@ -25,6 +25,18 @@ export type ReactionResponse = {
   reactionCount: number;
   currentReaction?: number | null;
 };
+
+export type PostReactionDto = {
+  userId: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  reactedAt: string;
+};
+
+export type PostReactionsResponse = {
+  items: PostReactionDto[];
+  nextCursor?: string | null;
+};
 export type CreatePostRequest = {
   content: string;
   sportId?: string | null;

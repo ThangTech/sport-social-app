@@ -60,6 +60,12 @@ function RootNavigator() {
         }}
       />
       <Stack.Screen
+        name="post/reactions/[id]"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="create-post"
         options={{
           presentation: "modal",
