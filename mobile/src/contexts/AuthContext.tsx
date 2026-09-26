@@ -19,6 +19,7 @@ type AuthContextType = {
   loading: boolean;
   signIn: (request: LoginRequest) => Promise<void>;
   signOut: () => Promise<void>;
+  updateDisplayName: (displayName: string) => void;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,6 +72,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateDisplayName = (displayName: string) => {
+    setUser((current) =>
+      current
+        ? {
+            ...current,
+            displayName,
+          }
+        : current,
+    );
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -78,6 +90,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         signIn,
         signOut,
+        updateDisplayName,
       }}
     >
       {children}

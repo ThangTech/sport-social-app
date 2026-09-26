@@ -66,6 +66,12 @@ function RootNavigator() {
         }}
       />
       <Stack.Screen
+        name="user/edit-profile"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="create-post"
         options={{
           presentation: "modal",

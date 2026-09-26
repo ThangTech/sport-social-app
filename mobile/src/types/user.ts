@@ -16,3 +16,9 @@ export type UserSummaryDto = {
   displayName: string;
   avatarUrl?: string | null;
 };
+
+export type UpdateProfileRequest = {
+  displayName: string;
+  bio: string | null;
+  dateOfBirth: string | null;
+};

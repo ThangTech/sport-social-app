@@ -1,7 +1,7 @@
 import AppText from "@/components/ui/AppText";
 import ProfilePostList from "@/components/profile/ProfilePostList";
+import ProfileSummary from "@/components/profile/ProfileSummary";
 import { COLORS, SPACING } from "@/constants/theme";
-import { getFileUrl } from "@/services/api";
 import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import {
   getUserPosts,
@@ -18,7 +18,6 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -177,121 +176,60 @@ export default function UserProfileScreen() {
         </View>
       ) : user ? (
         <ScrollView>
-          {user.coverUrl ? (
-            <Image
-              source={{
-                uri: getFileUrl(user.coverUrl)!,
-              }}
-              style={styles.cover}
-            />
-          ) : null}
+          <ProfileSummary
+            profile={user}
+            postCount={posts.length}
+            onFollowersPress={() =>
+              router.push({
+                pathname: "/user/connections",
+                params: { id: user.id, type: "followers" },
+              })
+            }
+            onFollowingPress={() =>
+              router.push({
+                pathname: "/user/connections",
+                params: { id: user.id, type: "following" },
+              })
+            }
+          />
 
-          <View
-            style={[
-              styles.profile,
-              !user.coverUrl && styles.profileWithoutCover,
-            ]}
-          >
-            <Image
-              source={
-                user.avatarUrl
-                  ? {
-                      uri: getFileUrl(user.avatarUrl)!,
-                    }
-                  : require("@/assets/images/icon.png")
-              }
+          {currentUser?.id !== user.id ? (
+            <Pressable
+              disabled={followLoading}
+              onPress={handleFollow}
               style={[
-                styles.avatar,
-                !user.coverUrl && styles.avatarWithoutCover,
+                styles.followButton,
+                user.isFollowing && styles.followingButton,
+                followLoading && styles.disabledButton,
               ]}
-            />
-
-            <AppText variant="subtitle">{user.displayName}</AppText>
-
-            <AppText style={styles.username}>@{user.userName}</AppText>
-
-            {user.bio ? <AppText style={styles.bio}>{user.bio}</AppText> : null}
-
-            <View style={styles.stats}>
-              <View style={styles.statItem}>
-                <AppText variant="subtitle">{posts.length}</AppText>
-
-                <AppText style={styles.statLabel}>Bài viết</AppText>
-              </View>
-
-              <Pressable
-                style={styles.statItem}
-                onPress={() =>
-                  router.push({
-                    pathname: "/user/connections",
-                    params: {
-                      id: user.id,
-                      type: "followers",
-                    },
-                  })
-                }
-              >
-                <AppText variant="subtitle">{user.followerCount}</AppText>
-
-                <AppText style={styles.statLabel}>Người theo dõi</AppText>
-              </Pressable>
-
-              <Pressable
-                style={styles.statItem}
-                onPress={() =>
-                  router.push({
-                    pathname: "/user/connections",
-                    params: {
-                      id: user.id,
-                      type: "following",
-                    },
-                  })
-                }
-              >
-                <AppText variant="subtitle">{user.followingCount}</AppText>
-
-                <AppText style={styles.statLabel}>Đang theo dõi</AppText>
-              </Pressable>
-            </View>
-
-            {currentUser?.id !== user.id ? (
-              <Pressable
-                disabled={followLoading}
-                onPress={handleFollow}
-                style={[
-                  styles.followButton,
-                  user.isFollowing && styles.followingButton,
-                  followLoading && styles.disabledButton,
-                ]}
-              >
-                {followLoading ? (
-                  <ActivityIndicator
-                    size="small"
+            >
+              {followLoading ? (
+                <ActivityIndicator
+                  size="small"
+                  color={user.isFollowing ? COLORS.text : COLORS.background}
+                />
+              ) : (
+                <>
+                  <Ionicons
+                    name={
+                      user.isFollowing ? "checkmark" : "person-add-outline"
+                    }
+                    size={18}
                     color={user.isFollowing ? COLORS.text : COLORS.background}
                   />
-                ) : (
-                  <>
-                    <Ionicons
-                      name={
-                        user.isFollowing ? "checkmark" : "person-add-outline"
-                      }
-                      size={18}
-                      color={user.isFollowing ? COLORS.text : COLORS.background}
-                    />
 
-                    <AppText
-                      style={[
-                        styles.followText,
-                        user.isFollowing && styles.followingText,
-                      ]}
-                    >
-                      {user.isFollowing ? "Đang theo dõi" : "Theo dõi"}
-                    </AppText>
-                  </>
-                )}
-              </Pressable>
-            ) : null}
-          </View>
+                  <AppText
+                    style={[
+                      styles.followText,
+                      user.isFollowing && styles.followingText,
+                    ]}
+                  >
+                    {user.isFollowing ? "Đang theo dõi" : "Theo dõi"}
+                  </AppText>
+                </>
+              )}
+            </Pressable>
+          ) : null}
 
           <ProfilePostList
             posts={posts}
@@ -353,66 +291,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
 
-  profile: {
-    alignItems: "center",
-    paddingHorizontal: SPACING.xl,
-    paddingBottom: SPACING.xl,
-  },
-
-  profileWithoutCover: {
-    paddingTop: SPACING.xl,
-  },
-
-  cover: {
-    width: "100%",
-    height: 150,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    marginTop: -48,
-    marginBottom: SPACING.md,
-    borderWidth: 4,
-    borderColor: COLORS.background,
-  },
-
-  avatarWithoutCover: {
-    marginTop: 0,
-  },
-
-  username: {
-    marginTop: 4,
-    color: COLORS.textMuted,
-  },
-
-  bio: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-
-  stats: {
-    width: "100%",
-    marginTop: 20,
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-
-  statLabel: {
-    marginTop: 6,
-    color: COLORS.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-  },
-
   followButton: {
+    alignSelf: "center",
     marginTop: 22,
     minWidth: 180,
     paddingHorizontal: 28,

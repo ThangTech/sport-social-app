@@ -1,6 +1,10 @@
 import { api } from "@/services/api";
 import type { FeedPostDto } from "@/types/feed";
-import type { UserProfileDto, UserSummaryDto } from "@/types/user";
+import type {
+  UpdateProfileRequest,
+  UserProfileDto,
+  UserSummaryDto,
+} from "@/types/user";
 
 export const getUserProfile = async (id: string) => {
   return await api<UserProfileDto>(`/users/${id}`, {
@@ -15,6 +19,15 @@ export const getUserPosts = async (id: string) => {
     auth: true,
   });
 };
+
+export const updateMyProfile = async (request: UpdateProfileRequest) => {
+  return await api<UserProfileDto>("/users/me", {
+    method: "PATCH",
+    auth: true,
+    body: JSON.stringify(request),
+  });
+};
+
 export const followUser = async (id: string) => {
   return await api<void>(`/users/${id}/follow`, {
     method: "POST",
