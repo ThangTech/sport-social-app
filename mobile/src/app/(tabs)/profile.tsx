@@ -21,7 +21,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
-  const { user: currentUser, signOut } = useAuth();
+  const { user: currentUser } = useAuth();
   const [profile, setProfile] = useState<UserProfileDto | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
@@ -104,53 +104,9 @@ export default function ProfileScreen() {
             postCount={posts.length}
             onFollowersPress={() => openConnections("followers")}
             onFollowingPress={() => openConnections("following")}
+            onAvatarPress={() => router.push("/user/settings")}
+            onEditPress={() => router.push("/user/edit-profile")}
           />
-
-          <Pressable
-            style={styles.editButton}
-            onPress={() => router.push("/user/edit-profile")}
-          >
-            <Ionicons
-              name="create-outline"
-              size={18}
-              color={COLORS.text}
-            />
-            <AppText variant="label">Chỉnh sửa hồ sơ</AppText>
-          </Pressable>
-
-          <View style={styles.menuSection}>
-            <Pressable
-              style={styles.menuItem}
-              onPress={() => router.push("/post/saved-posts")}
-            >
-              <View style={styles.menuLeft}>
-                <View style={styles.menuIcon}>
-                  <Ionicons
-                    name="bookmark-outline"
-                    size={22}
-                    color={COLORS.primary}
-                  />
-                </View>
-                <AppText variant="label">Bài viết đã lưu</AppText>
-              </View>
-              <Ionicons
-                name="chevron-forward"
-                size={20}
-                color={COLORS.textMuted}
-              />
-            </Pressable>
-
-            <Pressable onPress={signOut} style={styles.logoutButton}>
-              <Ionicons
-                name="log-out-outline"
-                size={20}
-                color={COLORS.danger}
-              />
-              <AppText variant="label" color={COLORS.danger}>
-                Đăng xuất
-              </AppText>
-            </Pressable>
-          </View>
 
           <ProfilePostList
             posts={posts}
@@ -201,55 +157,5 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     borderRadius: 20,
     backgroundColor: COLORS.primary,
-  },
-  editButton: {
-    alignSelf: "center",
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: 10,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  menuSection: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.lg,
-    gap: SPACING.sm,
-  },
-  menuItem: {
-    minHeight: 64,
-    paddingHorizontal: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-  },
-  menuLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-  },
-  menuIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  logoutButton: {
-    minHeight: 52,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: 12,
   },
 });

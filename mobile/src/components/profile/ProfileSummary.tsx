@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 
 import AppText from "@/components/ui/AppText";
@@ -10,6 +11,8 @@ type Props = {
   postCount: number;
   onFollowersPress: () => void;
   onFollowingPress: () => void;
+  onAvatarPress?: () => void;
+  onEditPress?: () => void;
 };
 
 export default function ProfileSummary({
@@ -17,6 +20,8 @@ export default function ProfileSummary({
   postCount,
   onFollowersPress,
   onFollowingPress,
+  onAvatarPress,
+  onEditPress,
 }: Props) {
   return (
     <>
@@ -33,17 +38,29 @@ export default function ProfileSummary({
           !profile.coverUrl && styles.profileWithoutCover,
         ]}
       >
-        <Image
-          source={
-            profile.avatarUrl
-              ? { uri: getFileUrl(profile.avatarUrl)! }
-              : require("@/assets/images/icon.png")
-          }
+        <View
           style={[
-            styles.avatar,
+            styles.avatarContainer,
             !profile.coverUrl && styles.avatarWithoutCover,
           ]}
-        />
+        >
+          <Pressable disabled={!onAvatarPress} onPress={onAvatarPress}>
+            <Image
+              source={
+                profile.avatarUrl
+                  ? { uri: getFileUrl(profile.avatarUrl)! }
+                  : require("@/assets/images/icon.png")
+              }
+              style={styles.avatar}
+            />
+          </Pressable>
+
+          {onEditPress ? (
+            <Pressable style={styles.editButton} onPress={onEditPress}>
+              <Ionicons name="pencil" size={16} color={COLORS.background} />
+            </Pressable>
+          ) : null}
+        </View>
 
         <AppText variant="subtitle">{profile.displayName}</AppText>
         <AppText style={styles.username}>@{profile.userName}</AppText>
@@ -85,18 +102,35 @@ const styles = StyleSheet.create({
   profileWithoutCover: {
     paddingTop: SPACING.xl,
   },
+  avatarContainer: {
+    width: 96,
+    height: 96,
+    marginTop: -48,
+    marginBottom: SPACING.md,
+  },
   avatar: {
     width: 96,
     height: 96,
     borderRadius: 48,
-    marginTop: -48,
-    marginBottom: SPACING.md,
     borderWidth: 4,
     borderColor: COLORS.background,
     backgroundColor: COLORS.surfaceAlt,
   },
   avatarWithoutCover: {
     marginTop: 0,
+  },
+  editButton: {
+    position: "absolute",
+    right: -2,
+    bottom: -2,
+    width: 32,
+    height: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 16,
+    borderWidth: 3,
+    borderColor: COLORS.background,
+    backgroundColor: COLORS.primary,
   },
   username: {
     marginTop: 4,

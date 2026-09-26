@@ -72,6 +72,12 @@ function RootNavigator() {
         }}
       />
       <Stack.Screen
+        name="user/settings"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="create-post"
         options={{
           presentation: "modal",

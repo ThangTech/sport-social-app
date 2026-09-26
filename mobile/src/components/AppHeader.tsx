@@ -50,7 +50,7 @@ export default function AppHeader() {
           {/* Chưa có notification API thì chưa hiện badge giả */}
         </Pressable>
 
-        <Pressable onPress={() => router.push("/(tabs)/profile")}>
+        <Pressable onPress={() => router.push("/user/settings")}>
           <Avatar
             source={
               user?.avatarUrl
