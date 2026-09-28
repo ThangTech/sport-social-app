@@ -57,7 +57,12 @@ export default function GroupSummary({
       <View style={styles.cover}>
         {group.coverUrl ? (
           <Image
-            source={{ uri: getFileUrl(group.coverUrl)! }}
+            source={{
+              uri: getFileUrl(
+                group.coverUrl,
+                group.updatedAt ?? group.createdAt,
+              )!,
+            }}
             style={styles.coverImage}
           />
         ) : (
@@ -69,7 +74,12 @@ export default function GroupSummary({
         <View style={styles.identityRow}>
           {group.avatarUrl ? (
             <Image
-              source={{ uri: getFileUrl(group.avatarUrl)! }}
+              source={{
+                uri: getFileUrl(
+                  group.avatarUrl,
+                  group.updatedAt ?? group.createdAt,
+                )!,
+              }}
               style={styles.avatar}
             />
           ) : (

@@ -25,7 +25,7 @@ type Props = {
   onDelete: () => void;
 };
 
-export default function ProfileImageField({
+export default function ImageUploadField({
   title,
   note,
   imageSource,
@@ -54,10 +54,14 @@ export default function ProfileImageField({
           style={variant === "avatar" ? styles.avatar : styles.cover}
         />
       ) : (
-        <View style={[styles.cover, styles.coverPlaceholder]}>
-          <Ionicons name="image-outline" size={34} color={COLORS.textMuted} />
+        <View style={[styles.cover, styles.placeholder]}>
+          <Ionicons
+            name={variant === "avatar" ? "people-outline" : "image-outline"}
+            size={34}
+            color={COLORS.textMuted}
+          />
           <AppText variant="caption" color={COLORS.textMuted}>
-            Chưa có ảnh bìa
+            {variant === "avatar" ? "Chưa có avatar" : "Chưa có ảnh bìa"}
           </AppText>
         </View>
       )}
@@ -144,7 +148,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: COLORS.surfaceAlt,
   },
-  coverPlaceholder: {
+  placeholder: {
     alignItems: "center",
     justifyContent: "center",
     gap: SPACING.sm,

@@ -16,6 +16,7 @@ type GroupFormProps = {
   initialDescription?: string | null;
   initialPrivacy?: GroupPrivacy;
   submitLabel: string;
+  disabled?: boolean;
   onSubmit: (request: SaveGroupRequest) => Promise<void>;
 };
 
@@ -24,6 +25,7 @@ export default function GroupForm({
   initialDescription = "",
   initialPrivacy = GroupPrivacy.Public,
   submitLabel,
+  disabled = false,
   onSubmit,
 }: GroupFormProps) {
   const [name, setName] = useState(initialName);
@@ -34,7 +36,7 @@ export default function GroupForm({
   const submittingRef = useRef(false);
 
   const handleSubmit = async () => {
-    if (submittingRef.current) return;
+    if (disabled || submittingRef.current) return;
 
     const normalizedName = name.trim();
     const normalizedDescription = description.trim();
@@ -69,6 +71,8 @@ export default function GroupForm({
     }
   };
 
+  const formDisabled = disabled || submitting;
+
   return (
     <View style={styles.container}>
       <View style={styles.field}>
@@ -76,7 +80,7 @@ export default function GroupForm({
         <TextInput
           value={name}
           onChangeText={setName}
-          editable={!submitting}
+          editable={!formDisabled}
           maxLength={100}
           placeholder="Ví dụ: Cộng đồng chạy bộ"
           placeholderTextColor={COLORS.textMuted}
@@ -92,7 +96,7 @@ export default function GroupForm({
         <TextInput
           value={description}
           onChangeText={setDescription}
-          editable={!submitting}
+          editable={!formDisabled}
           maxLength={1000}
           multiline
           numberOfLines={5}
@@ -111,7 +115,7 @@ export default function GroupForm({
 
         <View style={styles.privacyOptions}>
           <Pressable
-            disabled={submitting}
+            disabled={formDisabled}
             onPress={() => setPrivacy(GroupPrivacy.Public)}
             style={[
               styles.privacyOption,
@@ -136,7 +140,7 @@ export default function GroupForm({
           </Pressable>
 
           <Pressable
-            disabled={submitting}
+            disabled={formDisabled}
             onPress={() => setPrivacy(GroupPrivacy.Private)}
             style={[
               styles.privacyOption,
@@ -169,9 +173,9 @@ export default function GroupForm({
       ) : null}
 
       <Pressable
-        disabled={submitting}
+        disabled={formDisabled}
         onPress={handleSubmit}
-        style={[styles.submitButton, submitting && styles.disabledButton]}
+        style={[styles.submitButton, formDisabled && styles.disabledButton]}
       >
         {submitting ? (
           <ActivityIndicator color={COLORS.background} />

@@ -1,9 +1,17 @@
 import AppText from "@/components/ui/AppText";
-import ProfileImageEditor from "@/components/profile/ProfileImageEditor";
+import AvatarCoverImageEditor, {
+  type ImageUpdateResult,
+} from "@/components/image/AvatarCoverImageEditor";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserProfile, updateMyProfile } from "@/services/user.service";
-import type { UserProfileDto } from "@/types/user";
+import {
+  deleteMyAvatar,
+  deleteMyCover,
+  getUserProfile,
+  updateMyAvatar,
+  updateMyCover,
+  updateMyProfile,
+} from "@/services/user.service";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
@@ -131,7 +139,7 @@ export default function EditProfileScreen() {
     }
   };
 
-  const handleProfileImagesUpdated = (profile: UserProfileDto) => {
+  const handleProfileImagesUpdated = (profile: ImageUpdateResult) => {
     setAvatarUrl(profile.avatarUrl ?? null);
     setCoverUrl(profile.coverUrl ?? null);
     updateProfileImages(profile.avatarUrl ?? null, profile.coverUrl ?? null);
@@ -189,13 +197,19 @@ export default function EditProfileScreen() {
               </View>
             ) : null}
 
-            <ProfileImageEditor
+            <AvatarCoverImageEditor
+              title="Ảnh hồ sơ"
               avatarUrl={avatarUrl}
               coverUrl={coverUrl}
               imageVersion={profileImageVersion}
+              avatarFallback={require("@/assets/images/icon.png")}
               disabled={submitting}
-              onUploadingChange={setImageSubmitting}
-              onProfileUpdated={handleProfileImagesUpdated}
+              onBusyChange={setImageSubmitting}
+              onUpdated={handleProfileImagesUpdated}
+              uploadAvatar={updateMyAvatar}
+              uploadCover={updateMyCover}
+              deleteAvatar={deleteMyAvatar}
+              deleteCover={deleteMyCover}
             />
 
             <AppText variant="subtitle">Thông tin cá nhân</AppText>

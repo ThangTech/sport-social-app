@@ -14,7 +14,10 @@ if (!API_URL) {
 }
 const SERVER_URL = API_URL.replace(/\/api\/v1\/?$/, "");
 
-export const getFileUrl = (url?: string | null, cacheKey?: number) => {
+export const getFileUrl = (
+  url?: string | null,
+  cacheKey?: string | number | null,
+) => {
   if (!url) return null;
 
   const fileUrl =
@@ -25,7 +28,7 @@ export const getFileUrl = (url?: string | null, cacheKey?: number) => {
   if (!cacheKey) return fileUrl;
 
   const separator = fileUrl.includes("?") ? "&" : "?";
-  return `${fileUrl}${separator}v=${cacheKey}`;
+  return `${fileUrl}${separator}v=${encodeURIComponent(String(cacheKey))}`;
 };
 type ApiOptions = RequestInit & {
   auth?: boolean;

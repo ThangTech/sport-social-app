@@ -1,8 +1,16 @@
+import AvatarCoverImageEditor from "@/components/image/AvatarCoverImageEditor";
 import GroupForm from "@/components/group/GroupForm";
 import AppText from "@/components/ui/AppText";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
-import { getGroupById, updateGroup } from "@/services/group.service";
+import {
+  deleteGroupAvatar,
+  deleteGroupCover,
+  getGroupById,
+  updateGroup,
+  updateGroupAvatar,
+  updateGroupCover,
+} from "@/services/group.service";
 import { ApiError } from "@/types/api";
 import type { GroupDto, SaveGroupRequest } from "@/types/group";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -27,9 +35,10 @@ export default function EditGroupScreen() {
 
   const [group, setGroup] = useState<GroupDto | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageSubmitting, setImageSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const loadGroup = useCallback(async () => {
+  const loadGroup = useCallback(async (showLoading = true) => {
     if (!id) {
       setErrorMessage("Không tìm thấy nhóm.");
       setLoading(false);
@@ -37,8 +46,10 @@ export default function EditGroupScreen() {
     }
 
     try {
-      setLoading(true);
-      setErrorMessage("");
+      if (showLoading) {
+        setLoading(true);
+        setErrorMessage("");
+      }
 
       const result = await getGroupById(id);
 
@@ -50,6 +61,8 @@ export default function EditGroupScreen() {
 
       setGroup(result);
     } catch (error) {
+      if (!showLoading) throw error;
+
       setGroup(null);
       setErrorMessage(
         error instanceof ApiError && error.status === 404
@@ -59,13 +72,13 @@ export default function EditGroupScreen() {
             : "Không thể tải thông tin nhóm.",
       );
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   }, [currentUser?.id, id]);
 
   useFocusEffect(
     useCallback(() => {
-      loadGroup();
+      void loadGroup();
     }, [loadGroup]),
   );
 
@@ -105,7 +118,10 @@ export default function EditGroupScreen() {
             {errorMessage}
           </AppText>
           {id ? (
-            <Pressable style={styles.retryButton} onPress={loadGroup}>
+            <Pressable
+              style={styles.retryButton}
+              onPress={() => void loadGroup()}
+            >
               <AppText variant="label" color={COLORS.background}>
                 Thử lại
               </AppText>
@@ -121,11 +137,38 @@ export default function EditGroupScreen() {
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
           >
+            <AvatarCoverImageEditor
+              title="Ảnh nhóm"
+              avatarUrl={group.avatarUrl}
+              coverUrl={group.coverUrl}
+              imageVersion={group.updatedAt ?? group.createdAt}
+              disabled={false}
+              onBusyChange={setImageSubmitting}
+              onUpdated={(result) =>
+                setGroup((current) =>
+                  current
+                    ? {
+                        ...current,
+                        avatarUrl: result.avatarUrl,
+                        coverUrl: result.coverUrl,
+                        updatedAt: result.updatedAt,
+                      }
+                    : current,
+                )
+              }
+              onReload={() => loadGroup(false)}
+              uploadAvatar={(asset) => updateGroupAvatar(group.id, asset)}
+              uploadCover={(asset) => updateGroupCover(group.id, asset)}
+              deleteAvatar={() => deleteGroupAvatar(group.id)}
+              deleteCover={() => deleteGroupCover(group.id)}
+            />
+
             <GroupForm
               initialName={group.name}
               initialDescription={group.description}
               initialPrivacy={group.privacy}
               submitLabel="Lưu thay đổi"
+              disabled={imageSubmitting}
               onSubmit={handleSubmit}
             />
           </ScrollView>
@@ -161,6 +204,7 @@ const styles = StyleSheet.create({
   content: {
     padding: SPACING.lg,
     paddingBottom: SPACING.xxl,
+    gap: SPACING.xl,
   },
   center: {
     flex: 1,

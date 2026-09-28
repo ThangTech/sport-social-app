@@ -1,4 +1,5 @@
 import { api } from "@/services/api";
+import { createImageFormData } from "@/services/image-upload";
 import type { FeedPostDto } from "@/types/feed";
 import type {
   CreateGroupPostRequest,
@@ -9,6 +10,7 @@ import type {
   SaveGroupRequest,
   UpdateGroupMemberRoleRequest,
 } from "@/types/group";
+import type { ImagePickerAsset } from "expo-image-picker";
 
 export const createGroupPost = async (
   id: string,
@@ -41,6 +43,42 @@ export const updateGroup = async (id: string, request: SaveGroupRequest) => {
     method: "PATCH",
     auth: true,
     body: JSON.stringify(request),
+  });
+};
+
+export const updateGroupAvatar = async (
+  id: string,
+  asset: ImagePickerAsset,
+) => {
+  return await api<GroupDto>(`/groups/${id}/avatar`, {
+    method: "PUT",
+    auth: true,
+    body: createImageFormData(asset, "group-avatar"),
+  });
+};
+
+export const deleteGroupAvatar = async (id: string) => {
+  return await api<GroupDto>(`/groups/${id}/avatar`, {
+    method: "DELETE",
+    auth: true,
+  });
+};
+
+export const updateGroupCover = async (
+  id: string,
+  asset: ImagePickerAsset,
+) => {
+  return await api<GroupDto>(`/groups/${id}/cover`, {
+    method: "PUT",
+    auth: true,
+    body: createImageFormData(asset, "group-cover"),
+  });
+};
+
+export const deleteGroupCover = async (id: string) => {
+  return await api<GroupDto>(`/groups/${id}/cover`, {
+    method: "DELETE",
+    auth: true,
   });
 };
 

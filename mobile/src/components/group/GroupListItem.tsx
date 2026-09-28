@@ -20,7 +20,12 @@ export default function GroupListItem({
     <Pressable style={styles.container} onPress={onPress}>
       {group.avatarUrl ? (
         <Image
-          source={{ uri: getFileUrl(group.avatarUrl)! }}
+          source={{
+            uri: getFileUrl(
+              group.avatarUrl,
+              group.updatedAt ?? group.createdAt,
+            )!,
+          }}
           style={styles.avatar}
         />
       ) : (
