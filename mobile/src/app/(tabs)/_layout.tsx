@@ -56,7 +56,7 @@ export default function TabsLayout() {
           <Tabs.Screen
             name="community"
             options={{
-              title: "Cộng đồng",
+              title: "Nhóm",
               tabBarItemStyle: {
                 transform: [{ translateX: 18 }],
               },

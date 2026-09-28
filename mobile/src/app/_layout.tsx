@@ -66,6 +66,12 @@ function RootNavigator() {
         }}
       />
       <Stack.Screen
+        name="group/[id]"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="user/edit-profile"
         options={{
           headerShown: false,
