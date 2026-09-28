@@ -52,6 +52,12 @@ export type GroupMemberDto = {
   joinedAt: string;
 };
 
+export type SaveGroupRequest = {
+  name: string;
+  description: string | null;
+  privacy: GroupPrivacy;
+};
+
 export type GroupsResponse = {
   items: GroupDto[];
   nextCursor?: string | null;

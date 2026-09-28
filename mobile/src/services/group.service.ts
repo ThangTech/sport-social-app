@@ -4,7 +4,24 @@ import type {
   GroupMemberDto,
   GroupPostsResponse,
   GroupsResponse,
+  SaveGroupRequest,
 } from "@/types/group";
+
+export const createGroup = async (request: SaveGroupRequest) => {
+  return await api<GroupDto>("/groups", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify(request),
+  });
+};
+
+export const updateGroup = async (id: string, request: SaveGroupRequest) => {
+  return await api<GroupDto>(`/groups/${id}`, {
+    method: "PATCH",
+    auth: true,
+    body: JSON.stringify(request),
+  });
+};
 
 export const joinGroup = async (id: string) => {
   return await api<GroupMemberDto>(`/groups/${id}/join`, {

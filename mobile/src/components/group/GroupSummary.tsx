@@ -23,6 +23,7 @@ type GroupSummaryProps = {
   canManageJoinRequests: boolean;
   onJoin: () => void;
   onLeave: () => void;
+  onEdit: () => void;
   onManageJoinRequests: () => void;
 };
 
@@ -39,6 +40,7 @@ export default function GroupSummary({
   canManageJoinRequests,
   onJoin,
   onLeave,
+  onEdit,
   onManageJoinRequests,
 }: GroupSummaryProps) {
   const isPrivate = group.privacy === GroupPrivacy.Private;
@@ -99,6 +101,30 @@ export default function GroupSummary({
         <AppText variant="caption" color={COLORS.textMuted}>
           Quản lý bởi {group.ownerName}
         </AppText>
+
+        {isOwner ? (
+          <Pressable
+            onPress={onEdit}
+            style={({ pressed }) => [
+              styles.requestMenu,
+              pressed && styles.disabledButton,
+            ]}
+          >
+            <View style={styles.requestMenuLabel}>
+              <Ionicons
+                name="create-outline"
+                size={20}
+                color={COLORS.primary}
+              />
+              <AppText variant="label">Chỉnh sửa nhóm</AppText>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={COLORS.textMuted}
+            />
+          </Pressable>
+        ) : null}
 
         {canManageJoinRequests ? (
           <Pressable

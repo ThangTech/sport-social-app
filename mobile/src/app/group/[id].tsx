@@ -284,6 +284,12 @@ export default function GroupDetailScreen() {
                 canManageJoinRequests={canManageJoinRequests}
                 onJoin={() => updateMembership("join")}
                 onLeave={handleLeave}
+                onEdit={() =>
+                  router.push({
+                    pathname: "/group/edit/[id]",
+                    params: { id: group.id },
+                  })
+                }
                 onManageJoinRequests={() =>
                   router.push({
                     pathname: "/group/join-requests/[id]",

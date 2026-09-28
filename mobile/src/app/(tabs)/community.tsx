@@ -122,7 +122,20 @@ export default function CommunityScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
+        <View style={styles.headerButton} />
         <AppText variant="title">Khám phá nhóm</AppText>
+        <Pressable
+          accessibilityLabel="Tạo nhóm"
+          hitSlop={8}
+          onPress={() => router.push("/group/create")}
+          style={styles.headerButton}
+        >
+          <Ionicons
+            name="add-circle-outline"
+            size={28}
+            color={COLORS.primary}
+          />
+        </Pressable>
       </View>
 
       <View style={styles.searchBox}>
@@ -251,10 +264,17 @@ const styles = StyleSheet.create({
   header: {
     height: 64,
     paddingHorizontal: SPACING.lg,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+    justifyContent: "space-between",
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
   },
   searchBox: {
     margin: SPACING.lg,

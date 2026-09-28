@@ -72,6 +72,18 @@ function RootNavigator() {
         }}
       />
       <Stack.Screen
+        name="group/create"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
+        name="group/edit/[id]"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="group/join-requests/[id]"
         options={{
           headerShown: false,
