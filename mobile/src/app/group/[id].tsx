@@ -11,7 +11,12 @@ import {
   leaveGroup,
 } from "@/services/group.service";
 import { ApiError } from "@/types/api";
-import { GroupMemberStatus, type GroupDto } from "@/types/group";
+import {
+  GroupMemberRole,
+  GroupMemberStatus,
+  GroupPrivacy,
+  type GroupDto,
+} from "@/types/group";
 import type { Post } from "@/types/post";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -217,6 +222,13 @@ export default function GroupDetailScreen() {
     );
   };
 
+  const canManageJoinRequests = Boolean(
+    group &&
+      group.privacy === GroupPrivacy.Private &&
+      (currentUser?.id === group.ownerId ||
+        group.currentUserRole === GroupMemberRole.Admin),
+  );
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -269,8 +281,15 @@ export default function GroupDetailScreen() {
                 group={group}
                 isOwner={currentUser?.id === group.ownerId}
                 membershipLoading={membershipLoading}
+                canManageJoinRequests={canManageJoinRequests}
                 onJoin={() => updateMembership("join")}
                 onLeave={handleLeave}
+                onManageJoinRequests={() =>
+                  router.push({
+                    pathname: "/group/join-requests/[id]",
+                    params: { id: group.id },
+                  })
+                }
               />
 
               <View style={styles.sectionHeader}>

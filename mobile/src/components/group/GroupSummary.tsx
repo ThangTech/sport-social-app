@@ -20,8 +20,10 @@ type GroupSummaryProps = {
   group: GroupDto;
   isOwner: boolean;
   membershipLoading: boolean;
+  canManageJoinRequests: boolean;
   onJoin: () => void;
   onLeave: () => void;
+  onManageJoinRequests: () => void;
 };
 
 const getRoleLabel = (role?: GroupMemberRole | null) => {
@@ -34,8 +36,10 @@ export default function GroupSummary({
   group,
   isOwner,
   membershipLoading,
+  canManageJoinRequests,
   onJoin,
   onLeave,
+  onManageJoinRequests,
 }: GroupSummaryProps) {
   const isPrivate = group.privacy === GroupPrivacy.Private;
   const membershipStatus = group.currentUserMemberStatus ?? null;
@@ -95,6 +99,30 @@ export default function GroupSummary({
         <AppText variant="caption" color={COLORS.textMuted}>
           Quản lý bởi {group.ownerName}
         </AppText>
+
+        {canManageJoinRequests ? (
+          <Pressable
+            onPress={onManageJoinRequests}
+            style={({ pressed }) => [
+              styles.requestMenu,
+              pressed && styles.disabledButton,
+            ]}
+          >
+            <View style={styles.requestMenuLabel}>
+              <Ionicons
+                name="person-add-outline"
+                size={20}
+                color={COLORS.primary}
+              />
+              <AppText variant="label">Yêu cầu tham gia</AppText>
+            </View>
+            <Ionicons
+              name="chevron-forward"
+              size={20}
+              color={COLORS.textMuted}
+            />
+          </Pressable>
+        ) : null}
 
         {isOwner ? (
           <View style={styles.memberBadge}>
@@ -300,6 +328,22 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.danger,
     borderRadius: RADIUS.full,
+  },
+  requestMenu: {
+    minHeight: 52,
+    paddingHorizontal: SPACING.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: RADIUS.md,
+    backgroundColor: COLORS.surfaceAlt,
+  },
+  requestMenuLabel: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
   },
   disabledButton: {
     opacity: 0.6,

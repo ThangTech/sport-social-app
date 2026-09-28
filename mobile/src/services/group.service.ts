@@ -20,6 +20,33 @@ export const leaveGroup = async (id: string) => {
   });
 };
 
+export const getGroupJoinRequests = async (id: string) => {
+  return await api<GroupMemberDto[]>(`/groups/${id}/join-requests`, {
+    method: "GET",
+    auth: true,
+  });
+};
+
+export const approveGroupJoinRequest = async (
+  id: string,
+  userId: string,
+) => {
+  await api<void>(`/groups/${id}/join-requests/${userId}/approve`, {
+    method: "POST",
+    auth: true,
+  });
+};
+
+export const rejectGroupJoinRequest = async (
+  id: string,
+  userId: string,
+) => {
+  await api<void>(`/groups/${id}/join-requests/${userId}`, {
+    method: "DELETE",
+    auth: true,
+  });
+};
+
 export const getGroups = async (
   search: string,
   limit = 20,
