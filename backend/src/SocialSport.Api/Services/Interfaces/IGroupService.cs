@@ -9,6 +9,10 @@ namespace SocialSport.Api.Services.Interfaces
         Task<GroupsResponse> GetAllAsync(Guid? currentUserId, string? search, int limit, string? cursor);
         Task<GroupDto?> GetByIdAsync(Guid groupId, Guid? currentUserId);
         Task<GroupDto> UpdateAsync(Guid userId, Guid groupId, UpdateGroupRequest request);
+        Task<GroupDto> UpdateAvatarAsync(Guid userId, Guid groupId, IFormFile file);
+        Task<GroupDto> DeleteAvatarAsync(Guid userId, Guid groupId);
+        Task<GroupDto> UpdateCoverAsync(Guid userId, Guid groupId, IFormFile file);
+        Task<GroupDto> DeleteCoverAsync(Guid userId, Guid groupId);
         Task DeleteAsync(Guid userId, Guid groupId);
         Task<GroupMemberDto> JoinAsync(Guid userId, Guid groupId);
         Task LeaveAsync(Guid userId, Guid groupId);

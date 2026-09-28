@@ -54,6 +54,34 @@ namespace SocialSport.Api.Controllers
         }
 
         [Authorize]
+        [HttpPut("{id:guid}/avatar")]
+        public async Task<ActionResult<GroupDto>> UpdateAvatar(Guid id, [FromForm] IFormFile file)
+        {
+            return Ok(await _groupService.UpdateAvatarAsync(GetCurrentUserId(), id, file));
+        }
+
+        [Authorize]
+        [HttpDelete("{id:guid}/avatar")]
+        public async Task<ActionResult<GroupDto>> DeleteAvatar(Guid id)
+        {
+            return Ok(await _groupService.DeleteAvatarAsync(GetCurrentUserId(), id));
+        }
+
+        [Authorize]
+        [HttpPut("{id:guid}/cover")]
+        public async Task<ActionResult<GroupDto>> UpdateCover(Guid id, [FromForm] IFormFile file)
+        {
+            return Ok(await _groupService.UpdateCoverAsync(GetCurrentUserId(), id, file));
+        }
+
+        [Authorize]
+        [HttpDelete("{id:guid}/cover")]
+        public async Task<ActionResult<GroupDto>> DeleteCover(Guid id)
+        {
+            return Ok(await _groupService.DeleteCoverAsync(GetCurrentUserId(), id));
+        }
+
+        [Authorize]
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {

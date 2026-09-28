@@ -14,24 +14,30 @@ namespace SocialSport.Api.Services.Implementations;
 
 public class GroupService : IGroupService
 {
+    private const long MaxAvatarFileSize = 5 * 1024 * 1024;
+    private const long MaxCoverFileSize = 10 * 1024 * 1024;
+
     private readonly IGroupRepository _groupRepository;
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IGroupMemberRepository _groupMemberRepository;
     private readonly IPostRepository _postRepository;
     private readonly ISavedPostRepository _savedPostRepository;
+    private readonly IWebHostEnvironment _environment;
 
     public GroupService(
         IGroupRepository groupRepository,
         UserManager<ApplicationUser> userManager,
         IGroupMemberRepository groupMemberRepository,
         IPostRepository postRepository,
-        ISavedPostRepository savedPostRepository)
+        ISavedPostRepository savedPostRepository,
+        IWebHostEnvironment environment)
     {
         _groupRepository = groupRepository;
         _userManager = userManager;
         _groupMemberRepository = groupMemberRepository;
         _postRepository = postRepository;
         _savedPostRepository = savedPostRepository;
+        _environment = environment;
     }
 
     public async Task<GroupDto> CreateAsync(Guid userId, CreateGroupRequest request)
@@ -257,6 +263,186 @@ public class GroupService : IGroupService
             CreatedAt = group.CreatedAt,
             UpdatedAt = group.UpdatedAt
         };
+    }
+
+    public Task<GroupDto> UpdateAvatarAsync(Guid userId, Guid groupId, IFormFile file)
+    {
+        return UpdateGroupImageAsync(userId, groupId, file, GroupImageKind.Avatar);
+    }
+
+    public Task<GroupDto> DeleteAvatarAsync(Guid userId, Guid groupId)
+    {
+        return DeleteGroupImageAsync(userId, groupId, GroupImageKind.Avatar);
+    }
+
+    public Task<GroupDto> UpdateCoverAsync(Guid userId, Guid groupId, IFormFile file)
+    {
+        return UpdateGroupImageAsync(userId, groupId, file, GroupImageKind.Cover);
+    }
+
+    public Task<GroupDto> DeleteCoverAsync(Guid userId, Guid groupId)
+    {
+        return DeleteGroupImageAsync(userId, groupId, GroupImageKind.Cover);
+    }
+
+    private async Task<GroupDto> UpdateGroupImageAsync(Guid userId, Guid groupId, IFormFile file, GroupImageKind imageKind)
+    {
+        var group = await GetActiveOwnedGroupAsync(userId, groupId);
+        var maxFileSize = imageKind == GroupImageKind.Avatar ? MaxAvatarFileSize : MaxCoverFileSize;
+        var extension = await ValidateImageAsync(file, maxFileSize);
+        var folderName = GetImageFolderName(imageKind);
+        var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+        var uploadFolder = Path.Combine(webRoot, "uploads", "groups", folderName);
+
+        Directory.CreateDirectory(uploadFolder);
+
+        var fileName = $"{Guid.NewGuid():N}{extension}";
+        var newFilePath = Path.Combine(uploadFolder, fileName);
+        var oldUrl = imageKind == GroupImageKind.Avatar ? group.AvatarUrl : group.CoverUrl;
+
+        try
+        {
+            await using (var stream = new FileStream(newFilePath, FileMode.CreateNew))
+            {
+                await file.CopyToAsync(stream);
+            }
+
+            var newUrl = $"/uploads/groups/{folderName}/{fileName}";
+
+            if (imageKind == GroupImageKind.Avatar)
+                group.AvatarUrl = newUrl;
+            else
+                group.CoverUrl = newUrl;
+
+            group.UpdatedAt = DateTimeOffset.UtcNow;
+            await _groupRepository.SaveChangesAsync();
+        }
+        catch
+        {
+            DeleteFileIfExists(newFilePath);
+            throw;
+        }
+
+        DeleteOwnedGroupImage(oldUrl, imageKind);
+        return (await GetByIdAsync(groupId, userId))!;
+    }
+
+    private async Task<GroupDto> DeleteGroupImageAsync(Guid userId, Guid groupId, GroupImageKind imageKind)
+    {
+        var group = await GetActiveOwnedGroupAsync(userId, groupId);
+        var oldUrl = imageKind == GroupImageKind.Avatar ? group.AvatarUrl : group.CoverUrl;
+
+        if (imageKind == GroupImageKind.Avatar)
+            group.AvatarUrl = null;
+        else
+            group.CoverUrl = null;
+
+        group.UpdatedAt = DateTimeOffset.UtcNow;
+        await _groupRepository.SaveChangesAsync();
+
+        DeleteOwnedGroupImage(oldUrl, imageKind);
+        return (await GetByIdAsync(groupId, userId))!;
+    }
+
+    private async Task<Group> GetActiveOwnedGroupAsync(Guid userId, Guid groupId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        if (group.OwnerId != userId)
+            throw new UnauthorizedAccessException("Chỉ chủ nhóm mới có quyền thay đổi ảnh của nhóm.");
+
+        return group;
+    }
+
+    private static async Task<string> ValidateImageAsync(IFormFile file, long maxFileSize)
+    {
+        if (file.Length == 0)
+            throw new InvalidOperationException("File ảnh không hợp lệ.");
+
+        if (file.Length > maxFileSize)
+            throw new InvalidOperationException($"File ảnh không được vượt quá {maxFileSize / (1024 * 1024)}MB.");
+
+        var expectedExtension = file.ContentType.ToLowerInvariant() switch
+        {
+            "image/jpeg" or "image/jpg" => ".jpg",
+            "image/png" => ".png",
+            "image/webp" => ".webp",
+            _ => throw new InvalidOperationException("Chỉ hỗ trợ ảnh JPEG, PNG hoặc WebP.")
+        };
+
+        var header = new byte[12];
+        await using var stream = file.OpenReadStream();
+        var bytesRead = await stream.ReadAsync(header.AsMemory(0, header.Length));
+        var actualExtension = GetImageExtensionFromHeader(header, bytesRead);
+
+        if (actualExtension != expectedExtension)
+            throw new InvalidOperationException("Nội dung file không khớp với định dạng ảnh được khai báo.");
+
+        return actualExtension;
+    }
+
+    private static string? GetImageExtensionFromHeader(byte[] header, int bytesRead)
+    {
+        if (bytesRead >= 3 && header[0] == 0xFF && header[1] == 0xD8 && header[2] == 0xFF)
+            return ".jpg";
+
+        if (bytesRead >= 8 && header.AsSpan(0, 8).SequenceEqual(new byte[] { 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A }))
+            return ".png";
+
+        if (bytesRead >= 12 &&
+            header.AsSpan(0, 4).SequenceEqual("RIFF"u8) &&
+            header.AsSpan(8, 4).SequenceEqual("WEBP"u8))
+        {
+            return ".webp";
+        }
+
+        return null;
+    }
+
+    private void DeleteOwnedGroupImage(string? imageUrl, GroupImageKind imageKind)
+    {
+        if (string.IsNullOrWhiteSpace(imageUrl))
+            return;
+
+        var folderName = GetImageFolderName(imageKind);
+        var expectedPrefix = $"/uploads/groups/{folderName}/";
+
+        if (!imageUrl.StartsWith(expectedPrefix, StringComparison.Ordinal))
+            return;
+
+        var fileName = Path.GetFileName(imageUrl);
+
+        if (string.IsNullOrWhiteSpace(fileName) || imageUrl != $"{expectedPrefix}{fileName}")
+            return;
+
+        var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+        var expectedFolder = Path.GetFullPath(Path.Combine(webRoot, "uploads", "groups", folderName));
+        var fullPath = Path.GetFullPath(Path.Combine(expectedFolder, fileName));
+
+        if (!fullPath.StartsWith(expectedFolder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        DeleteFileIfExists(fullPath);
+    }
+
+    private static void DeleteFileIfExists(string filePath)
+    {
+        if (File.Exists(filePath))
+            File.Delete(filePath);
+    }
+
+    private static string GetImageFolderName(GroupImageKind imageKind)
+    {
+        return imageKind == GroupImageKind.Avatar ? "avatars" : "covers";
+    }
+
+    private enum GroupImageKind
+    {
+        Avatar,
+        Cover
     }
 
     public async Task DeleteAsync(Guid userId, Guid groupId)
