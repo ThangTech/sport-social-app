@@ -90,6 +90,12 @@ function RootNavigator() {
         }}
       />
       <Stack.Screen
+        name="group/banned-members/[id]"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="group/join-requests/[id]"
         options={{
           headerShown: false,

@@ -1,19 +1,12 @@
-import GroupMemberListItem from "@/components/group/GroupMemberListItem";
 import AppText from "@/components/ui/AppText";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
-import { useAuth } from "@/contexts/AuthContext";
+import { getFileUrl } from "@/services/api";
 import {
-  banGroupMember,
+  getBannedGroupMembers,
   getGroupById,
-  getGroupMembers,
-  removeGroupMember,
-  updateGroupMemberRole,
+  unbanGroupMember,
 } from "@/services/group.service";
-import {
-  GroupMemberRole,
-  type GroupDto,
-  type GroupMemberDto,
-} from "@/types/group";
+import type { GroupDto, GroupMemberDto } from "@/types/group";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
@@ -22,6 +15,7 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
+  Image,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -29,58 +23,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const getAvailableRoles = (
-  member: GroupMemberDto,
-  group: GroupDto,
-  currentUserId?: string,
-) => {
-  if (!currentUserId) return [];
-  if (member.userId === group.ownerId || member.userId === currentUserId) {
-    return [];
-  }
-
-  const isOwner = currentUserId === group.ownerId;
-  const isGroupAdmin = group.currentUserRole === GroupMemberRole.Admin;
-
-  if (!isOwner && !isGroupAdmin) return [];
-  if (!isOwner && member.role === GroupMemberRole.Admin) return [];
-
-  const allowedRoles = isOwner
-    ? [
-        GroupMemberRole.Member,
-        GroupMemberRole.Moderator,
-        GroupMemberRole.Admin,
-      ]
-    : [GroupMemberRole.Member, GroupMemberRole.Moderator];
-
-  return allowedRoles.filter((role) => role !== member.role);
-};
-
-const canManageMember = (
-  member: GroupMemberDto,
-  group: GroupDto,
-  currentUserId?: string,
-) => {
-  if (!currentUserId) return false;
-  if (member.userId === group.ownerId || member.userId === currentUserId) {
-    return false;
-  }
-
-  if (currentUserId === group.ownerId) return true;
-  if (group.currentUserRole === GroupMemberRole.Admin) {
-    return member.role !== GroupMemberRole.Admin;
-  }
-
-  return (
-    group.currentUserRole === GroupMemberRole.Moderator &&
-    member.role === GroupMemberRole.Member
-  );
-};
-
-type MemberAction = "role" | "remove" | "ban";
-
-export default function GroupMembersScreen() {
-  const { user: currentUser } = useAuth();
+export default function BannedGroupMembersScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -106,7 +49,7 @@ export default function GroupMembersScreen() {
 
         const [groupResult, membersResult] = await Promise.all([
           getGroupById(id),
-          getGroupMembers(id),
+          getBannedGroupMembers(id),
         ]);
 
         setGroup(groupResult);
@@ -115,7 +58,7 @@ export default function GroupMembersScreen() {
         setErrorMessage(
           error instanceof Error
             ? error.message
-            : "Không thể tải danh sách thành viên.",
+            : "Không thể tải danh sách thành viên bị cấm.",
         );
       } finally {
         setLoading(false);
@@ -136,34 +79,16 @@ export default function GroupMembersScreen() {
     loadData(false);
   };
 
-  const processMember = async (
-    member: GroupMemberDto,
-    action: MemberAction,
-    role?: GroupMemberRole,
-  ) => {
+  const handleUnban = async (member: GroupMemberDto) => {
     if (!id || processingUserIdRef.current) return;
 
     try {
       processingUserIdRef.current = member.userId;
       setProcessingUserId(member.userId);
-
-      if (action === "role" && role !== undefined) {
-        await updateGroupMemberRole(id, member.userId, { role });
-      } else if (action === "remove") {
-        await removeGroupMember(id, member.userId);
-      } else if (action === "ban") {
-        await banGroupMember(id, member.userId);
-      }
+      await unbanGroupMember(id, member.userId);
     } catch (error) {
-      const title =
-        action === "role"
-          ? "Không thể đổi vai trò"
-          : action === "remove"
-            ? "Không thể xóa thành viên"
-            : "Không thể cấm thành viên";
-
       Alert.alert(
-        title,
+        "Không thể bỏ cấm",
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     } finally {
@@ -173,11 +98,21 @@ export default function GroupMembersScreen() {
     }
   };
 
-  const canViewBannedMembers =
-    group &&
-    currentUser &&
-    (currentUser.id === group.ownerId ||
-      group.currentUserRole === GroupMemberRole.Admin);
+  const confirmUnban = (member: GroupMemberDto) => {
+    if (processingUserIdRef.current) return;
+
+    Alert.alert(
+      "Bỏ cấm thành viên",
+      `${member.displayName} có thể tham gia hoặc gửi yêu cầu lại, nhưng sẽ không tự động trở lại danh sách thành viên.`,
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Bỏ cấm",
+          onPress: () => handleUnban(member),
+        },
+      ],
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -185,8 +120,7 @@ export default function GroupMembersScreen() {
         <Pressable style={styles.headerButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={COLORS.text} />
         </Pressable>
-
-        <AppText variant="subtitle">Thành viên</AppText>
+        <AppText variant="subtitle">Thành viên bị cấm</AppText>
         <View style={styles.headerButton} />
       </View>
 
@@ -194,7 +128,7 @@ export default function GroupMembersScreen() {
         <View style={styles.center}>
           <ActivityIndicator size="large" color={COLORS.primary} />
           <AppText color={COLORS.textMuted} style={styles.message}>
-            Đang tải thành viên...
+            Đang tải danh sách...
           </AppText>
         </View>
       ) : errorMessage ? (
@@ -213,7 +147,7 @@ export default function GroupMembersScreen() {
             </AppText>
           </Pressable>
         </View>
-      ) : group ? (
+      ) : (
         <FlatList
           data={members}
           keyExtractor={(item) => item.userId}
@@ -221,77 +155,75 @@ export default function GroupMembersScreen() {
             members.length === 0 ? styles.emptyList : undefined
           }
           ListHeaderComponent={
-            <View style={styles.listHeader}>
-              <View style={styles.groupInfo}>
+            group ? (
+              <View style={styles.listHeader}>
                 <AppText variant="label">{group.name}</AppText>
-                <AppText variant="caption" color={COLORS.textMuted}>
-                  {group.memberCount} thành viên
-                </AppText>
               </View>
-
-              {canViewBannedMembers ? (
-                <Pressable
-                  onPress={() =>
-                    router.push({
-                      pathname: "/group/banned-members/[id]",
-                      params: { id: group.id },
-                    })
-                  }
-                  style={styles.bannedMembersButton}
-                >
-                  <View style={styles.bannedMembersLabel}>
-                    <Ionicons
-                      name="ban-outline"
-                      size={20}
-                      color={COLORS.danger}
-                    />
-                    <AppText variant="label">Thành viên bị cấm</AppText>
-                  </View>
-                  <Ionicons
-                    name="chevron-forward"
-                    size={20}
-                    color={COLORS.textMuted}
-                  />
-                </Pressable>
-              ) : null}
-            </View>
+            ) : null
           }
           ListEmptyComponent={
             <View style={styles.center}>
-              <Ionicons
-                name="people-outline"
-                size={50}
-                color={COLORS.textMuted}
-              />
+              <Ionicons name="ban-outline" size={50} color={COLORS.textMuted} />
               <AppText color={COLORS.textMuted} style={styles.message}>
-                Nhóm chưa có thành viên nào.
+                Không có thành viên nào đang bị cấm.
               </AppText>
             </View>
           }
-          renderItem={({ item }) => (
-            <GroupMemberListItem
-              member={item}
-              isOwner={item.userId === group.ownerId}
-              availableRoles={getAvailableRoles(
-                item,
-                group,
-                currentUser?.id,
-              )}
-              canRemove={canManageMember(item, group, currentUser?.id)}
-              canBan={canManageMember(item, group, currentUser?.id)}
-              actionLoading={processingUserId === item.userId}
-              actionsDisabled={processingUserId !== null}
-              onProfilePress={() =>
-                router.push({
-                  pathname: "/user/[id]",
-                  params: { id: item.userId },
-                })
-              }
-              onChangeRole={(role) => processMember(item, "role", role)}
-              onRemove={() => processMember(item, "remove")}
-              onBan={() => processMember(item, "ban")}
-            />
-          )}
+          renderItem={({ item }) => {
+            const isProcessing = processingUserId === item.userId;
+
+            return (
+              <View style={styles.memberItem}>
+                <Pressable
+                  style={styles.identity}
+                  onPress={() =>
+                    router.push({
+                      pathname: "/user/[id]",
+                      params: { id: item.userId },
+                    })
+                  }
+                >
+                  <Image
+                    source={
+                      item.avatarUrl
+                        ? { uri: getFileUrl(item.avatarUrl)! }
+                        : require("@/assets/images/icon.png")
+                    }
+                    style={styles.avatar}
+                  />
+                  <View style={styles.userInfo}>
+                    <AppText variant="label" numberOfLines={1}>
+                      {item.displayName}
+                    </AppText>
+                    <AppText
+                      variant="caption"
+                      color={COLORS.textMuted}
+                      numberOfLines={1}
+                    >
+                      @{item.userName}
+                    </AppText>
+                  </View>
+                </Pressable>
+
+                <Pressable
+                  disabled={processingUserId !== null}
+                  onPress={() => confirmUnban(item)}
+                  style={[
+                    styles.unbanButton,
+                    processingUserId !== null && styles.disabledButton,
+                  ]}
+                >
+                  {isProcessing ? (
+                    <ActivityIndicator size="small" color={COLORS.primary} />
+                  ) : (
+                    <AppText variant="label" color={COLORS.primary}>
+                      Bỏ cấm
+                    </AppText>
+                  )}
+                </Pressable>
+              </View>
+            );
+          }}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -302,7 +234,7 @@ export default function GroupMembersScreen() {
           }
           showsVerticalScrollIndicator={false}
         />
-      ) : null}
+      )}
     </SafeAreaView>
   );
 }
@@ -329,27 +261,41 @@ const styles = StyleSheet.create({
   },
   listHeader: {
     padding: SPACING.lg,
-    gap: SPACING.md,
     backgroundColor: COLORS.surface,
   },
-  groupInfo: {
-    gap: SPACING.xs,
-  },
-  bannedMembersButton: {
-    minHeight: 48,
-    paddingHorizontal: SPACING.md,
+  memberItem: {
+    minHeight: 84,
+    padding: SPACING.lg,
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
+    gap: SPACING.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
+  },
+  identity: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.md,
+  },
+  avatar: {
+    width: 50,
+    height: 50,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.surfaceAlt,
   },
-  bannedMembersLabel: {
-    flexDirection: "row",
+  userInfo: {
+    flex: 1,
+    gap: SPACING.xs,
+  },
+  unbanButton: {
+    minWidth: 84,
+    minHeight: 38,
     alignItems: "center",
-    gap: SPACING.sm,
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: RADIUS.full,
   },
   center: {
     flex: 1,
@@ -370,5 +316,8 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.primary,
+  },
+  disabledButton: {
+    opacity: 0.55,
   },
 });

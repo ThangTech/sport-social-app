@@ -84,6 +84,34 @@ export const updateGroupMemberRole = async (
   });
 };
 
+export const removeGroupMember = async (id: string, userId: string) => {
+  await api<void>(`/groups/${id}/members/${userId}`, {
+    method: "DELETE",
+    auth: true,
+  });
+};
+
+export const banGroupMember = async (id: string, userId: string) => {
+  await api<void>(`/groups/${id}/members/${userId}/ban`, {
+    method: "POST",
+    auth: true,
+  });
+};
+
+export const getBannedGroupMembers = async (id: string) => {
+  return await api<GroupMemberDto[]>(`/groups/${id}/members/banned`, {
+    method: "GET",
+    auth: true,
+  });
+};
+
+export const unbanGroupMember = async (id: string, userId: string) => {
+  await api<void>(`/groups/${id}/members/${userId}/ban`, {
+    method: "DELETE",
+    auth: true,
+  });
+};
+
 export const getGroups = async (
   search: string,
   limit = 20,
