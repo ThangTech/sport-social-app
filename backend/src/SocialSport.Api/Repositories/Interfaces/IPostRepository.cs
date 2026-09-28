@@ -4,7 +4,7 @@ namespace SocialSport.Api.Repositories.Interfaces
 {
     public interface IPostRepository
     {
-        Task<List<Post>> GetGroupPostsAsync(Guid groupId, int limit, DateTimeOffset? cursor);
+        Task<List<Post>> GetGroupPostsAsync(Guid groupId, int limit, DateTimeOffset? cursorCreatedAt, Guid? cursorPostId);
         Task<PostMedia?> GetMediaByIdAsync(Guid mediaId);
         Task AddMediaAsync(PostMedia media);
         void RemoveMedia(PostMedia media);

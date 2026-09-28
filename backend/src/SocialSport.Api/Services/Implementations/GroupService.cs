@@ -18,13 +18,20 @@ public class GroupService : IGroupService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly IGroupMemberRepository _groupMemberRepository;
     private readonly IPostRepository _postRepository;
+    private readonly ISavedPostRepository _savedPostRepository;
 
-    public GroupService(IGroupRepository groupRepository, UserManager<ApplicationUser> userManager, IGroupMemberRepository groupMemberRepository, IPostRepository postRepository)
+    public GroupService(
+        IGroupRepository groupRepository,
+        UserManager<ApplicationUser> userManager,
+        IGroupMemberRepository groupMemberRepository,
+        IPostRepository postRepository,
+        ISavedPostRepository savedPostRepository)
     {
         _groupRepository = groupRepository;
         _userManager = userManager;
         _groupMemberRepository = groupMemberRepository;
         _postRepository = postRepository;
+        _savedPostRepository = savedPostRepository;
     }
 
     public async Task<GroupDto> CreateAsync(Guid userId, CreateGroupRequest request)
@@ -736,6 +743,8 @@ public class GroupService : IGroupService
             Visibility = createdPost.Visibility,
             LikeCount = createdPost.Reactions.Count,
             CommentCount = createdPost.Comments.Count(x => x.Status == CommentStatus.Published),
+            CurrentReaction = null,
+            IsSaved = false,
             CreatedAt = createdPost.CreatedAt,
             UpdatedAt = createdPost.UpdatedAt,
             Media = createdPost.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -767,32 +776,17 @@ public class GroupService : IGroupService
 
         limit = Math.Clamp(limit, 1, 50);
 
-        DateTimeOffset? cursorDate = null;
-
-        if (!string.IsNullOrWhiteSpace(cursor))
-        {
-            try
-            {
-                var value = Encoding.UTF8.GetString(Convert.FromBase64String(cursor));
-
-                if (!DateTimeOffset.TryParse(value, out var parsedCursor))
-                    throw new InvalidOperationException("Cursor không hợp lệ.");
-
-                cursorDate = parsedCursor;
-            }
-            catch (FormatException)
-            {
-                throw new InvalidOperationException("Cursor không hợp lệ.");
-            }
-        }
-
-        var posts = await _postRepository.GetGroupPostsAsync(groupId, limit, cursorDate);
+        var (cursorCreatedAt, cursorPostId) = DecodeGroupPostCursor(cursor);
+        var posts = await _postRepository.GetGroupPostsAsync(groupId, limit, cursorCreatedAt, cursorPostId);
         var hasMore = posts.Count > limit;
 
         if (hasMore)
             posts = posts.Take(limit).ToList();
 
         var authorIds = posts.Select(x => x.AuthorId).Distinct().ToList();
+        var savedPostIds = userId.HasValue
+            ? await _savedPostRepository.GetSavedPostIdsAsync(userId.Value, posts.Select(x => x.Id))
+            : [];
 
         var users = await _userManager.Users
             .Where(x => authorIds.Contains(x.Id))
@@ -816,6 +810,10 @@ public class GroupService : IGroupService
                 Visibility = post.Visibility,
                 LikeCount = post.Reactions.Count,
                 CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
+                CurrentReaction = userId.HasValue
+                    ? post.Reactions.FirstOrDefault(x => x.UserId == userId.Value)?.Type
+                    : null,
+                IsSaved = savedPostIds.Contains(post.Id),
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -828,19 +826,44 @@ public class GroupService : IGroupService
             };
         }).ToList();
 
-        string? nextCursor = null;
-
-        if (hasMore && posts.Count > 0)
-        {
-            var value = posts[posts.Count - 1].CreatedAt.ToString("O");
-            nextCursor = Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
-        }
-
         return new GroupPostsResponse
         {
             Items = items,
-            NextCursor = nextCursor
+            NextCursor = hasMore && posts.Count > 0
+                ? EncodeGroupPostCursor(posts[^1].CreatedAt, posts[^1].Id)
+                : null
         };
+    }
+
+    private static (DateTimeOffset? CreatedAt, Guid? PostId) DecodeGroupPostCursor(string? cursor)
+    {
+        if (string.IsNullOrWhiteSpace(cursor))
+            return (null, null);
+
+        try
+        {
+            var value = Encoding.UTF8.GetString(Convert.FromBase64String(cursor));
+            var parts = value.Split('|', 2);
+
+            if (parts.Length != 2 ||
+                !DateTimeOffset.TryParseExact(parts[0], "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var createdAt) ||
+                !Guid.TryParseExact(parts[1], "D", out var postId))
+            {
+                throw new InvalidOperationException("Cursor không hợp lệ.");
+            }
+
+            return (createdAt, postId);
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException("Cursor không hợp lệ.");
+        }
+    }
+
+    private static string EncodeGroupPostCursor(DateTimeOffset createdAt, Guid postId)
+    {
+        var value = $"{createdAt:O}|{postId:D}";
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
     }
     public async Task RemovePostAsync(Guid userId, Guid groupId, Guid postId)
     {

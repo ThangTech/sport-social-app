@@ -14,7 +14,11 @@ namespace SocialSport.Api.Repositories.Implementations
         {
             _context = context;
         }
-        public async Task<List<Post>> GetGroupPostsAsync(Guid groupId, int limit, DateTimeOffset? cursor)
+        public async Task<List<Post>> GetGroupPostsAsync(
+            Guid groupId,
+            int limit,
+            DateTimeOffset? cursorCreatedAt,
+            Guid? cursorPostId)
         {
             var query = _context.Posts
                 .AsNoTracking()
@@ -25,11 +29,16 @@ namespace SocialSport.Api.Repositories.Implementations
                 .Include(x => x.Reactions)
                 .Where(x => x.GroupId == groupId && x.Status == PostStatus.Published);
 
-            if (cursor.HasValue)
-                query = query.Where(x => x.CreatedAt < cursor.Value);
+            if (cursorCreatedAt.HasValue && cursorPostId.HasValue)
+            {
+                query = query.Where(x =>
+                    x.CreatedAt < cursorCreatedAt.Value ||
+                    (x.CreatedAt == cursorCreatedAt.Value && x.Id.CompareTo(cursorPostId.Value) < 0));
+            }
 
             return await query
                 .OrderByDescending(x => x.CreatedAt)
+                .ThenByDescending(x => x.Id)
                 .Take(limit + 1)
                 .ToListAsync();
         }
