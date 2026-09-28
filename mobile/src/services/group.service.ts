@@ -5,6 +5,7 @@ import type {
   GroupPostsResponse,
   GroupsResponse,
   SaveGroupRequest,
+  UpdateGroupMemberRoleRequest,
 } from "@/types/group";
 
 export const createGroup = async (request: SaveGroupRequest) => {
@@ -61,6 +62,25 @@ export const rejectGroupJoinRequest = async (
   await api<void>(`/groups/${id}/join-requests/${userId}`, {
     method: "DELETE",
     auth: true,
+  });
+};
+
+export const getGroupMembers = async (id: string) => {
+  return await api<GroupMemberDto[]>(`/groups/${id}/members`, {
+    method: "GET",
+    auth: true,
+  });
+};
+
+export const updateGroupMemberRole = async (
+  id: string,
+  userId: string,
+  request: UpdateGroupMemberRoleRequest,
+) => {
+  await api<void>(`/groups/${id}/members/${userId}/role`, {
+    method: "PATCH",
+    auth: true,
+    body: JSON.stringify(request),
   });
 };
 

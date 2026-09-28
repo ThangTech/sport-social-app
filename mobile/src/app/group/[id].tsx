@@ -290,6 +290,12 @@ export default function GroupDetailScreen() {
                     params: { id: group.id },
                   })
                 }
+                onViewMembers={() =>
+                  router.push({
+                    pathname: "/group/members/[id]",
+                    params: { id: group.id },
+                  })
+                }
                 onManageJoinRequests={() =>
                   router.push({
                     pathname: "/group/join-requests/[id]",

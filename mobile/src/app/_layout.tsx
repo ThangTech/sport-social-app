@@ -84,6 +84,12 @@ function RootNavigator() {
         }}
       />
       <Stack.Screen
+        name="group/members/[id]"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="group/join-requests/[id]"
         options={{
           headerShown: false,

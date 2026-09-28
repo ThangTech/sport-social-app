@@ -58,6 +58,10 @@ export type SaveGroupRequest = {
   privacy: GroupPrivacy;
 };
 
+export type UpdateGroupMemberRoleRequest = {
+  role: GroupMemberRole;
+};
+
 export type GroupsResponse = {
   items: GroupDto[];
   nextCursor?: string | null;
