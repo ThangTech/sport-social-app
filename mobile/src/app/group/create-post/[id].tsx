@@ -1,14 +1,20 @@
 import PostEditorForm from "@/components/post/editor/PostEditorForm";
 import PostEditorHeader from "@/components/post/editor/PostEditorHeader";
-import PostSportSelector from "@/components/post/editor/PostSportSelector";
+import PostImagePickerButton from "@/components/post/editor/PostImagePickerButton";
+import PostImagePreview from "@/components/post/editor/PostImagePreview";
+import PostSportSelector, {
+  PostSportBadge,
+} from "@/components/post/editor/PostSportSelector";
 import AppText from "@/components/ui/AppText";
 import { COLORS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { createGroupPost, getGroupById } from "@/services/group.service";
+import { uploadPostMedia } from "@/services/post.service";
 import { getSports } from "@/services/sport.service";
 import { GroupMemberStatus, type GroupDto } from "@/types/group";
 import type { SportDto } from "@/types/sport";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import type { ImagePickerAsset } from "expo-image-picker";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -28,6 +34,9 @@ export default function CreateGroupPostScreen() {
   const [group, setGroup] = useState<GroupDto | null>(null);
   const [sports, setSports] = useState<SportDto[]>([]);
   const [selectedSport, setSelectedSport] = useState<SportDto | null>(null);
+  const [selectedImage, setSelectedImage] = useState<ImagePickerAsset | null>(
+    null,
+  );
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -85,17 +94,34 @@ export default function CreateGroupPostScreen() {
 
     if (!id || !value || submittingRef.current) return;
 
+    let postCreated = false;
+
     try {
       submittingRef.current = true;
       setSubmitting(true);
 
-      await createGroupPost(id, {
+      const post = await createGroupPost(id, {
         content: value,
         sportId: selectedSport?.id ?? null,
       });
 
+      postCreated = true;
+
+      if (selectedImage) {
+        await uploadPostMedia(post.id, selectedImage);
+      }
+
       router.back();
     } catch (error) {
+      if (postCreated) {
+        Alert.alert(
+          "Ảnh chưa được tải lên",
+          "Bài viết đã được tạo nhưng ảnh tải lên không thành công. Bài sẽ không được tạo lại.",
+        );
+        router.back();
+        return;
+      }
+
       Alert.alert(
         "Không thể đăng bài",
         error instanceof Error ? error.message : "Vui lòng thử lại.",
@@ -178,22 +204,48 @@ export default function CreateGroupPostScreen() {
             {group.name}
           </AppText>
         </View>
-        <PostSportSelector
-          sports={sports}
-          value={selectedSport}
-          onChange={setSelectedSport}
-          disabled={submitting}
-        />
-        {sportsError ? (
-          <AppText
-            variant="caption"
-            color={COLORS.danger}
-            style={styles.sportsError}
-          >
-            {sportsError}
-          </AppText>
-        ) : null}
       </PostEditorForm>
+
+      <PostImagePreview
+        selectedImage={selectedImage}
+        onRemoveSelected={() => setSelectedImage(null)}
+        disabled={submitting}
+        variant="create"
+      />
+
+      <View style={styles.actions}>
+        <View style={styles.actionLabel}>
+          <PostSportBadge
+            sport={selectedSport}
+            onClear={() => setSelectedSport(null)}
+            disabled={submitting}
+          />
+          <AppText variant="subtitle">Thêm vào bài viết</AppText>
+          <AppText variant="caption" color={COLORS.textMuted}>
+            Ảnh và môn thể thao
+          </AppText>
+          {sportsError ? (
+            <AppText variant="caption" color={COLORS.danger}>
+              {sportsError}
+            </AppText>
+          ) : null}
+        </View>
+
+        <View style={styles.actionIcons}>
+          <PostImagePickerButton
+            value={selectedImage}
+            onChange={setSelectedImage}
+            disabled={submitting}
+          />
+          <PostSportSelector
+            sports={sports}
+            value={selectedSport}
+            onChange={setSelectedSport}
+            disabled={submitting}
+            variant="icon"
+          />
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -226,7 +278,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: SPACING.xs,
   },
-  sportsError: {
-    marginTop: SPACING.xs,
+  actions: {
+    margin: SPACING.lg,
+    padding: SPACING.lg,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+    backgroundColor: COLORS.surface,
+  },
+  actionLabel: {
+    flex: 1,
+    gap: SPACING.xs,
+  },
+  actionIcons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.xs,
   },
 });

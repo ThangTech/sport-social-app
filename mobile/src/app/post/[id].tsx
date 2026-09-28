@@ -2,6 +2,10 @@ import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
 import { COLORS, SPACING } from "@/constants/theme";
 import { getPostById } from "@/services/post.service";
+import {
+  getGroupById,
+  removeGroupPost,
+} from "@/services/group.service";
 import type { Post } from "@/types/post";
 import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -30,6 +34,11 @@ import { useFocusEffect } from "@react-navigation/native";
 import { useCallback, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { ApiError } from "@/types/api";
+import {
+  GroupMemberRole,
+  GroupMemberStatus,
+  type GroupDto,
+} from "@/types/group";
 
 export default function PostDetailScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
@@ -39,6 +48,7 @@ export default function PostDetailScreen() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
   const [post, setPost] = useState<Post | null>(null);
+  const [group, setGroup] = useState<GroupDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [comments, setComments] = useState<CommentDto[]>([]);
@@ -60,7 +70,18 @@ export default function PostDetailScreen() {
 
       const item = await getPostById(postId);
 
-      setPost(mapFeedPostToPost(item));
+      const mappedPost = mapFeedPostToPost(item);
+      setPost(mappedPost);
+
+      if (mappedPost.groupId) {
+        try {
+          setGroup(await getGroupById(mappedPost.groupId));
+        } catch {
+          setGroup(null);
+        }
+      } else {
+        setGroup(null);
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof ApiError && error.status === 403
@@ -169,6 +190,28 @@ export default function PostDetailScreen() {
         : current,
     );
   };
+  const canRemoveFromGroup = Boolean(
+    post?.groupId &&
+      group &&
+      post.authorId !== currentUser?.id &&
+      group.currentUserMemberStatus === GroupMemberStatus.Active &&
+      (currentUser?.id === group.ownerId ||
+        (post.authorId !== group.ownerId &&
+          (group.currentUserRole === GroupMemberRole.Admin ||
+            group.currentUserRole === GroupMemberRole.Moderator))),
+  );
+
+  const handleRemoveFromGroup = async (postId: string) => {
+    if (!post?.groupId) return;
+
+    try {
+      await removeGroupPost(post.groupId, postId);
+      router.back();
+    } catch (error) {
+      await loadPost(postId);
+      throw error;
+    }
+  };
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -222,6 +265,11 @@ export default function PostDetailScreen() {
               }
               onCommentPress={() => commentInputRef.current?.focus()}
               onDeleted={() => {
+                if (post.groupId) {
+                  router.back();
+                  return;
+                }
+
                 router.replace({
                   pathname: "/(tabs)",
                   params: {
@@ -229,6 +277,9 @@ export default function PostDetailScreen() {
                   },
                 });
               }}
+              onRemoveFromGroup={
+                canRemoveFromGroup ? handleRemoveFromGroup : undefined
+              }
             />
 
             <PostCommentsSection

@@ -21,6 +21,13 @@ export const createGroupPost = async (
   });
 };
 
+export const removeGroupPost = async (groupId: string, postId: string) => {
+  await api<void>(`/groups/${groupId}/posts/${postId}`, {
+    method: "DELETE",
+    auth: true,
+  });
+};
+
 export const createGroup = async (request: SaveGroupRequest) => {
   return await api<GroupDto>("/groups", {
     method: "POST",

@@ -9,7 +9,7 @@ import {
   unsavePost,
   deletePost,
 } from "@/services/post.service";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import { router } from "expo-router";
@@ -23,6 +23,7 @@ type PostCardProps = {
   onCommentPress?: () => void;
   onSavedChange?: (saved: boolean) => void;
   onDeleted?: (postId: string) => void;
+  onRemoveFromGroup?: (postId: string) => Promise<void>;
 };
 export default function PostCard({
   post,
@@ -31,6 +32,7 @@ export default function PostCard({
   onCommentPress,
   onSavedChange,
   onDeleted,
+  onRemoveFromGroup,
 }: PostCardProps) {
   const { user: currentUser, profileImageVersion } = useAuth();
 
@@ -56,6 +58,8 @@ export default function PostCard({
   const [reactionLoading, setReactionLoading] = useState(false);
   const [saved, setSaved] = useState(post.isSaved);
   const [saveLoading, setSaveLoading] = useState(false);
+  const [menuActionLoading, setMenuActionLoading] = useState(false);
+  const menuActionLoadingRef = useRef(false);
   useEffect(() => {
     setReactionCount(post.likeCount);
     setCurrentReaction(post.currentReaction ?? null);
@@ -142,16 +146,71 @@ export default function PostCard({
       },
     ]);
   };
+  const handleRemoveFromGroup = () => {
+    if (!onRemoveFromGroup || menuActionLoadingRef.current) return;
+
+    Alert.alert(
+      "Gỡ khỏi nhóm",
+      "Bài viết sẽ không còn hiển thị và người dùng không thể mở bài từ nhóm.",
+      [
+        { text: "Hủy", style: "cancel" },
+        {
+          text: "Gỡ khỏi nhóm",
+          style: "destructive",
+          onPress: async () => {
+            if (menuActionLoadingRef.current) return;
+
+            try {
+              menuActionLoadingRef.current = true;
+              setMenuActionLoading(true);
+              await onRemoveFromGroup(post.id);
+            } catch (error) {
+              Alert.alert(
+                "Không thể gỡ bài viết",
+                error instanceof Error ? error.message : "Vui lòng thử lại.",
+              );
+            } finally {
+              menuActionLoadingRef.current = false;
+              setMenuActionLoading(false);
+            }
+          },
+        },
+      ],
+    );
+  };
   const handlePostMenu = () => {
+    const actions: Array<"edit" | "delete" | "remove"> = [];
+    const options: string[] = [];
+
+    if (isOwner) {
+      actions.push("edit", "delete");
+      options.push("Chỉnh sửa", "Xóa bài viết");
+    }
+
+    if (onRemoveFromGroup) {
+      actions.push("remove");
+      options.push("Gỡ khỏi nhóm");
+    }
+
+    options.push("Hủy");
+    const cancelButtonIndex = options.length - 1;
+    const destructiveButtonIndex = actions
+      .map((action, index) => (action === "edit" ? -1 : index))
+      .filter((index) => index >= 0);
+
     showActionSheetWithOptions(
       {
-        options: ["Chỉnh sửa", "Xóa bài viết", "Hủy"],
-        cancelButtonIndex: 2,
-        destructiveButtonIndex: 1,
+        options,
+        cancelButtonIndex,
+        destructiveButtonIndex,
         title: "Tùy chọn bài viết",
       },
       (index) => {
-        if (index === 0) {
+        if (index === undefined || index === cancelButtonIndex) return;
+
+        const action = actions[index];
+
+        if (action === "edit") {
           router.push({
             pathname: "../../post/edit/[id]",
             params: {
@@ -160,17 +219,18 @@ export default function PostCard({
           });
         }
 
-        if (index === 1) {
-          handleDeletePost();
-        }
+        if (action === "delete") handleDeletePost();
+        if (action === "remove") handleRemoveFromGroup();
       },
     );
   };
+  const showMenu =
+    !menuActionLoading && (isOwner || Boolean(onRemoveFromGroup));
   return (
     <View style={styles.card}>
       <PostCardHeader
         post={displayedPost}
-        isOwner={isOwner && !post.groupId}
+        showMenu={showMenu}
         onAuthorPress={onAuthorPress}
         onMenuPress={handlePostMenu}
       />

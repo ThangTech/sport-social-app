@@ -9,6 +9,7 @@ import {
   getGroupPosts,
   joinGroup,
   leaveGroup,
+  removeGroupPost,
 } from "@/services/group.service";
 import { ApiError } from "@/types/api";
 import {
@@ -230,6 +231,23 @@ export default function GroupDetailScreen() {
   );
   const canCreatePost =
     group?.currentUserMemberStatus === GroupMemberStatus.Active;
+  const canModeratePosts = Boolean(
+    group &&
+      group.currentUserMemberStatus === GroupMemberStatus.Active &&
+      (currentUser?.id === group.ownerId ||
+        group.currentUserRole === GroupMemberRole.Admin ||
+        group.currentUserRole === GroupMemberRole.Moderator),
+  );
+
+  const handleRemoveGroupPost = async (postId: string) => {
+    if (!id) return;
+
+    try {
+      await removeGroupPost(id, postId);
+    } finally {
+      await loadPosts(id);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -383,6 +401,20 @@ export default function GroupDetailScreen() {
                   pathname: "/user/[id]",
                   params: { id: item.authorId },
                 })
+              }
+              onDeleted={(postId) => {
+                setPosts((current) =>
+                  current.filter((post) => post.id !== postId),
+                );
+                if (id) loadPosts(id);
+              }}
+              onRemoveFromGroup={
+                canModeratePosts &&
+                item.authorId !== currentUser?.id &&
+                (currentUser?.id === group.ownerId ||
+                  item.authorId !== group.ownerId)
+                  ? handleRemoveGroupPost
+                  : undefined
               }
             />
           )}

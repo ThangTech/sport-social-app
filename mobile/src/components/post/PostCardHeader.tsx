@@ -9,14 +9,14 @@ import type { Post } from "@/types/post";
 
 type Props = {
   post: Post;
-  isOwner: boolean;
+  showMenu: boolean;
   onAuthorPress?: () => void;
   onMenuPress: () => void;
 };
 
 export default function PostCardHeader({
   post,
-  isOwner,
+  showMenu,
   onAuthorPress,
   onMenuPress,
 }: Props) {
@@ -63,7 +63,7 @@ export default function PostCardHeader({
 
       <View style={styles.headerActions}>
         {post.sport ? <SportBadge name={post.sport} /> : null}
-        {isOwner ? (
+        {showMenu ? (
           <Pressable hitSlop={10} onPress={onMenuPress}>
             <Ionicons
               name="ellipsis-horizontal"
