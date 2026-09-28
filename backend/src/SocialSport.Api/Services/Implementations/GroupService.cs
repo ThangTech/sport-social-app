@@ -34,14 +34,15 @@ public class GroupService : IGroupService
         if (user is null)
             throw new KeyNotFoundException("Không tìm thấy người dùng.");
 
-        var slug = await CreateUniqueSlugAsync(request.Name);
+        var (name, description) = NormalizeAndValidateGroupInput(request.Name, request.Description, request.Privacy);
+        var slug = await CreateUniqueSlugAsync(name);
 
         var group = new Group
         {
             Id = Guid.NewGuid(),
-            Name = request.Name.Trim(),
+            Name = name,
             Slug = slug,
-            Description = request.Description?.Trim(),
+            Description = description,
             OwnerId = userId,
             Privacy = request.Privacy,
             Status = GroupStatus.Active,
@@ -218,8 +219,10 @@ public class GroupService : IGroupService
         if (group.OwnerId != userId)
             throw new UnauthorizedAccessException("Bạn không có quyền chỉnh sửa nhóm này.");
 
-        group.Name = request.Name.Trim();
-        group.Description = request.Description?.Trim();
+        var (name, description) = NormalizeAndValidateGroupInput(request.Name, request.Description, request.Privacy);
+
+        group.Name = name;
+        group.Description = description;
         group.Privacy = request.Privacy;
         group.UpdatedAt = DateTimeOffset.UtcNow;
 
@@ -263,6 +266,26 @@ public class GroupService : IGroupService
         group.DeletedAt = DateTimeOffset.UtcNow;
 
         await _groupRepository.SaveChangesAsync();
+    }
+
+    private static (string Name, string? Description) NormalizeAndValidateGroupInput(
+        string name,
+        string? description,
+        GroupPrivacy privacy)
+    {
+        var normalizedName = name.Trim();
+        var normalizedDescription = description?.Trim();
+
+        if (normalizedName.Length is < 3 or > 100)
+            throw new InvalidOperationException("Tên nhóm phải từ 3 đến 100 ký tự.");
+
+        if (normalizedDescription?.Length > 1000)
+            throw new InvalidOperationException("Mô tả nhóm không được vượt quá 1000 ký tự.");
+
+        if (!Enum.IsDefined(typeof(GroupPrivacy), privacy))
+            throw new InvalidOperationException("Quyền riêng tư của nhóm không hợp lệ.");
+
+        return (normalizedName, normalizedDescription);
     }
 
     private async Task<string> CreateUniqueSlugAsync(string name)
