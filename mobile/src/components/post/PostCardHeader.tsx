@@ -20,8 +20,9 @@ export default function PostCardHeader({
   onAuthorPress,
   onMenuPress,
 }: Props) {
-  const visibilityIcon =
-    post.visibility === 1
+  const visibilityIcon = post.groupId
+    ? "people-outline"
+    : post.visibility === 1
       ? "earth-outline"
       : post.visibility === 2
         ? "people-outline"

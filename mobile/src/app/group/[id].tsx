@@ -228,6 +228,8 @@ export default function GroupDetailScreen() {
       (currentUser?.id === group.ownerId ||
         group.currentUserRole === GroupMemberRole.Admin),
   );
+  const canCreatePost =
+    group?.currentUserMemberStatus === GroupMemberStatus.Active;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -306,6 +308,26 @@ export default function GroupDetailScreen() {
 
               <View style={styles.sectionHeader}>
                 <AppText variant="subtitle">Bài viết trong nhóm</AppText>
+                {canCreatePost ? (
+                  <Pressable
+                    style={styles.createPostButton}
+                    onPress={() =>
+                      router.push({
+                        pathname: "/group/create-post/[id]",
+                        params: { id: group.id },
+                      })
+                    }
+                  >
+                    <Ionicons
+                      name="create-outline"
+                      size={18}
+                      color={COLORS.background}
+                    />
+                    <AppText variant="label" color={COLORS.background}>
+                      Đăng bài
+                    </AppText>
+                  </Pressable>
+                ) : null}
               </View>
 
               {postsErrorMessage ? (
@@ -318,6 +340,16 @@ export default function GroupDetailScreen() {
                   <AppText color={COLORS.textMuted} style={styles.errorText}>
                     {postsErrorMessage}
                   </AppText>
+                  {id ? (
+                    <Pressable
+                      style={styles.postsRetryButton}
+                      onPress={() => loadPosts(id)}
+                    >
+                      <AppText variant="label" color={COLORS.background}>
+                        Thử lại
+                      </AppText>
+                    </Pressable>
+                  ) : null}
                 </View>
               ) : null}
             </>
@@ -351,11 +383,6 @@ export default function GroupDetailScreen() {
                   pathname: "/user/[id]",
                   params: { id: item.authorId },
                 })
-              }
-              onDeleted={(postId) =>
-                setPosts((current) =>
-                  current.filter((post) => post.id !== postId),
-                )
               }
             />
           )}
@@ -424,6 +451,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: SPACING.lg,
     paddingTop: SPACING.xl,
     paddingBottom: SPACING.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.md,
+  },
+  createPostButton: {
+    minHeight: 38,
+    paddingHorizontal: SPACING.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.xs,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
   },
   postsError: {
     marginHorizontal: SPACING.lg,
@@ -438,6 +479,12 @@ const styles = StyleSheet.create({
   },
   errorText: {
     textAlign: "center",
+  },
+  postsRetryButton: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.primary,
   },
   emptyPosts: {
     padding: SPACING.xl,

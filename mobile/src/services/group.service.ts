@@ -1,5 +1,7 @@
 import { api } from "@/services/api";
+import type { FeedPostDto } from "@/types/feed";
 import type {
+  CreateGroupPostRequest,
   GroupDto,
   GroupMemberDto,
   GroupPostsResponse,
@@ -7,6 +9,17 @@ import type {
   SaveGroupRequest,
   UpdateGroupMemberRoleRequest,
 } from "@/types/group";
+
+export const createGroupPost = async (
+  id: string,
+  request: CreateGroupPostRequest,
+) => {
+  return await api<FeedPostDto>(`/groups/${id}/posts`, {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify(request),
+  });
+};
 
 export const createGroup = async (request: SaveGroupRequest) => {
   return await api<GroupDto>("/groups", {

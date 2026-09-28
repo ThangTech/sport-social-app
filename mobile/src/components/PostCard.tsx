@@ -170,7 +170,7 @@ export default function PostCard({
     <View style={styles.card}>
       <PostCardHeader
         post={displayedPost}
-        isOwner={isOwner}
+        isOwner={isOwner && !post.groupId}
         onAuthorPress={onAuthorPress}
         onMenuPress={handlePostMenu}
       />

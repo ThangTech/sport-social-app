@@ -78,6 +78,12 @@ function RootNavigator() {
         }}
       />
       <Stack.Screen
+        name="group/create-post/[id]"
+        options={{
+          headerShown: false,
+        }}
+      />
+      <Stack.Screen
         name="group/edit/[id]"
         options={{
           headerShown: false,

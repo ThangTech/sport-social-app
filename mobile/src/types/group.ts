@@ -58,6 +58,11 @@ export type SaveGroupRequest = {
   privacy: GroupPrivacy;
 };
 
+export type CreateGroupPostRequest = {
+  content: string;
+  sportId?: string | null;
+};
+
 export type UpdateGroupMemberRoleRequest = {
   role: GroupMemberRole;
 };

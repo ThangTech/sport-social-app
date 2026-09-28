@@ -10,8 +10,9 @@ import PostAudienceSelector from "@/components/post/editor/PostAudienceSelector"
 type Props = {
   content: string;
   onContentChange: (content: string) => void;
-  visibility: number;
-  onVisibilityChange: (visibility: number) => void;
+  visibility?: number;
+  onVisibilityChange?: (visibility: number) => void;
+  showAudienceSelector?: boolean;
   displayName?: string | null;
   avatarUrl?: string | null;
   avatarVersion?: number;
@@ -26,6 +27,7 @@ export default function PostEditorForm({
   onContentChange,
   visibility,
   onVisibilityChange,
+  showAudienceSelector = true,
   displayName,
   avatarUrl,
   avatarVersion,
@@ -55,11 +57,15 @@ export default function PostEditorForm({
         <View style={variant === "create" ? styles.userInfo : undefined}>
           <AppText variant="subtitle">{displayName || "Người dùng"}</AppText>
 
-          <PostAudienceSelector
-            value={visibility}
-            onChange={onVisibilityChange}
-            disabled={disabled}
-          />
+          {showAudienceSelector &&
+          visibility !== undefined &&
+          onVisibilityChange ? (
+            <PostAudienceSelector
+              value={visibility}
+              onChange={onVisibilityChange}
+              disabled={disabled}
+            />
+          ) : null}
 
           {children}
         </View>
