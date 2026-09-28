@@ -633,6 +633,42 @@ public class GroupService : IGroupService
 
         await _groupMemberRepository.SaveChangesAsync();
     }
+
+    public async Task<List<GroupMemberDto>> GetBannedMembersAsync(Guid userId, Guid groupId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+
+        if (group is null || group.Status != GroupStatus.Active)
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+
+        var currentMember = await _groupMemberRepository.GetAsync(groupId, userId);
+
+        if (currentMember is null || currentMember.Status != GroupMemberStatus.Active || currentMember.Role != GroupMemberRole.Admin)
+            throw new UnauthorizedAccessException("Bạn không có quyền xem danh sách thành viên bị cấm.");
+
+        var bannedMembers = await _groupMemberRepository.GetByGroupAsync(groupId, GroupMemberStatus.Banned);
+        var userIds = bannedMembers.Select(x => x.UserId).ToList();
+
+        var users = await _userManager.Users
+            .Where(x => userIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id);
+
+        return bannedMembers.Select(member =>
+        {
+            users.TryGetValue(member.UserId, out var user);
+
+            return new GroupMemberDto
+            {
+                UserId = member.UserId,
+                UserName = user?.UserName ?? string.Empty,
+                DisplayName = user?.DisplayName ?? string.Empty,
+                AvatarUrl = user?.AvatarUrl,
+                Role = member.Role,
+                Status = member.Status,
+                JoinedAt = member.JoinedAt
+            };
+        }).ToList();
+    }
     public async Task UnbanMemberAsync(Guid userId, Guid groupId, Guid targetUserId)
     {
         var group = await _groupRepository.GetByIdAsync(groupId);

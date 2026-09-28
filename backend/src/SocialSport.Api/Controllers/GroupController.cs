@@ -128,6 +128,13 @@ namespace SocialSport.Api.Controllers
         }
 
         [Authorize]
+        [HttpGet("{id:guid}/members/banned")]
+        public async Task<ActionResult<List<GroupMemberDto>>> GetBannedMembers(Guid id)
+        {
+            return Ok(await _groupService.GetBannedMembersAsync(GetCurrentUserId(), id));
+        }
+
+        [Authorize]
         [HttpDelete("{id:guid}/members/{userId:guid}/ban")]
         public async Task<IActionResult> UnbanMember(Guid id, Guid userId)
         {
