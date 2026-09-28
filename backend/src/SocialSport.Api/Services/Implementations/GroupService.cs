@@ -185,12 +185,7 @@ public class GroupService : IGroupService
 
         GroupMember? currentMember = null;
         if (currentUserId.HasValue)
-        {
             currentMember = await _groupMemberRepository.GetAsync(groupId, currentUserId.Value);
-
-            if (currentMember?.Status == GroupMemberStatus.Banned)
-                throw new UnauthorizedAccessException("Bạn đã bị cấm khỏi nhóm.");
-        }
 
         return new GroupDto
         {
