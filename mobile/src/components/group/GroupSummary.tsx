@@ -8,10 +8,20 @@ import {
   type GroupDto,
 } from "@/types/group";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Image, StyleSheet, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  View,
+} from "react-native";
 
 type GroupSummaryProps = {
   group: GroupDto;
+  isOwner: boolean;
+  membershipLoading: boolean;
+  onJoin: () => void;
+  onLeave: () => void;
 };
 
 const getRoleLabel = (role?: GroupMemberRole | null) => {
@@ -20,15 +30,19 @@ const getRoleLabel = (role?: GroupMemberRole | null) => {
   return "Thành viên";
 };
 
-export default function GroupSummary({ group }: GroupSummaryProps) {
+export default function GroupSummary({
+  group,
+  isOwner,
+  membershipLoading,
+  onJoin,
+  onLeave,
+}: GroupSummaryProps) {
   const isPrivate = group.privacy === GroupPrivacy.Private;
-  const isPending =
-    group.currentUserMemberStatus === GroupMemberStatus.Pending;
-  const joinLabel = isPending
-    ? "Đang chờ duyệt"
-    : isPrivate
-      ? "Yêu cầu tham gia"
-      : "Tham gia nhóm";
+  const membershipStatus = group.currentUserMemberStatus ?? null;
+  const isPending = membershipStatus === GroupMemberStatus.Pending;
+  const isActive = membershipStatus === GroupMemberStatus.Active;
+  const isBanned = membershipStatus === GroupMemberStatus.Banned;
+  const joinLabel = isPrivate ? "Gửi yêu cầu tham gia" : "Tham gia nhóm";
 
   return (
     <View style={styles.container}>
@@ -82,29 +96,95 @@ export default function GroupSummary({ group }: GroupSummaryProps) {
           Quản lý bởi {group.ownerName}
         </AppText>
 
-        {group.isMember ? (
+        {isOwner ? (
           <View style={styles.memberBadge}>
             <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} />
             <AppText variant="label" color={COLORS.primary}>
-              {getRoleLabel(group.currentUserRole)}
+              Chủ nhóm
             </AppText>
+          </View>
+        ) : isBanned ? (
+          <View style={styles.bannedBadge}>
+            <Ionicons name="ban-outline" size={18} color={COLORS.danger} />
+            <AppText variant="label" color={COLORS.danger}>
+              Bạn đã bị cấm khỏi nhóm
+            </AppText>
+          </View>
+        ) : isPending ? (
+          <View style={styles.membershipActions}>
+            <View style={styles.pendingButton}>
+              <Ionicons name="time-outline" size={18} color={COLORS.textMuted} />
+              <AppText variant="label" color={COLORS.textMuted}>
+                Đã gửi yêu cầu
+              </AppText>
+            </View>
+            <Pressable
+              disabled={membershipLoading}
+              onPress={onLeave}
+              style={({ pressed }) => [
+                styles.cancelButton,
+                (pressed || membershipLoading) && styles.disabledButton,
+              ]}
+            >
+              {membershipLoading ? (
+                <ActivityIndicator size="small" color={COLORS.danger} />
+              ) : (
+                <AppText variant="label" color={COLORS.danger}>
+                  Hủy yêu cầu
+                </AppText>
+              )}
+            </Pressable>
+          </View>
+        ) : isActive ? (
+          <View style={styles.membershipActions}>
+            <View style={styles.memberBadge}>
+              <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} />
+              <AppText variant="label" color={COLORS.primary}>
+                {getRoleLabel(group.currentUserRole)}
+              </AppText>
+            </View>
+            <Pressable
+              disabled={membershipLoading}
+              onPress={onLeave}
+              style={({ pressed }) => [
+                styles.leaveButton,
+                (pressed || membershipLoading) && styles.disabledButton,
+              ]}
+            >
+              {membershipLoading ? (
+                <ActivityIndicator size="small" color={COLORS.danger} />
+              ) : (
+                <AppText variant="label" color={COLORS.danger}>
+                  Rời nhóm
+                </AppText>
+              )}
+            </Pressable>
           </View>
         ) : (
-          <View style={[styles.joinButton, isPending && styles.pendingButton]}>
-            <Ionicons
-              name={isPending ? "time-outline" : "person-add-outline"}
-              size={18}
-              color={isPending ? COLORS.textMuted : COLORS.background}
-            />
-            <AppText
-              variant="label"
-              color={isPending ? COLORS.textMuted : COLORS.background}
-            >
-              {joinLabel}
-            </AppText>
-          </View>
+          <Pressable
+            disabled={membershipLoading}
+            onPress={onJoin}
+            style={({ pressed }) => [
+              styles.joinButton,
+              (pressed || membershipLoading) && styles.disabledButton,
+            ]}
+          >
+            {membershipLoading ? (
+              <ActivityIndicator size="small" color={COLORS.background} />
+            ) : (
+              <>
+                <Ionicons
+                  name="person-add-outline"
+                  size={18}
+                  color={COLORS.background}
+                />
+                <AppText variant="label" color={COLORS.background}>
+                  {joinLabel}
+                </AppText>
+              </>
+            )}
+          </Pressable>
         )}
-
       </View>
     </View>
   );
@@ -181,9 +261,47 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.primary,
   },
+  membershipActions: {
+    gap: SPACING.sm,
+  },
   pendingButton: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.sm,
     borderWidth: 1,
     borderColor: COLORS.border,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.surfaceAlt,
+  },
+  cancelButton: {
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: RADIUS.full,
+  },
+  leaveButton: {
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: RADIUS.full,
+  },
+  bannedBadge: {
+    minHeight: 44,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: RADIUS.full,
+  },
+  disabledButton: {
+    opacity: 0.6,
   },
 });

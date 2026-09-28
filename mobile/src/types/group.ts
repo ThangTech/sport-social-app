@@ -42,6 +42,16 @@ export type GroupDto = {
   updatedAt?: string | null;
 };
 
+export type GroupMemberDto = {
+  userId: string;
+  userName: string;
+  displayName: string;
+  avatarUrl?: string | null;
+  role: GroupMemberRole;
+  status: GroupMemberStatus;
+  joinedAt: string;
+};
+
 export type GroupsResponse = {
   items: GroupDto[];
   nextCursor?: string | null;

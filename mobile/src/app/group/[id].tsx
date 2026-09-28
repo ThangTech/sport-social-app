@@ -2,10 +2,16 @@ import PostCard from "@/components/PostCard";
 import GroupSummary from "@/components/group/GroupSummary";
 import AppText from "@/components/ui/AppText";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
 import { mapFeedPostToPost } from "@/mappers/post.mapper";
-import { getGroupById, getGroupPosts } from "@/services/group.service";
+import {
+  getGroupById,
+  getGroupPosts,
+  joinGroup,
+  leaveGroup,
+} from "@/services/group.service";
 import { ApiError } from "@/types/api";
-import type { GroupDto } from "@/types/group";
+import { GroupMemberStatus, type GroupDto } from "@/types/group";
 import type { Post } from "@/types/post";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -13,6 +19,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -24,6 +31,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const PAGE_SIZE = 20;
 
 export default function GroupDetailScreen() {
+  const { user: currentUser } = useAuth();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -35,8 +43,10 @@ export default function GroupDetailScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [postsErrorMessage, setPostsErrorMessage] = useState("");
+  const [membershipLoading, setMembershipLoading] = useState(false);
   const currentGroupIdRef = useRef<string | undefined>(id);
   const loadingMoreRef = useRef(false);
+  const membershipLoadingRef = useRef(false);
 
   const loadPosts = useCallback(
     async (
@@ -158,6 +168,55 @@ export default function GroupDetailScreen() {
     loadPosts(id, nextCursor, true);
   };
 
+  const updateMembership = async (action: "join" | "leave") => {
+    if (!id || membershipLoadingRef.current) return;
+
+    try {
+      membershipLoadingRef.current = true;
+      setMembershipLoading(true);
+
+      if (action === "join") {
+        await joinGroup(id);
+      } else {
+        await leaveGroup(id);
+      }
+
+      await loadGroup(id);
+    } catch (error) {
+      Alert.alert(
+        action === "join"
+          ? "Không thể tham gia nhóm"
+          : "Không thể rời nhóm",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    } finally {
+      membershipLoadingRef.current = false;
+      setMembershipLoading(false);
+    }
+  };
+
+  const handleLeave = () => {
+    if (!group || membershipLoadingRef.current) return;
+
+    const isPending =
+      group.currentUserMemberStatus === GroupMemberStatus.Pending;
+
+    Alert.alert(
+      isPending ? "Hủy yêu cầu tham gia" : "Rời nhóm",
+      isPending
+        ? "Bạn có chắc muốn hủy yêu cầu tham gia nhóm này?"
+        : "Bạn có chắc muốn rời khỏi nhóm này?",
+      [
+        { text: "Không", style: "cancel" },
+        {
+          text: isPending ? "Hủy yêu cầu" : "Rời nhóm",
+          style: "destructive",
+          onPress: () => updateMembership("leave"),
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -206,7 +265,13 @@ export default function GroupDetailScreen() {
           keyExtractor={(item) => item.id}
           ListHeaderComponent={
             <>
-              <GroupSummary group={group} />
+              <GroupSummary
+                group={group}
+                isOwner={currentUser?.id === group.ownerId}
+                membershipLoading={membershipLoading}
+                onJoin={() => updateMembership("join")}
+                onLeave={handleLeave}
+              />
 
               <View style={styles.sectionHeader}>
                 <AppText variant="subtitle">Bài viết trong nhóm</AppText>
