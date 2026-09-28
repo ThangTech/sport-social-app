@@ -26,6 +26,15 @@ namespace SocialSport.Api.Controllers
             return Ok(await _groupService.CreateAsync(GetCurrentUserId(), request));
         }
 
+        [HttpGet]
+        public async Task<ActionResult<GroupsResponse>> GetAll(
+            [FromQuery] string? search = null,
+            [FromQuery] int limit = 20,
+            [FromQuery] string? cursor = null)
+        {
+            return Ok(await _groupService.GetAllAsync(TryGetCurrentUserId(), search, limit, cursor));
+        }
+
         [HttpGet("{id:guid}")]
         public async Task<ActionResult<GroupDto>> GetById(Guid id)
         {

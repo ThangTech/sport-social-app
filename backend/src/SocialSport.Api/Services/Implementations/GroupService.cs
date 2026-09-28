@@ -75,9 +75,103 @@ public class GroupService : IGroupService
             MemberCount = group.Members.Count(x => x.Status == GroupMemberStatus.Active),
             IsMember = true,
             CurrentUserRole = GroupMemberRole.Admin,
+            CurrentUserMemberStatus = GroupMemberStatus.Active,
             CreatedAt = group.CreatedAt,
             UpdatedAt = group.UpdatedAt
         };
+    }
+
+    public async Task<GroupsResponse> GetAllAsync(Guid? currentUserId, string? search, int limit, string? cursor)
+    {
+        limit = Math.Clamp(limit, 1, 50);
+        search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
+
+        if (search?.Length > 150)
+            throw new InvalidOperationException("Từ khóa tìm kiếm không được vượt quá 150 ký tự.");
+
+        var (cursorCreatedAt, cursorGroupId) = DecodeGroupCursor(cursor);
+        var groups = await _groupRepository.GetListAsync(search, limit, cursorCreatedAt, cursorGroupId, currentUserId);
+        var hasMore = groups.Count > limit;
+
+        if (hasMore)
+            groups = groups.Take(limit).ToList();
+
+        var groupIds = groups.Select(x => x.Id).ToList();
+        var ownerIds = groups.Select(x => x.OwnerId).Distinct().ToList();
+        var owners = await _userManager.Users
+            .Where(x => ownerIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id);
+        var memberCounts = await _groupMemberRepository.GetActiveMemberCountsAsync(groupIds);
+        var currentMemberships = currentUserId.HasValue
+            ? (await _groupMemberRepository.GetByUserAndGroupsAsync(currentUserId.Value, groupIds))
+                .ToDictionary(x => x.GroupId)
+            : [];
+
+        var items = groups.Select(group =>
+        {
+            owners.TryGetValue(group.OwnerId, out var owner);
+            memberCounts.TryGetValue(group.Id, out var memberCount);
+            currentMemberships.TryGetValue(group.Id, out var currentMembership);
+
+            return new GroupDto
+            {
+                Id = group.Id,
+                Name = group.Name,
+                Slug = group.Slug,
+                Description = group.Description,
+                AvatarUrl = group.AvatarUrl,
+                CoverUrl = group.CoverUrl,
+                OwnerId = group.OwnerId,
+                OwnerName = owner?.DisplayName ?? string.Empty,
+                Privacy = group.Privacy,
+                Status = group.Status,
+                MemberCount = memberCount,
+                IsMember = currentMembership?.Status == GroupMemberStatus.Active,
+                CurrentUserRole = currentMembership?.Status == GroupMemberStatus.Active ? currentMembership.Role : null,
+                CurrentUserMemberStatus = currentMembership?.Status,
+                CreatedAt = group.CreatedAt,
+                UpdatedAt = group.UpdatedAt
+            };
+        }).ToList();
+
+        return new GroupsResponse
+        {
+            Items = items,
+            NextCursor = hasMore && groups.Count > 0
+                ? EncodeGroupCursor(groups[^1].CreatedAt, groups[^1].Id)
+                : null
+        };
+    }
+
+    private static (DateTimeOffset? CreatedAt, Guid? GroupId) DecodeGroupCursor(string? cursor)
+    {
+        if (string.IsNullOrWhiteSpace(cursor))
+            return (null, null);
+
+        try
+        {
+            var value = Encoding.UTF8.GetString(Convert.FromBase64String(cursor));
+            var parts = value.Split('|', 2);
+
+            if (parts.Length != 2 ||
+                !DateTimeOffset.TryParseExact(parts[0], "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var createdAt) ||
+                !Guid.TryParseExact(parts[1], "D", out var groupId))
+            {
+                throw new InvalidOperationException("Cursor không hợp lệ.");
+            }
+
+            return (createdAt, groupId);
+        }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException("Cursor không hợp lệ.");
+        }
+    }
+
+    private static string EncodeGroupCursor(DateTimeOffset createdAt, Guid groupId)
+    {
+        var value = $"{createdAt:O}|{groupId:D}";
+        return Convert.ToBase64String(Encoding.UTF8.GetBytes(value));
     }
 
     public async Task<GroupDto?> GetByIdAsync(Guid groupId, Guid? currentUserId)
@@ -98,9 +192,6 @@ public class GroupService : IGroupService
                 throw new UnauthorizedAccessException("Bạn đã bị cấm khỏi nhóm.");
         }
 
-        if (currentUserId.HasValue)
-            currentMember = group.Members.FirstOrDefault(x => x.UserId == currentUserId.Value && x.Status == GroupMemberStatus.Active);
-
         return new GroupDto
         {
             Id = group.Id,
@@ -114,8 +205,9 @@ public class GroupService : IGroupService
             Privacy = group.Privacy,
             Status = group.Status,
             MemberCount = group.Members.Count(x => x.Status == GroupMemberStatus.Active),
-            IsMember = currentMember is not null,
-            CurrentUserRole = currentMember?.Role,
+            IsMember = currentMember?.Status == GroupMemberStatus.Active,
+            CurrentUserRole = currentMember?.Status == GroupMemberStatus.Active ? currentMember.Role : null,
+            CurrentUserMemberStatus = currentMember?.Status,
             CreatedAt = group.CreatedAt,
             UpdatedAt = group.UpdatedAt
         };
@@ -156,6 +248,7 @@ public class GroupService : IGroupService
             MemberCount = group.Members.Count(x => x.Status == GroupMemberStatus.Active),
             IsMember = currentMember is not null,
             CurrentUserRole = currentMember?.Role,
+            CurrentUserMemberStatus = currentMember?.Status,
             CreatedAt = group.CreatedAt,
             UpdatedAt = group.UpdatedAt
         };

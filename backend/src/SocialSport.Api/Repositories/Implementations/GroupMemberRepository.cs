@@ -29,6 +29,29 @@ namespace SocialSport.Api.Repositories.Implementations
                 .ToListAsync();
         }
 
+        public async Task<Dictionary<Guid, int>> GetActiveMemberCountsAsync(IReadOnlyCollection<Guid> groupIds)
+        {
+            if (groupIds.Count == 0)
+                return [];
+
+            return await _context.GroupMembers
+                .AsNoTracking()
+                .Where(x => groupIds.Contains(x.GroupId) && x.Status == GroupMemberStatus.Active)
+                .GroupBy(x => x.GroupId)
+                .ToDictionaryAsync(x => x.Key, x => x.Count());
+        }
+
+        public async Task<List<GroupMember>> GetByUserAndGroupsAsync(Guid userId, IReadOnlyCollection<Guid> groupIds)
+        {
+            if (groupIds.Count == 0)
+                return [];
+
+            return await _context.GroupMembers
+                .AsNoTracking()
+                .Where(x => x.UserId == userId && groupIds.Contains(x.GroupId))
+                .ToListAsync();
+        }
+
         public async Task AddAsync(GroupMember member)
         {
             await _context.GroupMembers.AddAsync(member);

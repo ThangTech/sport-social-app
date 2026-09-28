@@ -21,6 +21,7 @@ namespace SocialSport.Api.DTOs.Group
 
         public bool IsMember { get; set; }
         public GroupMemberRole? CurrentUserRole { get; set; }
+        public GroupMemberStatus? CurrentUserMemberStatus { get; set; }
 
         public DateTimeOffset CreatedAt { get; set; }
         public DateTimeOffset? UpdatedAt { get; set; }
