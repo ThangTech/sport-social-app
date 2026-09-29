@@ -1,12 +1,153 @@
-import { useCallback, useEffect, useState } from 'react'
-import { api, formatDate } from '../lib/api'
-import type { DashboardData, HealthData } from '../lib/types'
-import { MetricCard, PageHeader, PageState, Panel, StatusBadge } from '../components/ui'
-
+import { useCallback, useEffect, useState } from "react";
+import { api, formatDate } from "../lib/api";
+import type { DashboardData, HealthData } from "../lib/types";
+import {
+  MetricCard,
+  PageHeader,
+  PageState,
+  Panel,
+  StatusBadge,
+} from "../components/ui";
 export function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null), [health, setHealth] = useState<HealthData | null>(null), [loading, setLoading] = useState(true), [error, setError] = useState('')
-  const load = useCallback(async () => { setLoading(true); setError(''); try { const [dashboard, status] = await Promise.all([api<DashboardData>('/admin/dashboard'), api<HealthData>('/admin/health')]); setData(dashboard); setHealth(status) } catch (e) { setError(e instanceof Error ? e.message : 'Không thể tải dashboard.') } finally { setLoading(false) } }, [])
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { void load() }, [load])
-  return <><PageHeader eyebrow="Central dashboard" title="Tình trạng hệ thống" description="Số liệu trực tiếp, hàng đợi cần xử lý và trạng thái các dịch vụ cốt lõi." /><PageState loading={loading} error={error} retry={() => void load()}>{data && health && <div className="space-y-6"><div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><MetricCard label="Người dùng" value={data.totals.users} helper={`+${data.activity.newUsers7d} trong 7 ngày`} /><MetricCard label="Nhóm đang hiện diện" value={data.totals.groups} helper={`+${data.activity.newGroups7d} trong 7 ngày`} /><MetricCard label="Bài viết" value={data.totals.posts} helper={`+${data.activity.newPosts7d} trong 7 ngày`} /><MetricCard label="Báo cáo chờ xử lý" value={data.totals.reportsPending} helper={`${data.activity.reports7d} báo cáo trong 7 ngày`} tone="amber" /><MetricCard label="Hồ sơ bản quyền" value={data.totals.copyrightPending} tone="amber" /><MetricCard label="Tác vụ đang mở" value={data.totals.openTasks} tone="slate" /><MetricCard label="Sự cố chưa đóng" value={data.totals.openIncidents} tone={data.totals.openIncidents ? 'red' : 'brand'} /><MetricCard label="Sức khỏe tổng thể" value={health.status === 'healthy' ? 'Ổn định' : 'Suy giảm'} helper={`Kiểm tra ${formatDate(health.checkedAt)}`} tone={health.status === 'healthy' ? 'brand' : 'red'} /></div><div className="grid gap-6 xl:grid-cols-[.85fr_1.15fr]"><Panel title="Trạng thái dịch vụ" subtitle="Không hiển thị chuỗi kết nối hoặc secret."><div className="space-y-3">{health.services.map(item => <div key={item.name} className="flex items-start justify-between gap-4 rounded-xl border border-slate-100 p-4"><div><p className="font-semibold text-slate-800">{item.name}</p><p className="mt-1 text-xs leading-5 text-slate-500">{item.detail}</p></div><StatusBadge tone={item.status === 'healthy' ? 'green' : 'red'}>{item.status}</StatusBadge></div>)}</div></Panel><Panel title="Hoạt động quản trị gần đây" subtitle="Dùng audit log để truy vết thay đổi."><div className="space-y-1">{data.recentAudit.length === 0 ? <p className="py-12 text-center text-sm text-slate-400">Chưa có hoạt động quản trị.</p> : data.recentAudit.map(item => <div key={item.id} className="flex gap-3 border-b border-slate-100 py-3 last:border-0"><div className="mt-1 size-2 shrink-0 rounded-full bg-brand-500"/><div><p className="text-sm font-medium text-slate-800">{item.summary}</p><p className="mt-1 text-xs text-slate-400">{item.action} · {formatDate(item.createdAt)}</p></div></div>)}</div></Panel></div></div>}</PageState></>
+  const [data, setData] = useState<DashboardData | null>(null),
+    [health, setHealth] = useState<HealthData | null>(null),
+    [loading, setLoading] = useState(true),
+    [error, setError] = useState("");
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const [dashboard, status] = await Promise.all([
+        api<DashboardData>("/admin/dashboard"),
+        api<HealthData>("/admin/health"),
+      ]);
+      setData(dashboard);
+      setHealth(status);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Không thể tải dashboard.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void load();
+  }, [load]);
+  return (
+    <>
+      <PageHeader
+        eyebrow="Central dashboard"
+        title="Tình trạng hệ thống"
+        description="Số liệu trực tiếp, hàng đợi cần xử lý và trạng thái các dịch vụ cốt lõi."
+      />
+      <PageState loading={loading} error={error} retry={() => void load()}>
+        {data && health && (
+          <div className="space-y-6">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <MetricCard
+                label="Người dùng"
+                value={data.totals.users}
+                helper={`+${data.activity.newUsers7d} trong 7 ngày`}
+              />
+              <MetricCard
+                label="Nhóm đang hiện diện"
+                value={data.totals.groups}
+                helper={`+${data.activity.newGroups7d} trong 7 ngày`}
+              />
+              <MetricCard
+                label="Bài viết"
+                value={data.totals.posts}
+                helper={`+${data.activity.newPosts7d} trong 7 ngày`}
+              />
+              <MetricCard
+                label="Báo cáo chờ xử lý"
+                value={data.totals.reportsPending}
+                helper={`${data.activity.reports7d} báo cáo trong 7 ngày`}
+                tone="amber"
+              />
+              <MetricCard
+                label="Hồ sơ bản quyền"
+                value={data.totals.copyrightPending}
+                tone="amber"
+              />
+              <MetricCard
+                label="Tác vụ đang mở"
+                value={data.totals.openTasks}
+                tone="slate"
+              />
+              <MetricCard
+                label="Sự cố chưa đóng"
+                value={data.totals.openIncidents}
+                tone={data.totals.openIncidents ? "red" : "brand"}
+              />
+              <MetricCard
+                label="Sức khỏe tổng thể"
+                value={health.status === "healthy" ? "Ổn định" : "Suy giảm"}
+                helper={`Kiểm tra ${formatDate(health.checkedAt)}`}
+                tone={health.status === "healthy" ? "brand" : "red"}
+              />
+            </div>
+            <div className="grid gap-6 xl:grid-cols-[.85fr_1.15fr]">
+              <Panel
+                title="Trạng thái dịch vụ"
+                subtitle="Không hiển thị chuỗi kết nối hoặc secret."
+              >
+                <div className="space-y-3">
+                  {health.services.map((item) => (
+                    <div
+                      key={item.name}
+                      className="flex items-start justify-between gap-4 rounded-xl border border-slate-100 p-4"
+                    >
+                      <div>
+                        <p className="font-semibold text-slate-800">
+                          {item.name}
+                        </p>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">
+                          {item.detail}
+                        </p>
+                      </div>
+                      <StatusBadge
+                        tone={item.status === "healthy" ? "green" : "red"}
+                      >
+                        {item.status}
+                      </StatusBadge>
+                    </div>
+                  ))}
+                </div>
+              </Panel>
+              <Panel
+                title="Hoạt động quản trị gần đây"
+                subtitle="Dùng audit log để truy vết thay đổi."
+              >
+                <div className="space-y-1">
+                  {data.recentAudit.length === 0 ? (
+                    <p className="py-12 text-center text-sm text-slate-400">
+                      Chưa có hoạt động quản trị.
+                    </p>
+                  ) : (
+                    data.recentAudit.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex gap-3 border-b border-slate-100 py-3 last:border-0"
+                      >
+                        <div className="mt-1 size-2 shrink-0 rounded-full bg-brand-500" />
+                        <div>
+                          <p className="text-sm font-medium text-slate-800">
+                            {item.summary}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {item.action} · {formatDate(item.createdAt)}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </Panel>
+            </div>
+          </div>
+        )}
+      </PageState>
+    </>
+  );
 }
