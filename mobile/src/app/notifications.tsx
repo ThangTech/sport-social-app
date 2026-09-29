@@ -63,6 +63,7 @@ export default function NotificationsScreen() {
       }
       if (item.postId) router.push({ pathname: "/post/[id]", params: { id: item.postId } });
       else if (item.groupId) router.push({ pathname: "/group/[id]", params: { id: item.groupId } });
+      else if (item.copyrightReviewId) router.push("/user/copyright");
       else if (item.actorId) router.push({ pathname: "/user/[id]", params: { id: item.actorId } });
     } catch (error) {
       Alert.alert("Không thể mở thông báo", error instanceof Error ? error.message : "Vui lòng thử lại.");

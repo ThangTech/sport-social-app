@@ -51,6 +51,16 @@ function RootNavigator() {
         router.push({ pathname: "/group/[id]", params: { id: data.entityId } });
       else if (data.type === NotificationType.Follow && data.actorId)
         router.push({ pathname: "/user/[id]", params: { id: data.actorId } });
+      else if (
+        [
+          NotificationType.CopyrightReviewPending,
+          NotificationType.CopyrightConfirmed,
+          NotificationType.CopyrightDismissed,
+          NotificationType.CopyrightAppealResolved,
+          NotificationType.CopyrightScanResolved,
+        ].includes(data.type as NotificationType)
+      )
+        router.push("/user/copyright");
       else router.push("/notifications");
     };
     const subscription =

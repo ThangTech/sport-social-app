@@ -53,4 +53,5 @@ export type PostMediaUploadResponse = {
   mediaType: number;
   sortOrder: number;
   isPendingCopyrightReview: boolean;
+  externalCopyrightScanStatus?: number | null;
 };

@@ -6,6 +6,11 @@ export enum NotificationType {
   GroupInvite = 5,
   GroupJoinApproved = 6,
   GroupJoinRejected = 7,
+  CopyrightReviewPending = 8,
+  CopyrightConfirmed = 9,
+  CopyrightDismissed = 10,
+  CopyrightAppealResolved = 11,
+  CopyrightScanResolved = 12,
 }
 
 export type NotificationDto = {
@@ -17,6 +22,7 @@ export type NotificationDto = {
   message: string;
   postId?: string | null;
   groupId?: string | null;
+  copyrightReviewId?: string | null;
   isRead: boolean;
   createdAt: string;
 };
