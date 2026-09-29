@@ -17,13 +17,15 @@ namespace SocialSport.Api.Services.Implementations
         private readonly IFollowRepository _followRepository;
         private readonly IUserBlockRepository _userBlockRepository;
         private readonly IWebHostEnvironment _environment;
+        private readonly INotificationService _notificationService;
 
-        public UserService(UserManager<ApplicationUser> userManager, IFollowRepository followRepository, IUserBlockRepository userBlockRepository, IWebHostEnvironment environment)
+        public UserService(UserManager<ApplicationUser> userManager, IFollowRepository followRepository, IUserBlockRepository userBlockRepository, IWebHostEnvironment environment, INotificationService notificationService)
         {
             _userManager = userManager;
             _followRepository = followRepository;
             _userBlockRepository = userBlockRepository;
             _environment = environment;
+            _notificationService = notificationService;
         }
 
         public async Task<UserProfileDto?> GetProfileAsync(Guid userId, Guid? currentUserId)
@@ -301,6 +303,7 @@ namespace SocialSport.Api.Services.Implementations
 
             await _followRepository.AddAsync(follow);
             await _followRepository.SaveChangesAsync();
+            await _notificationService.CreateAsync(targetUserId, currentUserId, NotificationType.Follow);
         }
 
         public async Task UnfollowAsync(Guid currentUserId, Guid targetUserId)

@@ -19,14 +19,16 @@ namespace SocialSport.Api.Services.Implementations
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ISavedPostRepository _savedPostRepository;
         private readonly IWebHostEnvironment _environment;
+        private readonly INotificationService _notificationService;
 
-        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository, IWebHostEnvironment environment, IPostAccessService postAccessService)
+        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository, IWebHostEnvironment environment, IPostAccessService postAccessService, INotificationService notificationService)
         {
             _postRepository = postRepository;
             _userManager = userManager;
             _savedPostRepository = savedPostRepository;
             _environment = environment;
             _postAccessService = postAccessService;
+            _notificationService = notificationService;
         }
         public async Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request)
         {
@@ -50,13 +52,14 @@ namespace SocialSport.Api.Services.Implementations
                 };
 
                 await _postRepository.AddReactionAsync(reaction);
+                await _postRepository.SaveChangesAsync();
+                await _notificationService.CreateAsync(post.AuthorId, userId, NotificationType.PostReaction, post.Id);
             }
             else
             {
                 reaction.Type = request.Type;
+                await _postRepository.SaveChangesAsync();
             }
-
-            await _postRepository.SaveChangesAsync();
 
             var updatedPost = await _postRepository.GetByIdAsync(postId);
 

@@ -23,6 +23,7 @@ public class GroupService : IGroupService
     private readonly IPostRepository _postRepository;
     private readonly ISavedPostRepository _savedPostRepository;
     private readonly IWebHostEnvironment _environment;
+    private readonly INotificationService _notificationService;
 
     public GroupService(
         IGroupRepository groupRepository,
@@ -30,7 +31,8 @@ public class GroupService : IGroupService
         IGroupMemberRepository groupMemberRepository,
         IPostRepository postRepository,
         ISavedPostRepository savedPostRepository,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        INotificationService notificationService)
     {
         _groupRepository = groupRepository;
         _userManager = userManager;
@@ -38,6 +40,7 @@ public class GroupService : IGroupService
         _postRepository = postRepository;
         _savedPostRepository = savedPostRepository;
         _environment = environment;
+        _notificationService = notificationService;
     }
 
     public async Task<GroupDto> CreateAsync(Guid userId, CreateGroupRequest request)
@@ -682,6 +685,7 @@ public class GroupService : IGroupService
         targetMember.JoinedAt = DateTimeOffset.UtcNow;
 
         await _groupMemberRepository.SaveChangesAsync();
+        await _notificationService.CreateAsync(targetUserId, userId, NotificationType.GroupJoinApproved, groupId);
     }
     public async Task RejectMemberAsync(Guid userId, Guid groupId, Guid targetUserId)
     {
@@ -702,6 +706,7 @@ public class GroupService : IGroupService
 
         _groupMemberRepository.Remove(targetMember);
         await _groupMemberRepository.SaveChangesAsync();
+        await _notificationService.CreateAsync(targetUserId, userId, NotificationType.GroupJoinRejected, groupId);
     }
     public async Task UpdateMemberRoleAsync(Guid userId, Guid groupId, Guid targetUserId, UpdateGroupMemberRoleRequest request)
     {

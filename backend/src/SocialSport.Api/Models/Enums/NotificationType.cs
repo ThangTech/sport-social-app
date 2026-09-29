@@ -13,6 +13,7 @@ namespace SocialSport.Api.Models.Enums
         Comment = 3,
         CommentReply = 4,
         GroupInvite = 5,
-        GroupJoinApproved = 6
+        GroupJoinApproved = 6,
+        GroupJoinRejected = 7
     }
 }

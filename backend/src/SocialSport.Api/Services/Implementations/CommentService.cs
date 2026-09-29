@@ -15,13 +15,15 @@ public class CommentService : ICommentService
     private readonly ICommentRepository _commentRepository;
     private readonly IPostRepository _postRepository;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly INotificationService _notificationService;
 
-    public CommentService(ICommentRepository commentRepository, IPostRepository postRepository, UserManager<ApplicationUser> userManager, IPostAccessService postAccessService)
+    public CommentService(ICommentRepository commentRepository, IPostRepository postRepository, UserManager<ApplicationUser> userManager, IPostAccessService postAccessService, INotificationService notificationService)
     {
         _commentRepository = commentRepository;
         _postRepository = postRepository;
         _userManager = userManager;
         _postAccessService = postAccessService;
+        _notificationService = notificationService;
     }
 
     public async Task<List<CommentDto>> GetByPostIdAsync(Guid postId, Guid? currentUserId)
@@ -104,6 +106,7 @@ public class CommentService : ICommentService
 
         await _commentRepository.AddAsync(comment);
         await _commentRepository.SaveChangesAsync();
+        await _notificationService.CreateAsync(post.AuthorId, userId, NotificationType.Comment, post.Id);
 
         var user = await _userManager.FindByIdAsync(userId.ToString());
 
