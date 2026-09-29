@@ -3,12 +3,24 @@ import AppText from "@/components/ui/AppText";
 import { useAuth } from "@/contexts/AuthContext";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
+import { getUnreadNotificationCount } from "@/services/notification.service";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
+import { useCallback, useState } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 
 export default function AppHeader() {
   const { user, profileImageVersion } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useFocusEffect(useCallback(() => {
+    if (!user?.id) {
+      setUnreadCount(0);
+      return;
+    }
+    void getUnreadNotificationCount().then((result) => setUnreadCount(result.count)).catch(() => setUnreadCount(0));
+  }, [user?.id]));
 
   return (
     <View style={styles.container}>
@@ -47,7 +59,13 @@ export default function AppHeader() {
             color={COLORS.text}
           />
 
-          {/* Chưa có notification API thì chưa hiện badge giả */}
+          {unreadCount > 0 ? (
+            <View style={styles.badge}>
+              <AppText variant="caption" color={COLORS.background} style={styles.badgeText}>
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </AppText>
+            </View>
+          ) : null}
         </Pressable>
 
         <Pressable onPress={() => router.push("/user/settings")}>
@@ -116,4 +134,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  badge: {
+    position: "absolute",
+    top: 1,
+    right: 0,
+    minWidth: 17,
+    height: 17,
+    paddingHorizontal: 3,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.danger,
+  },
+  badgeText: { fontSize: 10, lineHeight: 12 },
 });
