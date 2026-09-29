@@ -22,6 +22,8 @@ namespace SocialSport.Api.Models.Entities
 
         public int? Height { get; set; }
 
+        public string? ContentHash { get; set; }
+
         public Post Post { get; set; } = null!;
     }
 }

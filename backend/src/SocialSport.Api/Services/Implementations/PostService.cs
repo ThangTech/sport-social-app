@@ -20,8 +20,9 @@ namespace SocialSport.Api.Services.Implementations
         private readonly ISavedPostRepository _savedPostRepository;
         private readonly IWebHostEnvironment _environment;
         private readonly INotificationService _notificationService;
+        private readonly ICopyrightService _copyrightService;
 
-        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository, IWebHostEnvironment environment, IPostAccessService postAccessService, INotificationService notificationService)
+        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository, IWebHostEnvironment environment, IPostAccessService postAccessService, INotificationService notificationService, ICopyrightService copyrightService)
         {
             _postRepository = postRepository;
             _userManager = userManager;
@@ -29,6 +30,7 @@ namespace SocialSport.Api.Services.Implementations
             _environment = environment;
             _postAccessService = postAccessService;
             _notificationService = notificationService;
+            _copyrightService = copyrightService;
         }
         public async Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request)
         {
@@ -587,10 +589,12 @@ namespace SocialSport.Api.Services.Implementations
                 Url = $"/uploads/posts/{fileName}",
                 MediaType = mediaType,
                 SortOrder = post.Media.Count,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTimeOffset.UtcNow,
+                ContentHash = await _copyrightService.ComputeHashAsync(filePath)
             };
 
             await _postRepository.AddMediaAsync(media);
+            var isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(userId, post, media);
             await _postRepository.SaveChangesAsync();
 
             return new PostMediaUploadResponse
@@ -598,7 +602,8 @@ namespace SocialSport.Api.Services.Implementations
                 Id = media.Id,
                 Url = media.Url,
                 MediaType = (int)media.MediaType,
-                SortOrder = media.SortOrder
+                SortOrder = media.SortOrder,
+                IsPendingCopyrightReview = isPendingCopyrightReview
             };
         }
         public async Task DeleteMediaAsync(Guid userId, Guid postId, Guid mediaId)
@@ -680,7 +685,9 @@ namespace SocialSport.Api.Services.Implementations
 
             media.Url = $"/uploads/posts/{fileName}";
             media.MediaType = mediaType;
+            media.ContentHash = await _copyrightService.ComputeHashAsync(newPath);
 
+            var isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(userId, post, media);
             await _postRepository.SaveChangesAsync();
 
             if (File.Exists(oldPath))
@@ -691,7 +698,8 @@ namespace SocialSport.Api.Services.Implementations
                 Id = media.Id,
                 Url = media.Url,
                 MediaType = (int)media.MediaType,
-                SortOrder = media.SortOrder
+                SortOrder = media.SortOrder,
+                IsPendingCopyrightReview = isPendingCopyrightReview
             };
         }
     }

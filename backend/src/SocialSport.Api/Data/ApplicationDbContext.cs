@@ -57,6 +57,9 @@ public class ApplicationDbContext
     public DbSet<RefreshToken> RefreshTokens =>
         Set<RefreshToken>();
 
+    public DbSet<CopyrightAsset> CopyrightAssets => Set<CopyrightAsset>();
+    public DbSet<CopyrightCase> CopyrightCases => Set<CopyrightCase>();
+
     protected override void OnModelCreating(
         ModelBuilder builder)
     {

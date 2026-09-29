@@ -6,5 +6,6 @@
         public string Url { get; set; } = string.Empty;
         public int MediaType { get; set; }
         public int SortOrder { get; set; }
+        public bool IsPendingCopyrightReview { get; set; }
     }
 }
