@@ -1,5 +1,6 @@
 using SocialSport.Api.Models.Enums;
 namespace SocialSport.Api.DTOs.Copyright;
+
 public class CopyrightCaseDto
 {
     public Guid Id { get; set; }

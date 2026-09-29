@@ -4,6 +4,7 @@ using SocialSport.Api.Models.Entities;
 using SocialSport.Api.Models.Enums;
 
 namespace SocialSport.Api.Services.Interfaces;
+
 public interface ICopyrightService
 {
     Task<string> ComputeHashAsync(string path);

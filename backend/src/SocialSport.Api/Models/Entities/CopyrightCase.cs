@@ -2,6 +2,7 @@ using SocialSport.Api.Models.Common;
 using SocialSport.Api.Models.Enums;
 
 namespace SocialSport.Api.Models.Entities;
+
 public class CopyrightCase : BaseEntity
 {
     public Guid CopyrightAssetId { get; set; }
