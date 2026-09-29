@@ -5,7 +5,10 @@ using SocialSport.Api.DTOs.Copyright;
 using SocialSport.Api.Models.Entities;
 using SocialSport.Api.Models.Enums;
 using SocialSport.Api.Services.Interfaces;
+using SocialSport.Api.Settings;
 using System.Security.Cryptography;
+using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace SocialSport.Api.Services.Implementations;
 
@@ -14,15 +17,21 @@ public class CopyrightService : ICopyrightService
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _environment;
     private readonly IMediaUrlService _mediaUrlService;
+    private readonly CopyrightScanningSettings _settings;
+    private readonly INotificationService _notificationService;
 
     public CopyrightService(
         ApplicationDbContext context,
         IWebHostEnvironment environment,
-        IMediaUrlService mediaUrlService)
+        IMediaUrlService mediaUrlService,
+        IOptions<CopyrightScanningSettings> settings,
+        INotificationService notificationService)
     {
         _context = context;
         _environment = environment;
         _mediaUrlService = mediaUrlService;
+        _settings = settings.Value;
+        _notificationService = notificationService;
     }
 
     public async Task<string> ComputeHashAsync(string path)
@@ -47,14 +56,16 @@ public class CopyrightService : ICopyrightService
                 x.Status == CopyrightAssetStatus.Active
                 && x.MediaType == media.MediaType
                 && x.ContentHash == media.ContentHash
+                && x.CreatedByUserId != uploaderId
                 && !_context.CopyrightCases.Any(c =>
                     c.CopyrightAssetId == x.Id
                     && c.PostMediaId == media.Id))
             .ToListAsync();
 
+        Guid? firstCaseId = null;
         foreach (var asset in assets)
         {
-            await _context.CopyrightCases.AddAsync(new CopyrightCase
+            var copyrightCase = new CopyrightCase
             {
                 Id = Guid.NewGuid(),
                 CopyrightAssetId = asset.Id,
@@ -63,7 +74,9 @@ public class CopyrightService : ICopyrightService
                 Confidence = 1m,
                 Status = CopyrightCaseStatus.Pending,
                 CreatedAt = DateTimeOffset.UtcNow
-            });
+            };
+            firstCaseId ??= copyrightCase.Id;
+            await _context.CopyrightCases.AddAsync(copyrightCase);
         }
 
         if (assets.Count == 0)
@@ -73,6 +86,11 @@ public class CopyrightService : ICopyrightService
 
         post.Status = PostStatus.Hidden;
         post.UpdatedAt = DateTimeOffset.UtcNow;
+        await _notificationService.CreateAsync(
+            uploaderId,
+            null,
+            NotificationType.CopyrightReviewPending,
+            firstCaseId);
         return true;
     }
 
@@ -103,9 +121,9 @@ public class CopyrightService : ICopyrightService
             "copyright-references");
         Directory.CreateDirectory(folder);
 
-        var path = Path.Combine(
-            folder,
-            $"{Guid.NewGuid():N}{Path.GetExtension(file.FileName).ToLowerInvariant()}");
+        var fileName =
+            $"{Guid.NewGuid():N}{Path.GetExtension(file.FileName).ToLowerInvariant()}";
+        var path = Path.Combine(folder, fileName);
         await using (var stream = new FileStream(path, FileMode.CreateNew))
         {
             await file.CopyToAsync(stream);
@@ -120,13 +138,83 @@ public class CopyrightService : ICopyrightService
             EvidenceNotes = evidenceNotes?.Trim(),
             ContentHash = await ComputeHashAsync(path),
             MediaType = mediaType,
-            ReferencePath = path,
+            ReferencePath = fileName,
             Status = CopyrightAssetStatus.Active,
             CreatedAt = DateTimeOffset.UtcNow
         };
         await _context.CopyrightAssets.AddAsync(asset);
         await _context.SaveChangesAsync();
         return asset;
+    }
+
+    public async Task<(string Path, string ContentType)> GetAssetMediaAsync(
+        Guid assetId)
+    {
+        var referencePath = await _context.CopyrightAssets
+            .AsNoTracking()
+            .Where(x => x.Id == assetId && x.Status == CopyrightAssetStatus.Active)
+            .Select(x => x.ReferencePath)
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException("Không tìm thấy reference bản quyền.");
+        var root = Path.GetFullPath(Path.Combine(
+            _environment.ContentRootPath,
+            "App_Data",
+            "copyright-references"));
+        var candidate = Path.IsPathRooted(referencePath)
+            ? Path.GetFullPath(referencePath)
+            : Path.GetFullPath(Path.Combine(root, referencePath));
+        var rootPrefix = root.EndsWith(Path.DirectorySeparatorChar)
+            ? root
+            : $"{root}{Path.DirectorySeparatorChar}";
+        if (!candidate.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase)
+            || !File.Exists(candidate))
+        {
+            throw new KeyNotFoundException("File reference không còn khả dụng.");
+        }
+
+        var provider = new FileExtensionContentTypeProvider();
+        if (!provider.TryGetContentType(candidate, out var contentType))
+        {
+            contentType = "application/octet-stream";
+        }
+
+        return (candidate, contentType);
+    }
+
+    public async Task<(string Path, string ContentType)> GetCaseMediaAsync(
+        Guid caseId)
+    {
+        var mediaUrl = await _context.CopyrightCases
+            .AsNoTracking()
+            .Where(x => x.Id == caseId)
+            .Select(x => x.PostMedia.Url)
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException("Không tìm thấy media cần review.");
+        const string prefix = "/uploads/posts/";
+        if (!mediaUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new KeyNotFoundException("Đường dẫn media không hợp lệ.");
+        }
+
+        var webRoot = _environment.WebRootPath
+            ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+        var root = Path.GetFullPath(Path.Combine(webRoot, "uploads", "posts"));
+        var candidate = Path.GetFullPath(Path.Combine(root, Path.GetFileName(mediaUrl)));
+        if (!candidate.StartsWith(
+                $"{root}{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase)
+            || !File.Exists(candidate))
+        {
+            throw new KeyNotFoundException("File media không còn khả dụng.");
+        }
+
+        var provider = new FileExtensionContentTypeProvider();
+        if (!provider.TryGetContentType(candidate, out var contentType))
+        {
+            contentType = "application/octet-stream";
+        }
+
+        return (candidate, contentType);
     }
 
     public async Task<PagedResponse<CopyrightCaseDto>> GetCasesAsync(
@@ -194,6 +282,20 @@ public class CopyrightService : ICopyrightService
             .ThenInclude(x => x.Post)
             .FirstOrDefaultAsync(x => x.Id == caseId)
             ?? throw new KeyNotFoundException("Không tìm thấy hồ sơ bản quyền.");
+        var allowed = item.Status switch
+        {
+            CopyrightCaseStatus.Pending => request.Status is
+                CopyrightCaseStatus.Confirmed or CopyrightCaseStatus.Dismissed,
+            CopyrightCaseStatus.Appealed => request.Status is
+                CopyrightCaseStatus.AppealAccepted or CopyrightCaseStatus.AppealRejected,
+            _ => false
+        };
+        if (!allowed)
+        {
+            throw new InvalidOperationException(
+                "Trạng thái hồ sơ không cho phép quyết định này.");
+        }
+
         item.Status = request.Status;
         item.DecisionNotes = request.Notes.Trim();
         item.ReviewedBy = adminId;
@@ -220,6 +322,17 @@ public class CopyrightService : ICopyrightService
 
         item.PostMedia.Post.UpdatedAt = DateTimeOffset.UtcNow;
         await _context.SaveChangesAsync();
+        var notificationType = request.Status switch
+        {
+            CopyrightCaseStatus.Confirmed => NotificationType.CopyrightConfirmed,
+            CopyrightCaseStatus.Dismissed => NotificationType.CopyrightDismissed,
+            _ => NotificationType.CopyrightAppealResolved
+        };
+        await _notificationService.CreateAsync(
+            item.UploaderId,
+            null,
+            notificationType,
+            item.Id);
     }
 
     public async Task AppealAsync(
@@ -236,6 +349,13 @@ public class CopyrightService : ICopyrightService
                 "Chỉ quyết định vi phạm đã xác nhận mới có thể kháng nghị.");
         }
 
+        var appealDeadline = item.ReviewedAt?.AddDays(_settings.AppealWindowDays);
+        if (!appealDeadline.HasValue || appealDeadline.Value < DateTimeOffset.UtcNow)
+        {
+            throw new InvalidOperationException(
+                $"Thời hạn kháng nghị {_settings.AppealWindowDays} ngày đã hết.");
+        }
+
         item.Status = CopyrightCaseStatus.Appealed;
         item.AppealReason = request.Reason.Trim();
         item.AppealedAt = DateTimeOffset.UtcNow;
@@ -249,7 +369,9 @@ public class CopyrightService : ICopyrightService
             Id = item.Id,
             PostId = item.PostMedia.PostId,
             PostMediaId = item.PostMediaId,
-            MediaUrl = _mediaUrlService.CreatePostMediaUrl(item.PostMediaId),
+            MediaUrl = $"/api/v1/copyright/cases/{item.Id}/media",
+            MediaType = item.PostMedia.MediaType,
+            ReferenceMediaUrl = $"/api/v1/copyright/assets/{item.CopyrightAssetId}/media",
             CopyrightAssetId = item.CopyrightAssetId,
             AssetTitle = item.CopyrightAsset.Title,
             RightsOwnerName = item.CopyrightAsset.RightsOwnerName,
@@ -258,7 +380,14 @@ public class CopyrightService : ICopyrightService
             Status = item.Status,
             DecisionNotes = item.DecisionNotes,
             AppealReason = item.AppealReason,
-            CreatedAt = item.CreatedAt
+            CreatedAt = item.CreatedAt,
+            ReviewedAt = item.ReviewedAt,
+            AppealedAt = item.AppealedAt,
+            AppealDeadline = item.ReviewedAt?.AddDays(_settings.AppealWindowDays),
+            CanAppeal = item.Status == CopyrightCaseStatus.Confirmed
+                && item.ReviewedAt.HasValue
+                && item.ReviewedAt.Value.AddDays(_settings.AppealWindowDays)
+                    >= DateTimeOffset.UtcNow
         };
     }
 }

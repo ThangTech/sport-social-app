@@ -111,6 +111,15 @@ public class NotificationService : INotificationService
                     if (group.Privacy == GroupPrivacy.Public || member?.Status == GroupMemberStatus.Active) dto.GroupId = group.Id;
                 }
             }
+            else if (notification.Type is
+                NotificationType.CopyrightReviewPending
+                or NotificationType.CopyrightConfirmed
+                or NotificationType.CopyrightDismissed
+                or NotificationType.CopyrightAppealResolved
+                or NotificationType.CopyrightScanResolved)
+            {
+                dto.CopyrightReviewId = notification.EntityId;
+            }
 
             items.Add(dto);
         }
@@ -220,6 +229,11 @@ public class NotificationService : INotificationService
             NotificationType.CommentReply => $"{name} đã trả lời bình luận của bạn.",
             NotificationType.GroupJoinApproved => "Yêu cầu tham gia nhóm của bạn đã được duyệt.",
             NotificationType.GroupJoinRejected => "Yêu cầu tham gia nhóm của bạn đã bị từ chối.",
+            NotificationType.CopyrightReviewPending => "Nội dung của bạn đang được kiểm tra bản quyền.",
+            NotificationType.CopyrightConfirmed => "Nội dung của bạn đã bị xác nhận vi phạm bản quyền.",
+            NotificationType.CopyrightDismissed => "Hồ sơ bản quyền đã được bác bỏ và nội dung hợp lệ được khôi phục.",
+            NotificationType.CopyrightAppealResolved => "Kháng nghị bản quyền của bạn đã có kết quả.",
+            NotificationType.CopyrightScanResolved => "Lượt quét bản quyền video của bạn đã có kết quả.",
             _ => "Bạn có thông báo mới."
         };
     }

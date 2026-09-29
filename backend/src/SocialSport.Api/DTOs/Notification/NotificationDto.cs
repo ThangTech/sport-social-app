@@ -12,6 +12,7 @@ public class NotificationDto
     public string Message { get; set; } = string.Empty;
     public Guid? PostId { get; set; }
     public Guid? GroupId { get; set; }
+    public Guid? CopyrightReviewId { get; set; }
     public bool IsRead { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
 }

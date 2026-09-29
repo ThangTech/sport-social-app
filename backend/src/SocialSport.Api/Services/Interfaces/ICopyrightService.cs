@@ -10,6 +10,8 @@ public interface ICopyrightService
     Task<string> ComputeHashAsync(string path);
     Task<bool> EvaluateUploadAsync(Guid uploaderId, Post post, PostMedia media);
     Task<CopyrightAsset> CreateAssetAsync(Guid adminId, string title, string rightsOwnerName, string? evidenceNotes, IFormFile file);
+    Task<(string Path, string ContentType)> GetAssetMediaAsync(Guid assetId);
+    Task<(string Path, string ContentType)> GetCaseMediaAsync(Guid caseId);
     Task<PagedResponse<CopyrightCaseDto>> GetCasesAsync(int page, int pageSize, CopyrightCaseStatus? status);
     Task<List<CopyrightCaseDto>> GetMineAsync(Guid userId);
     Task DecideAsync(Guid adminId, Guid caseId, CopyrightDecisionRequest request);

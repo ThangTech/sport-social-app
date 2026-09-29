@@ -6,7 +6,9 @@ public class CopyrightCaseDto
     public Guid Id { get; set; }
     public Guid PostId { get; set; }
     public Guid PostMediaId { get; set; }
+    public MediaType MediaType { get; set; }
     public string MediaUrl { get; set; } = string.Empty;
+    public string ReferenceMediaUrl { get; set; } = string.Empty;
     public Guid CopyrightAssetId { get; set; }
     public string AssetTitle { get; set; } = string.Empty;
     public string RightsOwnerName { get; set; } = string.Empty;
@@ -16,4 +18,8 @@ public class CopyrightCaseDto
     public string? DecisionNotes { get; set; }
     public string? AppealReason { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset? ReviewedAt { get; set; }
+    public DateTimeOffset? AppealedAt { get; set; }
+    public DateTimeOffset? AppealDeadline { get; set; }
+    public bool CanAppeal { get; set; }
 }

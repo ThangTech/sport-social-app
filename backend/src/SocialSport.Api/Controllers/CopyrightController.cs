@@ -13,10 +13,16 @@ namespace SocialSport.Api.Controllers;
 public class CopyrightController : ControllerBase
 {
     private readonly ICopyrightService _service;
+    private readonly IExternalCopyrightScanService _externalScanService;
     private readonly ApplicationDbContext _context;
-    public CopyrightController(ICopyrightService service, ApplicationDbContext context)
+
+    public CopyrightController(
+        ICopyrightService service,
+        IExternalCopyrightScanService externalScanService,
+        ApplicationDbContext context)
     {
         _service = service;
+        _externalScanService = externalScanService;
         _context = context;
     }
 
@@ -50,6 +56,20 @@ public class CopyrightController : ControllerBase
         return Ok(await _service.GetCasesAsync(page, pageSize, status));
     }
 
+    [Authorize(Roles = "ADMIN"), HttpGet("assets/{id:guid}/media")]
+    public async Task<IActionResult> AssetMedia(Guid id)
+    {
+        var media = await _service.GetAssetMediaAsync(id);
+        return PhysicalFile(media.Path, media.ContentType, enableRangeProcessing: true);
+    }
+
+    [Authorize(Roles = "ADMIN"), HttpGet("cases/{id:guid}/media")]
+    public async Task<IActionResult> CaseMedia(Guid id)
+    {
+        var media = await _service.GetCaseMediaAsync(id);
+        return PhysicalFile(media.Path, media.ContentType, enableRangeProcessing: true);
+    }
+
     [Authorize(Roles = "ADMIN"), HttpPatch("cases/{id:guid}/decision")]
     public async Task<IActionResult> Decide(Guid id, CopyrightDecisionRequest request)
     {
@@ -68,6 +88,58 @@ public class CopyrightController : ControllerBase
     public async Task<IActionResult> Appeal(Guid id, CopyrightAppealRequest request)
     {
         await _service.AppealAsync(UserId(), id, request);
+        return NoContent();
+    }
+
+    [Authorize(Roles = "ADMIN"), HttpGet("external-scans")]
+    public async Task<IActionResult> ExternalScans(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] ExternalCopyrightScanStatus? status = null)
+    {
+        return Ok(await _externalScanService.GetScansAsync(page, pageSize, status));
+    }
+
+    [HttpGet("external-scans/me")]
+    public async Task<IActionResult> MyExternalScans()
+    {
+        return Ok(await _externalScanService.GetMineAsync(UserId()));
+    }
+
+    [Authorize(Roles = "ADMIN"), HttpGet("external-scans/{id:guid}/media")]
+    public async Task<IActionResult> ExternalScanMedia(Guid id)
+    {
+        var media = await _externalScanService.GetMediaAsync(id);
+        return PhysicalFile(media.Path, media.ContentType, enableRangeProcessing: true);
+    }
+
+    [Authorize(Roles = "ADMIN"), HttpPost("external-scans/{id:guid}/refresh")]
+    public async Task<IActionResult> RefreshExternalScan(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var result = await _externalScanService.RefreshAsync(id, cancellationToken);
+        await Audit(
+            "copyright.external-scan.refreshed",
+            "external-copyright-scan",
+            id,
+            $"External copyright scan refreshed: {result.Status}.");
+        return Ok(result);
+    }
+
+    [Authorize(Roles = "ADMIN"), HttpPatch("external-scans/{id:guid}/decision")]
+    public async Task<IActionResult> DecideExternalScan(
+        Guid id,
+        ExternalCopyrightScanDecisionRequest request)
+    {
+        await _externalScanService.DecideAsync(UserId(), id, request);
+        await Audit(
+            "copyright.external-scan.decided",
+            "external-copyright-scan",
+            id,
+            request.IsViolation
+                ? "External scan confirmed as a violation."
+                : "External scan cleared by an administrator.");
         return NoContent();
     }
 

@@ -21,6 +21,7 @@ namespace SocialSport.Api.Services.Implementations
         private readonly IWebHostEnvironment _environment;
         private readonly INotificationService _notificationService;
         private readonly ICopyrightService _copyrightService;
+        private readonly IExternalCopyrightScanService _externalCopyrightScanService;
         private readonly IMediaUrlService _mediaUrlService;
 
         public PostService(
@@ -31,6 +32,7 @@ namespace SocialSport.Api.Services.Implementations
             IPostAccessService postAccessService,
             INotificationService notificationService,
             ICopyrightService copyrightService,
+            IExternalCopyrightScanService externalCopyrightScanService,
             IMediaUrlService mediaUrlService)
         {
             _postRepository = postRepository;
@@ -40,6 +42,7 @@ namespace SocialSport.Api.Services.Implementations
             _postAccessService = postAccessService;
             _notificationService = notificationService;
             _copyrightService = copyrightService;
+            _externalCopyrightScanService = externalCopyrightScanService;
             _mediaUrlService = mediaUrlService;
         }
         public async Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request)
@@ -609,6 +612,11 @@ namespace SocialSport.Api.Services.Implementations
 
             await _postRepository.AddMediaAsync(media);
             var isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(userId, post, media);
+            var externalScan = await _externalCopyrightScanService.SubmitAsync(
+                post,
+                media,
+                filePath,
+                file.ContentType);
             await _postRepository.SaveChangesAsync();
 
             return new PostMediaUploadResponse
@@ -618,6 +626,12 @@ namespace SocialSport.Api.Services.Implementations
                 MediaType = (int)media.MediaType,
                 SortOrder = media.SortOrder,
                 IsPendingCopyrightReview = isPendingCopyrightReview
+                    || externalScan?.Status is ExternalCopyrightScanStatus.Processing
+                        or ExternalCopyrightScanStatus.ReviewRequired
+                        or ExternalCopyrightScanStatus.Failed,
+                ExternalCopyrightScanStatus = externalScan is null
+                    ? null
+                    : (int)externalScan.Status
             };
         }
         public async Task DeleteMediaAsync(Guid userId, Guid postId, Guid mediaId)
@@ -702,6 +716,12 @@ namespace SocialSport.Api.Services.Implementations
             media.ContentHash = await _copyrightService.ComputeHashAsync(newPath);
 
             var isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(userId, post, media);
+            var externalScan = await _externalCopyrightScanService.SubmitAsync(
+                post,
+                media,
+                newPath,
+                file.ContentType,
+                replaceExisting: true);
             await _postRepository.SaveChangesAsync();
 
             if (File.Exists(oldPath))
@@ -714,6 +734,12 @@ namespace SocialSport.Api.Services.Implementations
                 MediaType = (int)media.MediaType,
                 SortOrder = media.SortOrder,
                 IsPendingCopyrightReview = isPendingCopyrightReview
+                    || externalScan?.Status is ExternalCopyrightScanStatus.Processing
+                        or ExternalCopyrightScanStatus.ReviewRequired
+                        or ExternalCopyrightScanStatus.Failed,
+                ExternalCopyrightScanStatus = externalScan is null
+                    ? null
+                    : (int)externalScan.Status
             };
         }
     }

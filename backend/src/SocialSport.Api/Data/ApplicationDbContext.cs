@@ -59,6 +59,8 @@ public class ApplicationDbContext
 
     public DbSet<CopyrightAsset> CopyrightAssets => Set<CopyrightAsset>();
     public DbSet<CopyrightCase> CopyrightCases => Set<CopyrightCase>();
+    public DbSet<ExternalCopyrightScan> ExternalCopyrightScans =>
+        Set<ExternalCopyrightScan>();
     public DbSet<OperationalTask> OperationalTasks => Set<OperationalTask>();
     public DbSet<ChangeRequest> ChangeRequests => Set<ChangeRequest>();
     public DbSet<Incident> Incidents => Set<Incident>();

@@ -114,6 +114,24 @@ public static class DependencyInjection
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IExploreService, ExploreService>();
         services.AddScoped<ICopyrightService, CopyrightService>();
+        services.Configure<CopyrightScanningSettings>(
+            configuration.GetSection(CopyrightScanningSettings.SectionName));
+        services.AddScoped<IExternalCopyrightScanService, ExternalCopyrightScanService>();
+        services.AddHttpClient("AcrCloud", (provider, client) =>
+        {
+            var settings = provider
+                .GetRequiredService<Microsoft.Extensions.Options.IOptions<CopyrightScanningSettings>>()
+                .Value;
+            if (!string.IsNullOrWhiteSpace(settings.ApiBaseUrl))
+            {
+                var baseUrl = settings.ApiBaseUrl.EndsWith('/')
+                    ? settings.ApiBaseUrl
+                    : $"{settings.ApiBaseUrl}/";
+                client.BaseAddress = new Uri(baseUrl);
+            }
+
+            client.Timeout = TimeSpan.FromMinutes(5);
+        });
         services.AddScoped<IMediaUrlService, MediaUrlService>();
         var dataProtection = services
             .AddDataProtection()

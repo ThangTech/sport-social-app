@@ -14,6 +14,11 @@ namespace SocialSport.Api.Models.Enums
         CommentReply = 4,
         GroupInvite = 5,
         GroupJoinApproved = 6,
-        GroupJoinRejected = 7
+        GroupJoinRejected = 7,
+        CopyrightReviewPending = 8,
+        CopyrightConfirmed = 9,
+        CopyrightDismissed = 10,
+        CopyrightAppealResolved = 11,
+        CopyrightScanResolved = 12
     }
 }

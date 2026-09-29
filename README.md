@@ -30,6 +30,25 @@ Push notification vẫn lưu inbox trong database nếu Expo Push không khả d
 Expo__AccessToken
 ```
 
+Quét bản quyền âm thanh trong video là tích hợp tùy chọn. Khi chưa cấu hình,
+upload video và đối chiếu SHA-256 nội bộ vẫn hoạt động bình thường. Khi bật,
+đặt token trong secret manager, không ghi vào `appsettings.json`:
+
+```text
+CopyrightScanning__Enabled=true
+CopyrightScanning__FailClosed=true
+CopyrightScanning__AppealWindowDays=14
+CopyrightScanning__Provider=AcrCloud
+CopyrightScanning__ApiBaseUrl=https://api-ap-southeast-1.acrcloud.com/
+CopyrightScanning__BearerToken
+CopyrightScanning__ContainerId
+```
+
+`ApiBaseUrl` phải đúng region của File Scanning container. `FailClosed=true` giữ
+bài ở trạng thái ẩn trong lúc quét hoặc khi nhà cung cấp lỗi. ACRCloud nhận diện
+nhạc/âm thanh và derivative works theo cấu hình container; nó không thay thế
+việc đối chiếu hình ảnh/video trực quan hay quyết định của System Admin.
+
 Mobile cần `mobile/.env` (đã bị ignore):
 
 ```text

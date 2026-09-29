@@ -7,5 +7,6 @@
         public int MediaType { get; set; }
         public int SortOrder { get; set; }
         public bool IsPendingCopyrightReview { get; set; }
+        public int? ExternalCopyrightScanStatus { get; set; }
     }
 }
