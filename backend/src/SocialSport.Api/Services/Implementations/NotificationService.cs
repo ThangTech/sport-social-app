@@ -55,7 +55,7 @@ public class NotificationService : INotificationService
             CreatedAt = DateTimeOffset.UtcNow
         });
         await _context.SaveChangesAsync();
-        await _pushSender.SendAsync(userId, GetMessage(type, await ActorName(actorId)), type, entityId);
+        await _pushSender.SendAsync(userId, GetMessage(type, await ActorName(actorId)), type, entityId, actorId);
     }
 
     public async Task<NotificationsResponse> GetAsync(Guid userId, int limit, string? cursor)

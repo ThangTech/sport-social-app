@@ -20,7 +20,7 @@ public class ExpoPushNotificationSender : IPushNotificationSender
         _context = context; _httpClientFactory = httpClientFactory; _configuration = configuration; _logger = logger;
     }
 
-    public async Task SendAsync(Guid userId, string body, NotificationType type, Guid? entityId, CancellationToken cancellationToken = default)
+    public async Task SendAsync(Guid userId, string body, NotificationType type, Guid? entityId, Guid? actorId, CancellationToken cancellationToken = default)
     {
         var tokens = await _context.DeviceTokens.Where(x => x.UserId == userId && x.IsActive).OrderByDescending(x => x.LastUsedAt).Take(10).ToListAsync(cancellationToken);
         if (tokens.Count == 0) return;
@@ -29,7 +29,7 @@ public class ExpoPushNotificationSender : IPushNotificationSender
             var client = _httpClientFactory.CreateClient("ExpoPush");
             var accessToken = _configuration["Expo:AccessToken"];
             if (!string.IsNullOrWhiteSpace(accessToken)) client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
-            var messages = tokens.Select(x => new { to = x.ExpoPushToken, title = "SocialSport", body, sound = "default", data = new { type = (int)type, entityId } }).ToArray();
+            var messages = tokens.Select(x => new { to = x.ExpoPushToken, title = "SocialSport", body, sound = "default", data = new { type = (int)type, entityId, actorId } }).ToArray();
             using var response = await client.PostAsJsonAsync("--/api/v2/push/send", messages, cancellationToken);
             response.EnsureSuccessStatusCode();
             using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync(cancellationToken));
