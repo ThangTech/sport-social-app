@@ -95,6 +95,7 @@ export default function CreateGroupPostScreen() {
     if (!id || !value || submittingRef.current) return;
 
     let postCreated = false;
+    let pendingCopyrightReview = false;
 
     try {
       submittingRef.current = true;
@@ -108,10 +109,12 @@ export default function CreateGroupPostScreen() {
       postCreated = true;
 
       if (selectedImage) {
-        await uploadPostMedia(post.id, selectedImage);
+        const media = await uploadPostMedia(post.id, selectedImage);
+        pendingCopyrightReview = media.isPendingCopyrightReview;
       }
 
       router.back();
+      if (pendingCopyrightReview) Alert.alert("Đang kiểm tra bản quyền", "Bài viết tạm thời chưa hiển thị vì media trùng với nội dung đã đăng ký.");
     } catch (error) {
       if (postCreated) {
         Alert.alert(

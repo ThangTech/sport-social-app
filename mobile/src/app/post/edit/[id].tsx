@@ -117,6 +117,7 @@ export default function EditPostScreen() {
 
     try {
       setSubmitting(true);
+      let pendingCopyrightReview = false;
 
       await updatePost(id, {
         content: value,
@@ -125,18 +126,21 @@ export default function EditPostScreen() {
       });
       if (selectedImage) {
         if (existingMedia && !removeExistingImage) {
-          await updatePostMedia(id, existingMedia.id, selectedImage);
+          const media = await updatePostMedia(id, existingMedia.id, selectedImage);
+          pendingCopyrightReview = media.isPendingCopyrightReview;
         } else {
           if (existingMedia && removeExistingImage) {
             await deletePostMedia(id, existingMedia.id);
           }
 
-          await uploadPostMedia(id, selectedImage);
+          const media = await uploadPostMedia(id, selectedImage);
+          pendingCopyrightReview = media.isPendingCopyrightReview;
         }
       } else if (existingMedia && removeExistingImage) {
         await deletePostMedia(id, existingMedia.id);
       }
       router.back();
+      if (pendingCopyrightReview) Alert.alert("Đang kiểm tra bản quyền", "Bài viết tạm thời chưa hiển thị cho đến khi media được xem xét.");
     } catch (error) {
       Alert.alert(
         "Không thể cập nhật bài viết",

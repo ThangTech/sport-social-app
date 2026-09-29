@@ -51,6 +51,7 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
     if (!value || submitting) return;
 
     let postCreated = false;
+    let pendingCopyrightReview = false;
 
     try {
       setSubmitting(true);
@@ -64,7 +65,8 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
       postCreated = true;
 
       if (selectedImage) {
-        await uploadPostMedia(post.id, selectedImage);
+        const media = await uploadPostMedia(post.id, selectedImage);
+        pendingCopyrightReview = media.isPendingCopyrightReview;
       }
 
       setContent("");
@@ -73,6 +75,7 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
 
       onClose();
       onCreated?.();
+      if (pendingCopyrightReview) Alert.alert("Đang kiểm tra bản quyền", "Bài viết tạm thời chưa hiển thị vì media trùng với nội dung đã đăng ký. Bạn sẽ nhận kết quả sau khi System Admin xem xét.");
     } catch (error) {
       if (postCreated) {
         Alert.alert(

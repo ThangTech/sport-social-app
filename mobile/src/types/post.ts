@@ -52,4 +52,5 @@ export type PostMediaUploadResponse = {
   url: string;
   mediaType: number;
   sortOrder: number;
+  isPendingCopyrightReview: boolean;
 };
