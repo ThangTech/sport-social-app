@@ -3,6 +3,7 @@ using SocialSport.Api.Repositories.Interfaces;
 using SocialSport.Api.Services.Implementations;
 using SocialSport.Api.Services.Interfaces;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using SocialSport.Api.Middleware;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -114,15 +115,30 @@ public static class DependencyInjection
         services.AddScoped<IExploreService, ExploreService>();
         services.AddScoped<ICopyrightService, CopyrightService>();
         services.AddScoped<IMediaUrlService, MediaUrlService>();
-        services.AddDataProtection();
+        var dataProtection = services
+            .AddDataProtection()
+            .SetApplicationName("SocialSport.Api");
+        var keyRingPath = configuration["DataProtection:KeyRingPath"];
+
+        if (!string.IsNullOrWhiteSpace(keyRingPath))
+        {
+            Directory.CreateDirectory(keyRingPath);
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keyRingPath));
+        }
+
         services.AddScoped<ISportRepository, SportRepository>();
         services.AddScoped<ISportService, SportService>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
-        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        var allowedOrigins = configuration
+            .GetSection("Cors:AllowedOrigins")
+            .Get<string[]>()
+            ?? [];
         services.AddCors(options => options.AddPolicy("AppClients", policy =>
         {
             if (allowedOrigins.Length > 0)
+            {
                 policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+            }
         }));
         services.AddAuthorization();
         return services;

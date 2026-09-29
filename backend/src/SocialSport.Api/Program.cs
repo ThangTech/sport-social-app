@@ -20,18 +20,27 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseExceptionHandler();
+
 if (!app.Environment.IsDevelopment())
 {
     app.UseHttpsRedirection();
 }
-//app.UseHttpsRedirection();
-var publicUploadRoot = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), "uploads");
+
+var webRoot = app.Environment.WebRootPath ??
+    Path.Combine(app.Environment.ContentRootPath, "wwwroot");
+var publicUploadRoot = Path.Combine(webRoot, "uploads");
+
 foreach (var publicFolder in new[] { "avatars", "covers", "groups" })
 {
     var physicalPath = Path.Combine(publicUploadRoot, publicFolder);
     Directory.CreateDirectory(physicalPath);
-    app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(physicalPath), RequestPath = $"/uploads/{publicFolder}" });
+    app.UseStaticFiles(new StaticFileOptions
+    {
+        FileProvider = new PhysicalFileProvider(physicalPath),
+        RequestPath = $"/uploads/{publicFolder}"
+    });
 }
+
 app.UseCors("AppClients");
 app.UseAuthentication();
 app.UseAuthorization();
