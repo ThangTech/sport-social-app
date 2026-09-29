@@ -10,10 +10,11 @@ import type { UserProfileDto } from "@/types/user";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   View,
@@ -25,41 +26,64 @@ export default function ProfileScreen() {
   const [profile, setProfile] = useState<UserProfileDto | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const currentUserIdRef = useRef<string | undefined>(currentUser?.id);
 
-  const loadProfile = useCallback(async () => {
-    if (!currentUser?.id) {
+  const loadProfile = useCallback(async (userId?: string) => {
+    if (!userId) {
       setProfile(null);
       setPosts([]);
       setLoading(false);
+      setRefreshing(false);
       return;
     }
 
     try {
       setErrorMessage("");
       const [profileResult, postsResult] = await Promise.all([
-        getUserProfile(currentUser.id),
-        getUserPosts(currentUser.id),
+        getUserProfile(userId),
+        getUserPosts(userId),
       ]);
 
+      if (currentUserIdRef.current !== userId) return;
       setProfile(profileResult);
       setPosts(postsResult.map(mapFeedPostToPost));
     } catch (error) {
+      if (currentUserIdRef.current !== userId) return;
       setErrorMessage(
         error instanceof Error
           ? error.message
           : "Không thể tải trang cá nhân.",
       );
     } finally {
-      setLoading(false);
+      if (currentUserIdRef.current === userId) {
+        setLoading(false);
+        setRefreshing(false);
+      }
     }
-  }, [currentUser?.id]);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
-      loadProfile();
-    }, [loadProfile]),
+      const previousUserId = currentUserIdRef.current;
+      currentUserIdRef.current = currentUser?.id;
+
+      if (previousUserId !== currentUser?.id) {
+        setProfile(null);
+        setPosts([]);
+        setLoading(Boolean(currentUser?.id));
+      }
+
+      void loadProfile(currentUser?.id);
+    }, [currentUser?.id, loadProfile]),
   );
+
+  const handleRefresh = () => {
+    if (!currentUser?.id) return;
+    setRefreshing(true);
+    void loadProfile(currentUser.id);
+  };
 
   const openConnections = (type: "followers" | "following") => {
     if (!profile) return;
@@ -93,12 +117,25 @@ export default function ProfileScreen() {
           <AppText color={COLORS.textMuted} style={styles.message}>
             {errorMessage}
           </AppText>
-          <Pressable style={styles.retryButton} onPress={loadProfile}>
+          <Pressable style={styles.retryButton} onPress={() => {
+            setLoading(true);
+            void loadProfile(currentUser?.id);
+          }}>
             <AppText color={COLORS.background}>Thử lại</AppText>
           </Pressable>
         </View>
       ) : profile ? (
-        <ScrollView showsVerticalScrollIndicator={false}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              tintColor={COLORS.primary}
+              colors={[COLORS.primary]}
+            />
+          }
+        >
           <ProfileSummary
             profile={{
               ...profile,

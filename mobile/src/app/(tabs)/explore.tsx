@@ -1,108 +1,112 @@
+import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
-import { useEffect, useState } from "react";
+import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { useAuth } from "@/contexts/AuthContext";
+import { mapFeedPostToPost } from "@/mappers/post.mapper";
+import { getFeed } from "@/services/feed.service";
+import type { Post } from "@/types/post";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useFocusEffect } from "@react-navigation/native";
+import { router } from "expo-router";
+import { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-type ApiPost = {
-  id: number;
-  title: string;
-  body: string;
-  tags: string[];
-  reactions: {
-    likes: number;
-    dislikes: number;
-  };
-  views: number;
-  userId: number;
-};
-
-const LIMIT = 10;
+const PAGE_SIZE = 20;
 
 export default function ExploreScreen() {
-  const [posts, setPosts] = useState<ApiPost[]>([]);
-  const [skip, setSkip] = useState(0);
-  const [total, setTotal] = useState(0);
-
+  const { user: currentUser } = useAuth();
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const currentUserIdRef = useRef<string | undefined>(currentUser?.id);
+  const loadingMoreRef = useRef(false);
 
-  const [error, setError] = useState("");
+  const loadPosts = useCallback(
+    async (userId: string, cursor: string | null = null, append = false) => {
+      try {
+        if (!append) setErrorMessage("");
+        const response = await getFeed(PAGE_SIZE, cursor);
 
-  const fetchPosts = async (currentSkip: number, isLoadMore = false) => {
-    try {
-      if (isLoadMore) {
-        setLoadingMore(true);
-      } else {
+        if (currentUserIdRef.current !== userId) return;
+
+        const mappedPosts = response.items.map(mapFeedPostToPost);
+        setPosts((current) => {
+          if (!append) return mappedPosts;
+          const existingIds = new Set(current.map((post) => post.id));
+          return [
+            ...current,
+            ...mappedPosts.filter((post) => !existingIds.has(post.id)),
+          ];
+        });
+        setNextCursor(response.nextCursor ?? null);
+      } catch (error) {
+        if (currentUserIdRef.current !== userId) return;
+        if (!append) setPosts([]);
+        setErrorMessage(
+          error instanceof Error ? error.message : "Không thể tải bài viết.",
+        );
+      } finally {
+        if (currentUserIdRef.current === userId) {
+          setLoading(false);
+          setRefreshing(false);
+          setLoadingMore(false);
+          loadingMoreRef.current = false;
+        }
+      }
+    },
+    [],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      const previousUserId = currentUserIdRef.current;
+      currentUserIdRef.current = currentUser?.id;
+
+      if (!currentUser?.id) {
+        setPosts([]);
+        setNextCursor(null);
+        setErrorMessage("");
+        setLoading(false);
+        return;
+      }
+
+      if (previousUserId !== currentUser.id) {
+        setPosts([]);
+        setNextCursor(null);
         setLoading(true);
       }
 
-      const response = await fetch(
-        `https://dummyjson.com/posts?limit=${LIMIT}&skip=${currentSkip}`,
-      );
+      void loadPosts(currentUser.id);
+    }, [currentUser?.id, loadPosts]),
+  );
 
-      if (!response.ok) {
-        throw new Error("Không thể tải dữ liệu");
-      }
-
-      const data = await response.json();
-
-      if (isLoadMore) {
-        setPosts((currentPosts) => [...currentPosts, ...data.posts]);
-      } else {
-        setPosts(data.posts);
-      }
-
-      setTotal(data.total);
-    } catch {
-      setError("Đã xảy ra lỗi khi tải bài viết");
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
+  const handleRefresh = () => {
+    if (!currentUser?.id) return;
+    setRefreshing(true);
+    void loadPosts(currentUser.id);
   };
 
-  useEffect(() => {
-    fetchPosts(0);
-  }, []);
+  const handleLoadMore = () => {
+    if (!currentUser?.id || !nextCursor || loading || refreshing || loadingMoreRef.current) return;
 
-  const handleLoadMore = async () => {
-    const nextSkip = skip + LIMIT;
-
-    await fetchPosts(nextSkip, true);
-
-    setSkip(nextSkip);
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
+    void loadPosts(currentUser.id, nextCursor, true);
   };
 
-  const hasMore = posts.length < total;
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color={COLORS.primary} />
-
-          <AppText color={COLORS.textMuted}>Đang tải...</AppText>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.center}>
-          <AppText color={COLORS.textMuted}>{error}</AppText>
-        </View>
-      </SafeAreaView>
-    );
-  }
+  const openPost = (postId: string) =>
+    router.push({ pathname: "/post/[id]", params: { id: postId } });
 
   return (
     <SafeAreaView style={styles.container}>
@@ -110,102 +114,90 @@ export default function ExploreScreen() {
         <AppText variant="title">Khám phá</AppText>
       </View>
 
-      <FlatList
-        data={posts}
-        keyExtractor={(item) => item.id.toString()}
-        contentContainerStyle={styles.list}
-        onEndReached={handleLoadMore}
-        onEndReachedThreshold={0.5}
-        renderItem={({ item }) => (
-          <View style={styles.card}>
-            <AppText variant="subtitle">{item.title}</AppText>
-
-            <AppText>{item.body}</AppText>
-
-            <View style={styles.stats}>
-              <AppText variant="caption" color={COLORS.textMuted}>
-                ❤️ {item.reactions.likes}
-              </AppText>
-
-              <AppText variant="caption" color={COLORS.textMuted}>
-                👁 {item.views}
-              </AppText>
-            </View>
-          </View>
-        )}
-        ListFooterComponent={
-          loadingMore ? (
-            <View style={styles.footer}>
-              <ActivityIndicator size="small" color={COLORS.primary} />
-
-              <AppText variant="caption" color={COLORS.textMuted}>
-                Đang tải thêm...
-              </AppText>
-            </View>
-          ) : !hasMore ? (
-            <AppText style={styles.endText} color={COLORS.textMuted}>
-              Đã tải hết bài viết
-            </AppText>
-          ) : null
-        }
-      />
+      {loading ? (
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={COLORS.primary} />
+          <AppText color={COLORS.textMuted}>Đang tải bài viết...</AppText>
+        </View>
+      ) : errorMessage && posts.length === 0 ? (
+        <View style={styles.center}>
+          <Ionicons name="alert-circle-outline" size={48} color={COLORS.textMuted} />
+          <AppText color={COLORS.textMuted} style={styles.message}>{errorMessage}</AppText>
+          {currentUser?.id ? (
+            <Pressable style={styles.retryButton} onPress={() => {
+              setLoading(true);
+              void loadPosts(currentUser.id);
+            }}>
+              <AppText variant="label" color={COLORS.background}>Thử lại</AppText>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : (
+        <FlatList
+          data={posts}
+          extraData={currentUser?.id}
+          keyExtractor={(item) => `${currentUser?.id}-${item.id}`}
+          ListHeaderComponent={errorMessage ? (
+            <View style={styles.errorBox}><AppText color={COLORS.danger}>{errorMessage}</AppText></View>
+          ) : null}
+          ListEmptyComponent={
+            <View style={styles.center}><AppText color={COLORS.textMuted}>Chưa có bài viết nào để khám phá.</AppText></View>
+          }
+          renderItem={({ item }) => (
+            <PostCard
+              post={item}
+              onPress={() => openPost(item.id)}
+              onCommentPress={() => openPost(item.id)}
+              onAuthorPress={() => router.push({ pathname: "/user/[id]", params: { id: item.authorId } })}
+              onDeleted={(postId) => setPosts((current) => current.filter((post) => post.id !== postId))}
+            />
+          )}
+          ListFooterComponent={loadingMore ? (
+            <View style={styles.footer}><ActivityIndicator color={COLORS.primary} /></View>
+          ) : null}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.4}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={COLORS.primary} colors={[COLORS.primary]} />
+          }
+          showsVerticalScrollIndicator={false}
+        />
+      )}
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: {
-    padding: SPACING.lg,
+    height: 64,
+    paddingHorizontal: SPACING.lg,
     alignItems: "center",
+    justifyContent: "center",
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: COLORS.border,
   },
-
-  list: {
-    padding: SPACING.lg,
-    gap: SPACING.md,
-  },
-
-  card: {
-    padding: SPACING.lg,
-    backgroundColor: COLORS.surface,
-    borderRadius: 16,
-    gap: SPACING.sm,
-  },
-
-  stats: {
-    flexDirection: "row",
-    gap: SPACING.lg,
-  },
-
   center: {
     flex: 1,
+    minHeight: 180,
+    padding: SPACING.xl,
     alignItems: "center",
     justifyContent: "center",
     gap: SPACING.md,
   },
-
-  loadMoreButton: {
-    marginTop: SPACING.md,
-    paddingVertical: 12,
-
+  message: { textAlign: "center" },
+  retryButton: {
+    paddingHorizontal: SPACING.xl,
+    paddingVertical: SPACING.sm,
+    borderRadius: RADIUS.full,
     backgroundColor: COLORS.primary,
-    borderRadius: 12,
-
-    alignItems: "center",
-    justifyContent: "center",
   },
-
-  loadMoreText: {
-    color: COLORS.background,
-    fontWeight: "600",
+  errorBox: {
+    margin: SPACING.lg,
+    padding: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: RADIUS.md,
   },
-
-  endText: {
-    textAlign: "center",
-    paddingVertical: SPACING.lg,
-  },
+  footer: { padding: SPACING.lg, alignItems: "center" },
 });
