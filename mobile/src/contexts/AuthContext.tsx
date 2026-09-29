@@ -13,6 +13,7 @@ import {
   useState,
 } from "react";
 import { setUnauthorizedHandler } from "@/services/api";
+import { unregisterCurrentPushToken } from "@/services/push-notification.service";
 
 type AuthContextType = {
   user: AuthUser | null;
@@ -71,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
   const signOut = async () => {
     try {
+      await unregisterCurrentPushToken();
       await logoutRequest();
     } finally {
       await clearTokens();

@@ -1,10 +1,9 @@
 import { COLORS } from "@/constants/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { Tabs } from "expo-router";
+import { router, Tabs } from "expo-router";
 import { useState } from "react";
 import { Modal, Pressable, StyleSheet, View } from "react-native";
 import CreatePostScreen from "../modal/create-post";
-import { router } from "expo-router";
 import { CreatePostProvider } from "@/contexts/CreatePostContext";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 export default function TabsLayout() {

@@ -76,6 +76,7 @@ export default function HomeScreen() {
   };
   useFocusEffect(
     useCallback(() => {
+      void refresh;
       const previousUserId = currentUserIdRef.current;
 
       currentUserIdRef.current = currentUser?.id;

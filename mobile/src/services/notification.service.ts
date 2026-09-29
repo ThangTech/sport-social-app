@@ -17,3 +17,11 @@ export const markNotificationRead = async (id: string) => {
 export const markAllNotificationsRead = async () => {
   await api<void>("/notifications/read-all", { method: "PATCH", auth: true });
 };
+
+export const registerDeviceToken = async (expoPushToken: string, platform: "ios" | "android") => {
+  await api<void>("/notifications/devices", { method: "POST", auth: true, body: JSON.stringify({ expoPushToken, platform }) });
+};
+
+export const unregisterDeviceToken = async (expoPushToken: string, platform: "ios" | "android") => {
+  await api<void>("/notifications/devices", { method: "DELETE", auth: true, body: JSON.stringify({ expoPushToken, platform }) });
+};

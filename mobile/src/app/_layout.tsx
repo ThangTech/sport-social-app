@@ -7,11 +7,14 @@ import {
 } from "@expo-google-fonts/inter";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
+import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
+import { registerForPushNotifications } from "@/services/push-notification.service";
+import { NotificationType } from "@/types/notification";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -19,6 +22,25 @@ function RootNavigator() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const router = useRouter();
+
+  useEffect(() => {
+    if (!user?.id) return;
+    void registerForPushNotifications().catch(() => undefined);
+    const open = (response: Notifications.NotificationResponse) => {
+      const data = response.notification.request.content.data as { type?: number; entityId?: string; actorId?: string };
+      if ([NotificationType.PostReaction, NotificationType.Comment, NotificationType.CommentReply].includes(data.type as NotificationType) && data.entityId) router.push({ pathname: "/post/[id]", params: { id: data.entityId } });
+      else if ([NotificationType.GroupJoinApproved, NotificationType.GroupJoinRejected].includes(data.type as NotificationType) && data.entityId) router.push({ pathname: "/group/[id]", params: { id: data.entityId } });
+      else if (data.type === NotificationType.Follow && data.actorId) router.push({ pathname: "/user/[id]", params: { id: data.actorId } });
+      else router.push("/notifications");
+    };
+    const subscription = Notifications.addNotificationResponseReceivedListener(open);
+    void Notifications.getLastNotificationResponseAsync().then(async response => {
+      if (!response) return;
+      open(response);
+      await Notifications.clearLastNotificationResponseAsync();
+    });
+    return () => subscription.remove();
+  }, [user?.id, router]);
 
   useEffect(() => {
     if (loading) return;
@@ -33,7 +55,7 @@ function RootNavigator() {
     if (user && inAuthGroup) {
       router.replace("/(tabs)");
     }
-  }, [user, loading, segments]);
+  }, [user, loading, segments, router]);
 
   if (loading) {
     return (

@@ -179,7 +179,7 @@ export default function PostCard({
     );
   };
   const handlePostMenu = () => {
-    const actions: Array<"edit" | "delete" | "remove" | "report"> = [];
+    const actions: ("edit" | "delete" | "remove" | "report")[] = [];
     const options: string[] = [];
 
     if (isOwner) {
