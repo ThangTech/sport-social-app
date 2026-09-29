@@ -150,21 +150,64 @@ public class NotificationService : INotificationService
     public async Task RegisterDeviceAsync(Guid userId, string expoPushToken, string platform)
     {
         var token = expoPushToken.Trim();
-        if (!(token.StartsWith("ExponentPushToken[") || token.StartsWith("ExpoPushToken[")) || !token.EndsWith(']')) throw new InvalidOperationException("Expo push token không hợp lệ.");
+        var hasValidPrefix = token.StartsWith("ExponentPushToken[") ||
+            token.StartsWith("ExpoPushToken[");
+
+        if (!hasValidPrefix || !token.EndsWith(']'))
+        {
+            throw new InvalidOperationException("Expo push token không hợp lệ.");
+        }
+
         var item = await _context.DeviceTokens.FirstOrDefaultAsync(x => x.ExpoPushToken == token);
-        if (item is null) await _context.DeviceTokens.AddAsync(new DeviceToken { UserId = userId, ExpoPushToken = token, Platform = platform, IsActive = true, LastUsedAt = DateTimeOffset.UtcNow });
-        else { item.UserId = userId; item.Platform = platform; item.IsActive = true; item.LastUsedAt = DateTimeOffset.UtcNow; item.UpdatedAt = DateTimeOffset.UtcNow; }
+        if (item is null)
+        {
+            await _context.DeviceTokens.AddAsync(new DeviceToken
+            {
+                UserId = userId,
+                ExpoPushToken = token,
+                Platform = platform,
+                IsActive = true,
+                LastUsedAt = DateTimeOffset.UtcNow
+            });
+        }
+        else
+        {
+            item.UserId = userId;
+            item.Platform = platform;
+            item.IsActive = true;
+            item.LastUsedAt = DateTimeOffset.UtcNow;
+            item.UpdatedAt = DateTimeOffset.UtcNow;
+        }
         await _context.SaveChangesAsync();
     }
 
     public async Task UnregisterDeviceAsync(Guid userId, string expoPushToken)
     {
-        var item = await _context.DeviceTokens.FirstOrDefaultAsync(x => x.UserId == userId && x.ExpoPushToken == expoPushToken);
-        if (item is null) return;
-        item.IsActive = false; item.UpdatedAt = DateTimeOffset.UtcNow; await _context.SaveChangesAsync();
+        var item = await _context.DeviceTokens.FirstOrDefaultAsync(
+            x => x.UserId == userId && x.ExpoPushToken == expoPushToken);
+
+        if (item is null)
+        {
+            return;
+        }
+
+        item.IsActive = false;
+        item.UpdatedAt = DateTimeOffset.UtcNow;
+        await _context.SaveChangesAsync();
     }
 
-    private async Task<string?> ActorName(Guid? actorId) => actorId.HasValue ? await _context.Users.Where(x => x.Id == actorId.Value).Select(x => x.DisplayName).FirstOrDefaultAsync() : null;
+    private async Task<string?> ActorName(Guid? actorId)
+    {
+        if (!actorId.HasValue)
+        {
+            return null;
+        }
+
+        return await _context.Users
+            .Where(x => x.Id == actorId.Value)
+            .Select(x => x.DisplayName)
+            .FirstOrDefaultAsync();
+    }
 
     private static string GetMessage(NotificationType type, string? actorName)
     {
@@ -183,15 +226,39 @@ public class NotificationService : INotificationService
 
     private static (DateTimeOffset? CreatedAt, Guid? Id) DecodeCursor(string? cursor)
     {
-        if (string.IsNullOrWhiteSpace(cursor)) return (null, null);
+        if (string.IsNullOrWhiteSpace(cursor))
+        {
+            return (null, null);
+        }
+
         try
         {
             var parts = Encoding.UTF8.GetString(Convert.FromBase64String(cursor)).Split('|', 2);
-            if (parts.Length != 2 || !DateTimeOffset.TryParseExact(parts[0], "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out var createdAt) || !Guid.TryParse(parts[1], out var id))
+
+            if (parts.Length != 2)
+            {
                 throw new InvalidOperationException("Cursor không hợp lệ.");
+            }
+
+            var hasValidDate = DateTimeOffset.TryParseExact(
+                parts[0],
+                "O",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.RoundtripKind,
+                out var createdAt);
+            var hasValidId = Guid.TryParse(parts[1], out var id);
+
+            if (!hasValidDate || !hasValidId)
+            {
+                throw new InvalidOperationException("Cursor không hợp lệ.");
+            }
+
             return (createdAt, id);
         }
-        catch (FormatException) { throw new InvalidOperationException("Cursor không hợp lệ."); }
+        catch (FormatException)
+        {
+            throw new InvalidOperationException("Cursor không hợp lệ.");
+        }
     }
 
     private static string EncodeCursor(DateTimeOffset createdAt, Guid id) =>

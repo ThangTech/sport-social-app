@@ -30,7 +30,11 @@ public record CreateIncidentRequest(
     IncidentSeverity Severity,
     Guid? OwnerId);
 
-public record UpdateIncidentRequest(IncidentStatus Status, Guid? OwnerId, [property: MaxLength(12000)] string? ResponseNotes, [property: MaxLength(6000)] string? RootCause);
+public record UpdateIncidentRequest(
+    IncidentStatus Status,
+    Guid? OwnerId,
+    [property: MaxLength(12000)] string? ResponseNotes,
+    [property: MaxLength(6000)] string? RootCause);
 
 public record SaveContingencyPlanRequest(
     [property: Required, MaxLength(200)] string Name,

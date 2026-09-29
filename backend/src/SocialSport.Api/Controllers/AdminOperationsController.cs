@@ -35,7 +35,9 @@ public class AdminOperationsController : ControllerBase
                 groups = await _context.Groups.CountAsync(x => x.DeletedAt == null),
                 posts = await _context.Posts.CountAsync(x => x.DeletedAt == null),
                 reportsPending = await _context.Reports.CountAsync(x => x.Status == ReportStatus.Pending),
-                copyrightPending = await _context.CopyrightCases.CountAsync(x => x.Status == CopyrightCaseStatus.Pending || x.Status == CopyrightCaseStatus.Appealed),
+                copyrightPending = await _context.CopyrightCases.CountAsync(
+                    x => x.Status == CopyrightCaseStatus.Pending ||
+                        x.Status == CopyrightCaseStatus.Appealed),
                 openTasks = await _context.OperationalTasks.CountAsync(x => x.Status != OperationalTaskStatus.Completed),
                 openIncidents = await _context.Incidents.CountAsync(x => x.Status != IncidentStatus.Resolved)
             },
@@ -55,7 +57,14 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> Health()
     {
         var databaseOk = false;
-        try { databaseOk = await _context.Database.CanConnectAsync(); } catch { }
+        try
+        {
+            databaseOk = await _context.Database.CanConnectAsync();
+        }
+        catch
+        {
+            // Health endpoint reports the degraded state without exposing connection details.
+        }
         var uploadPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads");
         return Ok(new
         {
@@ -64,8 +73,20 @@ public class AdminOperationsController : ControllerBase
             services = new[]
             {
                 new { name = "API", status = "healthy", detail = "HTTP pipeline is responding" },
-                new { name = "Database", status = databaseOk ? "healthy" : "unavailable", detail = databaseOk ? "Connection succeeded" : "Connection failed" },
-                new { name = "Media storage", status = Directory.Exists(uploadPath) ? "healthy" : "degraded", detail = Directory.Exists(uploadPath) ? "Upload directory is available" : "Upload directory has not been created" }
+                new
+                {
+                    name = "Database",
+                    status = databaseOk ? "healthy" : "unavailable",
+                    detail = databaseOk ? "Connection succeeded" : "Connection failed"
+                },
+                new
+                {
+                    name = "Media storage",
+                    status = Directory.Exists(uploadPath) ? "healthy" : "degraded",
+                    detail = Directory.Exists(uploadPath)
+                        ? "Upload directory is available"
+                        : "Upload directory has not been created"
+                }
             }
         });
     }
@@ -82,8 +103,26 @@ public class AdminOperationsController : ControllerBase
                 name = "ADMIN",
                 displayName = "System Administrator",
                 accessLevel = "Full system administration",
-                responsibilities = new[] { "System health and operations", "Users, groups and content", "Reports and copyright review", "Incidents and contingency plans", "Administrator access" },
-                permissions = new[] { "dashboard:read", "users:manage", "groups:manage", "posts:manage", "reports:manage", "copyright:manage", "operations:manage", "incidents:manage", "admins:manage" },
+                responsibilities = new[]
+                {
+                    "System health and operations",
+                    "Users, groups and content",
+                    "Reports and copyright review",
+                    "Incidents and contingency plans",
+                    "Administrator access"
+                },
+                permissions = new[]
+                {
+                    "dashboard:read",
+                    "users:manage",
+                    "groups:manage",
+                    "posts:manage",
+                    "reports:manage",
+                    "copyright:manage",
+                    "operations:manage",
+                    "incidents:manage",
+                    "admins:manage"
+                },
                 userCount = count
             }
         });
@@ -103,7 +142,10 @@ public class AdminOperationsController : ControllerBase
         if (!await _userManager.IsInRoleAsync(user, "ADMIN"))
         {
             var result = await _userManager.AddToRoleAsync(user, "ADMIN");
-            if (!result.Succeeded) throw new InvalidOperationException(string.Join("; ", result.Errors.Select(x => x.Description)));
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(x => x.Description)));
+            }
             await Audit("admin.granted", "user", userId.ToString(), $"Granted System Admin access to {user.Email}.");
         }
         return NoContent();
@@ -112,14 +154,23 @@ public class AdminOperationsController : ControllerBase
     [HttpDelete("administrators/{userId:guid}")]
     public async Task<IActionResult> RevokeAdministrator(Guid userId)
     {
-        if (userId == CurrentUserId()) throw new InvalidOperationException("Không thể tự thu hồi quyền quản trị.");
+        if (userId == CurrentUserId())
+        {
+            throw new InvalidOperationException("Không thể tự thu hồi quyền quản trị.");
+        }
         var user = await _userManager.FindByIdAsync(userId.ToString()) ?? throw new KeyNotFoundException("Không tìm thấy người dùng.");
         var admins = await _userManager.GetUsersInRoleAsync("ADMIN");
-        if (admins.Count <= 1) throw new InvalidOperationException("Hệ thống phải còn ít nhất một System Admin.");
+        if (admins.Count <= 1)
+        {
+            throw new InvalidOperationException("Hệ thống phải còn ít nhất một System Admin.");
+        }
         if (await _userManager.IsInRoleAsync(user, "ADMIN"))
         {
             var result = await _userManager.RemoveFromRoleAsync(user, "ADMIN");
-            if (!result.Succeeded) throw new InvalidOperationException(string.Join("; ", result.Errors.Select(x => x.Description)));
+            if (!result.Succeeded)
+            {
+                throw new InvalidOperationException(string.Join("; ", result.Errors.Select(x => x.Description)));
+            }
             await Audit("admin.revoked", "user", userId.ToString(), $"Revoked System Admin access from {user.Email}.");
         }
         return NoContent();
@@ -128,97 +179,253 @@ public class AdminOperationsController : ControllerBase
     [HttpGet("operations/tasks")]
     public async Task<IActionResult> Tasks([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        (page, pageSize) = Normalize(page, pageSize); var q = _context.OperationalTasks.AsNoTracking().OrderBy(x => x.Status == OperationalTaskStatus.Completed).ThenByDescending(x => x.Priority).ThenBy(x => x.DueAt);
-        return Ok(new { items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(), total = await q.CountAsync(), page, pageSize });
+        (page, pageSize) = Normalize(page, pageSize);
+        var q = _context.OperationalTasks
+            .AsNoTracking()
+            .OrderBy(x => x.Status == OperationalTaskStatus.Completed)
+            .ThenByDescending(x => x.Priority)
+            .ThenBy(x => x.DueAt);
+        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        var total = await q.CountAsync();
+
+        return Ok(new { items, total, page, pageSize });
     }
 
     [HttpPost("operations/tasks")]
     public async Task<IActionResult> CreateTask(CreateOperationalTaskRequest request)
     {
-        EnsureEnum(request.Priority); var item = new OperationalTask { Title = request.Title.Trim(), Description = request.Description?.Trim(), Procedure = request.Procedure?.Trim(), Priority = request.Priority, AssignedTo = request.AssignedTo, DueAt = request.DueAt, CreatedBy = CurrentUserId() };
-        _context.Add(item); AddAudit("task.created", "operational-task", item.Id.ToString(), item.Title); await _context.SaveChangesAsync(); return CreatedAtAction(nameof(Tasks), new { }, item);
+        EnsureEnum(request.Priority);
+        var item = new OperationalTask
+        {
+            Title = request.Title.Trim(),
+            Description = request.Description?.Trim(),
+            Procedure = request.Procedure?.Trim(),
+            Priority = request.Priority,
+            AssignedTo = request.AssignedTo,
+            DueAt = request.DueAt,
+            CreatedBy = CurrentUserId()
+        };
+        _context.Add(item);
+        AddAudit("task.created", "operational-task", item.Id.ToString(), item.Title);
+        await _context.SaveChangesAsync();
+        return CreatedAtAction(nameof(Tasks), new { }, item);
     }
 
     [HttpPatch("operations/tasks/{id:guid}")]
     public async Task<IActionResult> UpdateTask(Guid id, UpdateOperationalTaskRequest request)
     {
-        EnsureEnum(request.Status); var item = await _context.OperationalTasks.FindAsync(id) ?? throw new KeyNotFoundException("Không tìm thấy tác vụ.");
-        item.Status = request.Status; item.AssignedTo = request.AssignedTo; item.DueAt = request.DueAt; item.UpdatedAt = DateTimeOffset.UtcNow; item.CompletedAt = request.Status == OperationalTaskStatus.Completed ? DateTimeOffset.UtcNow : null;
-        AddAudit("task.updated", "operational-task", id.ToString(), $"{item.Title}: {request.Status}"); await _context.SaveChangesAsync(); return NoContent();
+        EnsureEnum(request.Status);
+        var item = await _context.OperationalTasks.FindAsync(id)
+            ?? throw new KeyNotFoundException("Không tìm thấy tác vụ.");
+        item.Status = request.Status;
+        item.AssignedTo = request.AssignedTo;
+        item.DueAt = request.DueAt;
+        item.UpdatedAt = DateTimeOffset.UtcNow;
+        item.CompletedAt = request.Status == OperationalTaskStatus.Completed
+            ? DateTimeOffset.UtcNow
+            : null;
+        AddAudit("task.updated", "operational-task", id.ToString(), $"{item.Title}: {request.Status}");
+        await _context.SaveChangesAsync();
+        return NoContent();
     }
 
     [HttpGet("operations/changes")]
     public async Task<IActionResult> Changes([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        (page, pageSize) = Normalize(page, pageSize); var q = _context.ChangeRequests.AsNoTracking().OrderByDescending(x => x.CreatedAt);
-        return Ok(new { items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(), total = await q.CountAsync(), page, pageSize });
+        (page, pageSize) = Normalize(page, pageSize);
+        var q = _context.ChangeRequests.AsNoTracking().OrderByDescending(x => x.CreatedAt);
+        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        var total = await q.CountAsync();
+
+        return Ok(new { items, total, page, pageSize });
     }
 
     [HttpPost("operations/changes")]
     public async Task<IActionResult> CreateChange(CreateChangeRequest request)
     {
-        var item = new ChangeRequest { Title = request.Title.Trim(), Description = request.Description.Trim(), ImplementationPlan = request.ImplementationPlan.Trim(), RollbackPlan = request.RollbackPlan.Trim(), RiskLevel = request.RiskLevel, ScheduledAt = request.ScheduledAt, RequestedBy = CurrentUserId() };
-        _context.Add(item); AddAudit("change.created", "change-request", item.Id.ToString(), item.Title); await _context.SaveChangesAsync(); return CreatedAtAction(nameof(Changes), new { }, item);
+        var item = new ChangeRequest
+        {
+            Title = request.Title.Trim(),
+            Description = request.Description.Trim(),
+            ImplementationPlan = request.ImplementationPlan.Trim(),
+            RollbackPlan = request.RollbackPlan.Trim(),
+            RiskLevel = request.RiskLevel,
+            ScheduledAt = request.ScheduledAt,
+            RequestedBy = CurrentUserId()
+        };
+        _context.Add(item);
+        AddAudit("change.created", "change-request", item.Id.ToString(), item.Title);
+        await _context.SaveChangesAsync();
+        return CreatedAtAction(nameof(Changes), new { }, item);
     }
 
     [HttpPatch("operations/changes/{id:guid}/status")]
     public async Task<IActionResult> UpdateChange(Guid id, UpdateChangeStatusRequest request)
     {
-        EnsureEnum(request.Status); var item = await _context.ChangeRequests.FindAsync(id) ?? throw new KeyNotFoundException("Không tìm thấy yêu cầu thay đổi.");
-        item.Status = request.Status; item.UpdatedAt = DateTimeOffset.UtcNow; if (request.Status == ChangeRequestStatus.Approved) item.ApprovedBy = CurrentUserId(); if (request.Status is ChangeRequestStatus.Completed or ChangeRequestStatus.Failed or ChangeRequestStatus.RolledBack) item.CompletedAt = DateTimeOffset.UtcNow;
-        AddAudit("change.status", "change-request", id.ToString(), $"{item.Title}: {request.Status}"); await _context.SaveChangesAsync(); return NoContent();
+        EnsureEnum(request.Status);
+        var item = await _context.ChangeRequests.FindAsync(id)
+            ?? throw new KeyNotFoundException("Không tìm thấy yêu cầu thay đổi.");
+        item.Status = request.Status;
+        item.UpdatedAt = DateTimeOffset.UtcNow;
+        if (request.Status == ChangeRequestStatus.Approved)
+        {
+            item.ApprovedBy = CurrentUserId();
+        }
+        if (request.Status is ChangeRequestStatus.Completed or ChangeRequestStatus.Failed or ChangeRequestStatus.RolledBack)
+        {
+            item.CompletedAt = DateTimeOffset.UtcNow;
+        }
+        AddAudit("change.status", "change-request", id.ToString(), $"{item.Title}: {request.Status}");
+        await _context.SaveChangesAsync();
+        return NoContent();
     }
 
     [HttpGet("incidents")]
     public async Task<IActionResult> Incidents([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {
-        (page, pageSize) = Normalize(page, pageSize); var q = _context.Incidents.AsNoTracking().OrderBy(x => x.Status == IncidentStatus.Resolved).ThenByDescending(x => x.Severity).ThenByDescending(x => x.DetectedAt);
-        return Ok(new { items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(), total = await q.CountAsync(), page, pageSize });
+        (page, pageSize) = Normalize(page, pageSize);
+        var q = _context.Incidents
+            .AsNoTracking()
+            .OrderBy(x => x.Status == IncidentStatus.Resolved)
+            .ThenByDescending(x => x.Severity)
+            .ThenByDescending(x => x.DetectedAt);
+        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        var total = await q.CountAsync();
+
+        return Ok(new { items, total, page, pageSize });
     }
 
     [HttpPost("incidents")]
     public async Task<IActionResult> CreateIncident(CreateIncidentRequest request)
     {
-        EnsureEnum(request.Severity); var item = new Incident { Title = request.Title.Trim(), Summary = request.Summary.Trim(), Impact = request.Impact?.Trim(), Severity = request.Severity, OwnerId = request.OwnerId, CreatedBy = CurrentUserId() };
-        _context.Add(item); AddAudit("incident.created", "incident", item.Id.ToString(), item.Title); await _context.SaveChangesAsync(); return CreatedAtAction(nameof(Incidents), new { }, item);
+        EnsureEnum(request.Severity);
+        var item = new Incident
+        {
+            Title = request.Title.Trim(),
+            Summary = request.Summary.Trim(),
+            Impact = request.Impact?.Trim(),
+            Severity = request.Severity,
+            OwnerId = request.OwnerId,
+            CreatedBy = CurrentUserId()
+        };
+        _context.Add(item);
+        AddAudit("incident.created", "incident", item.Id.ToString(), item.Title);
+        await _context.SaveChangesAsync();
+        return CreatedAtAction(nameof(Incidents), new { }, item);
     }
 
     [HttpPatch("incidents/{id:guid}")]
     public async Task<IActionResult> UpdateIncident(Guid id, UpdateIncidentRequest request)
     {
-        EnsureEnum(request.Status); var item = await _context.Incidents.FindAsync(id) ?? throw new KeyNotFoundException("Không tìm thấy sự cố.");
-        item.Status = request.Status; item.OwnerId = request.OwnerId; item.ResponseNotes = request.ResponseNotes?.Trim(); item.RootCause = request.RootCause?.Trim(); item.UpdatedAt = DateTimeOffset.UtcNow; item.ResolvedAt = request.Status == IncidentStatus.Resolved ? DateTimeOffset.UtcNow : null;
-        AddAudit("incident.updated", "incident", id.ToString(), $"{item.Title}: {request.Status}"); await _context.SaveChangesAsync(); return NoContent();
+        EnsureEnum(request.Status);
+        var item = await _context.Incidents.FindAsync(id)
+            ?? throw new KeyNotFoundException("Không tìm thấy sự cố.");
+        item.Status = request.Status;
+        item.OwnerId = request.OwnerId;
+        item.ResponseNotes = request.ResponseNotes?.Trim();
+        item.RootCause = request.RootCause?.Trim();
+        item.UpdatedAt = DateTimeOffset.UtcNow;
+        item.ResolvedAt = request.Status == IncidentStatus.Resolved
+            ? DateTimeOffset.UtcNow
+            : null;
+        AddAudit("incident.updated", "incident", id.ToString(), $"{item.Title}: {request.Status}");
+        await _context.SaveChangesAsync();
+        return NoContent();
     }
 
     [HttpGet("contingency-plans")]
-    public async Task<IActionResult> Plans() => Ok(await _context.ContingencyPlans.AsNoTracking().OrderByDescending(x => x.IsActive).ThenBy(x => x.Name).ToListAsync());
+    public async Task<IActionResult> Plans()
+    {
+        var plans = await _context.ContingencyPlans
+            .AsNoTracking()
+            .OrderByDescending(x => x.IsActive)
+            .ThenBy(x => x.Name)
+            .ToListAsync();
+
+        return Ok(plans);
+    }
 
     [HttpPost("contingency-plans")]
     public async Task<IActionResult> CreatePlan(SaveContingencyPlanRequest request)
     {
-        var item = new ContingencyPlan { Name = request.Name.Trim(), TriggerConditions = request.TriggerConditions.Trim(), ResponseSteps = request.ResponseSteps.Trim(), RecoverySteps = request.RecoverySteps.Trim(), Owner = request.Owner.Trim(), IsActive = request.IsActive, CreatedBy = CurrentUserId() };
-        _context.Add(item); AddAudit("plan.created", "contingency-plan", item.Id.ToString(), item.Name); await _context.SaveChangesAsync(); return CreatedAtAction(nameof(Plans), new { }, item);
+        var item = new ContingencyPlan
+        {
+            Name = request.Name.Trim(),
+            TriggerConditions = request.TriggerConditions.Trim(),
+            ResponseSteps = request.ResponseSteps.Trim(),
+            RecoverySteps = request.RecoverySteps.Trim(),
+            Owner = request.Owner.Trim(),
+            IsActive = request.IsActive,
+            CreatedBy = CurrentUserId()
+        };
+        _context.Add(item);
+        AddAudit("plan.created", "contingency-plan", item.Id.ToString(), item.Name);
+        await _context.SaveChangesAsync();
+        return CreatedAtAction(nameof(Plans), new { }, item);
     }
 
     [HttpPut("contingency-plans/{id:guid}")]
     public async Task<IActionResult> UpdatePlan(Guid id, SaveContingencyPlanRequest request)
     {
         var item = await _context.ContingencyPlans.FindAsync(id) ?? throw new KeyNotFoundException("Không tìm thấy kế hoạch dự phòng.");
-        item.Name = request.Name.Trim(); item.TriggerConditions = request.TriggerConditions.Trim(); item.ResponseSteps = request.ResponseSteps.Trim(); item.RecoverySteps = request.RecoverySteps.Trim(); item.Owner = request.Owner.Trim(); item.IsActive = request.IsActive; item.Version++; item.UpdatedAt = DateTimeOffset.UtcNow;
-        AddAudit("plan.updated", "contingency-plan", id.ToString(), $"{item.Name} v{item.Version}"); await _context.SaveChangesAsync(); return NoContent();
+        item.Name = request.Name.Trim();
+        item.TriggerConditions = request.TriggerConditions.Trim();
+        item.ResponseSteps = request.ResponseSteps.Trim();
+        item.RecoverySteps = request.RecoverySteps.Trim();
+        item.Owner = request.Owner.Trim();
+        item.IsActive = request.IsActive;
+        item.Version++;
+        item.UpdatedAt = DateTimeOffset.UtcNow;
+        AddAudit("plan.updated", "contingency-plan", id.ToString(), $"{item.Name} v{item.Version}");
+        await _context.SaveChangesAsync();
+        return NoContent();
     }
 
     [HttpGet("audit")]
     public async Task<IActionResult> AuditLog([FromQuery] int page = 1, [FromQuery] int pageSize = 30)
     {
-        (page, pageSize) = Normalize(page, pageSize); var q = _context.AdminAuditLogs.AsNoTracking().OrderByDescending(x => x.CreatedAt);
-        return Ok(new { items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(), total = await q.CountAsync(), page, pageSize });
+        (page, pageSize) = Normalize(page, pageSize);
+        var q = _context.AdminAuditLogs.AsNoTracking().OrderByDescending(x => x.CreatedAt);
+        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        var total = await q.CountAsync();
+
+        return Ok(new { items, total, page, pageSize });
     }
 
-    private Guid CurrentUserId() => Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : throw new UnauthorizedAccessException("User id trong token không hợp lệ.");
-    private static (int, int) Normalize(int page, int pageSize) => (Math.Max(1, page), Math.Clamp(pageSize, 1, 100));
-    private static void EnsureEnum<T>(T value) where T : struct, Enum { if (!Enum.IsDefined(value)) throw new InvalidOperationException("Trạng thái không hợp lệ."); }
-    private void AddAudit(string action, string targetType, string? targetId, string summary) => _context.AdminAuditLogs.Add(new AdminAuditLog { ActorId = CurrentUserId(), Action = action, TargetType = targetType, TargetId = targetId, Summary = summary });
-    private async Task Audit(string action, string targetType, string? targetId, string summary) { AddAudit(action, targetType, targetId, summary); await _context.SaveChangesAsync(); }
+    private Guid CurrentUserId()
+    {
+        return Guid.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var id)
+            ? id
+            : throw new UnauthorizedAccessException("User id trong token không hợp lệ.");
+    }
+
+    private static (int, int) Normalize(int page, int pageSize)
+    {
+        return (Math.Max(1, page), Math.Clamp(pageSize, 1, 100));
+    }
+
+    private static void EnsureEnum<T>(T value) where T : struct, Enum
+    {
+        if (!Enum.IsDefined(value))
+        {
+            throw new InvalidOperationException("Trạng thái không hợp lệ.");
+        }
+    }
+    private void AddAudit(string action, string targetType, string? targetId, string summary)
+    {
+        _context.AdminAuditLogs.Add(new AdminAuditLog
+        {
+            ActorId = CurrentUserId(),
+            Action = action,
+            TargetType = targetType,
+            TargetId = targetId,
+            Summary = summary
+        });
+    }
+
+    private async Task Audit(string action, string targetType, string? targetId, string summary)
+    {
+        AddAudit(action, targetType, targetId, summary);
+        await _context.SaveChangesAsync();
+    }
 }

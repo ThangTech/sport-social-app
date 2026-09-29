@@ -23,7 +23,15 @@ namespace SocialSport.Api.Services.Implementations
         private readonly ICopyrightService _copyrightService;
         private readonly IMediaUrlService _mediaUrlService;
 
-        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository, IWebHostEnvironment environment, IPostAccessService postAccessService, INotificationService notificationService, ICopyrightService copyrightService, IMediaUrlService mediaUrlService)
+        public PostService(
+            IPostRepository postRepository,
+            UserManager<ApplicationUser> userManager,
+            ISavedPostRepository savedPostRepository,
+            IWebHostEnvironment environment,
+            IPostAccessService postAccessService,
+            INotificationService notificationService,
+            ICopyrightService copyrightService,
+            IMediaUrlService mediaUrlService)
         {
             _postRepository = postRepository;
             _userManager = userManager;
@@ -120,7 +128,7 @@ namespace SocialSport.Api.Services.Implementations
 
             var createdPost = await _postRepository.GetByIdAsync(post.Id);
             var user = await _userManager.FindByIdAsync(createdPost!.AuthorId.ToString());
-            
+
             return new PostDto
             {
                 Id = createdPost.Id,
@@ -281,7 +289,11 @@ namespace SocialSport.Api.Services.Implementations
             }
 
             posts = visiblePosts;
-            var savedPostIds = currentUserId.HasValue? await _savedPostRepository.GetSavedPostIdsAsync(currentUserId.Value,posts.Select(x => x.Id)): [];
+            var savedPostIds = currentUserId.HasValue
+                ? await _savedPostRepository.GetSavedPostIdsAsync(
+                    currentUserId.Value,
+                    posts.Select(x => x.Id))
+                : [];
 
             return posts.Select(post => new PostDto
             {
@@ -297,7 +309,7 @@ namespace SocialSport.Api.Services.Implementations
                 Visibility = post.Visibility,
                 LikeCount = post.Reactions.Count,
                 CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
-                CurrentReaction = currentUserId.HasValue ? post.Reactions.FirstOrDefault(x => x.UserId == currentUserId.Value)?.Type: null,
+                CurrentReaction = currentUserId.HasValue ? post.Reactions.FirstOrDefault(x => x.UserId == currentUserId.Value)?.Type : null,
                 IsSaved = savedPostIds.Contains(post.Id),
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
@@ -404,7 +416,7 @@ namespace SocialSport.Api.Services.Implementations
             }
 
             var posts = await _postRepository.GetFeedAsync(userId, limit, cursorDate);
-            var savedPostIds = await _savedPostRepository.GetSavedPostIdsAsync(userId,posts.Select(x => x.Id)
+            var savedPostIds = await _savedPostRepository.GetSavedPostIdsAsync(userId, posts.Select(x => x.Id)
 );
             var hasMore = posts.Count > limit;
 

@@ -16,7 +16,7 @@ namespace SocialSport.Api.Extensions;
 
 public static class DependencyInjection
 {
-    public static IServiceCollection AddDependencies(this IServiceCollection services,IConfiguration configuration)
+    public static IServiceCollection AddDependencies(this IServiceCollection services, IConfiguration configuration)
     {
         var connectionString =
             configuration.GetConnectionString("DefaultConnection")
@@ -45,7 +45,10 @@ public static class DependencyInjection
         {
             options.TokenLifespan = TimeSpan.FromMinutes(30);
         });
-        var jwtSettings = configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>()?? throw new InvalidOperationException("JWT configuration was not found.");
+        var jwtSettings = configuration
+            .GetSection(JwtSettings.SectionName)
+            .Get<JwtSettings>()
+            ?? throw new InvalidOperationException("JWT configuration was not found.");
 
         if (string.IsNullOrWhiteSpace(jwtSettings.Key))
         {
@@ -86,7 +89,7 @@ public static class DependencyInjection
             });
         services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
         services.AddScoped<IEmailService, EmailService>();
-        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>(); 
+        services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IFollowRepository, FollowRepository>();
         services.AddScoped<IUserService, UserService>();
