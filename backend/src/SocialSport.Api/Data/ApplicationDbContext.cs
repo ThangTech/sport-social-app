@@ -59,6 +59,11 @@ public class ApplicationDbContext
 
     public DbSet<CopyrightAsset> CopyrightAssets => Set<CopyrightAsset>();
     public DbSet<CopyrightCase> CopyrightCases => Set<CopyrightCase>();
+    public DbSet<OperationalTask> OperationalTasks => Set<OperationalTask>();
+    public DbSet<ChangeRequest> ChangeRequests => Set<ChangeRequest>();
+    public DbSet<Incident> Incidents => Set<Incident>();
+    public DbSet<ContingencyPlan> ContingencyPlans => Set<ContingencyPlan>();
+    public DbSet<AdminAuditLog> AdminAuditLogs => Set<AdminAuditLog>();
 
     protected override void OnModelCreating(
         ModelBuilder builder)
