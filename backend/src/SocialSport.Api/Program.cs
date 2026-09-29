@@ -1,4 +1,5 @@
 using SocialSport.Api.Extensions;
+using Microsoft.Extensions.FileProviders;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,7 +25,13 @@ if (!app.Environment.IsDevelopment())
     app.UseHttpsRedirection();
 }
 //app.UseHttpsRedirection();
-app.UseStaticFiles();
+var publicUploadRoot = Path.Combine(app.Environment.WebRootPath ?? Path.Combine(app.Environment.ContentRootPath, "wwwroot"), "uploads");
+foreach (var publicFolder in new[] { "avatars", "covers", "groups" })
+{
+    var physicalPath = Path.Combine(publicUploadRoot, publicFolder);
+    Directory.CreateDirectory(physicalPath);
+    app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(physicalPath), RequestPath = $"/uploads/{publicFolder}" });
+}
 app.UseCors("AppClients");
 app.UseAuthentication();
 app.UseAuthorization();

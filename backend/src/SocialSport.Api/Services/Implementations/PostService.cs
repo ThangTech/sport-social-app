@@ -21,8 +21,9 @@ namespace SocialSport.Api.Services.Implementations
         private readonly IWebHostEnvironment _environment;
         private readonly INotificationService _notificationService;
         private readonly ICopyrightService _copyrightService;
+        private readonly IMediaUrlService _mediaUrlService;
 
-        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository, IWebHostEnvironment environment, IPostAccessService postAccessService, INotificationService notificationService, ICopyrightService copyrightService)
+        public PostService(IPostRepository postRepository, UserManager<ApplicationUser> userManager, ISavedPostRepository savedPostRepository, IWebHostEnvironment environment, IPostAccessService postAccessService, INotificationService notificationService, ICopyrightService copyrightService, IMediaUrlService mediaUrlService)
         {
             _postRepository = postRepository;
             _userManager = userManager;
@@ -31,6 +32,7 @@ namespace SocialSport.Api.Services.Implementations
             _postAccessService = postAccessService;
             _notificationService = notificationService;
             _copyrightService = copyrightService;
+            _mediaUrlService = mediaUrlService;
         }
         public async Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request)
         {
@@ -140,7 +142,7 @@ namespace SocialSport.Api.Services.Implementations
                 Media = createdPost.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
                 {
                     Id = x.Id,
-                    Url = x.Url,
+                    Url = _mediaUrlService.CreatePostMediaUrl(x.Id),
                     MediaType = (int)x.MediaType,
                     SortOrder = x.SortOrder
                 }).ToList()
@@ -179,7 +181,7 @@ namespace SocialSport.Api.Services.Implementations
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
                 {
                     Id = x.Id,
-                    Url = x.Url,
+                    Url = _mediaUrlService.CreatePostMediaUrl(x.Id),
                     MediaType = (int)x.MediaType,
                     SortOrder = x.SortOrder
                 }).ToList()
@@ -302,7 +304,7 @@ namespace SocialSport.Api.Services.Implementations
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
                 {
                     Id = x.Id,
-                    Url = x.Url,
+                    Url = _mediaUrlService.CreatePostMediaUrl(x.Id),
                     MediaType = (int)x.MediaType,
                     SortOrder = x.SortOrder
                 }).ToList()
@@ -354,7 +356,7 @@ namespace SocialSport.Api.Services.Implementations
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
                 {
                     Id = x.Id,
-                    Url = x.Url,
+                    Url = _mediaUrlService.CreatePostMediaUrl(x.Id),
                     MediaType = (int)x.MediaType,
                     SortOrder = x.SortOrder
                 }).ToList()
@@ -439,7 +441,7 @@ namespace SocialSport.Api.Services.Implementations
                     Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
                     {
                         Id = x.Id,
-                        Url = x.Url,
+                        Url = _mediaUrlService.CreatePostMediaUrl(x.Id),
                         MediaType = (int)x.MediaType,
                         SortOrder = x.SortOrder
                     }).ToList()
@@ -541,7 +543,7 @@ namespace SocialSport.Api.Services.Implementations
                     Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
                     {
                         Id = x.Id,
-                        Url = x.Url,
+                        Url = _mediaUrlService.CreatePostMediaUrl(x.Id),
                         MediaType = (int)x.MediaType,
                         SortOrder = x.SortOrder
                     }).ToList()
@@ -600,7 +602,7 @@ namespace SocialSport.Api.Services.Implementations
             return new PostMediaUploadResponse
             {
                 Id = media.Id,
-                Url = media.Url,
+                Url = _mediaUrlService.CreatePostMediaUrl(media.Id),
                 MediaType = (int)media.MediaType,
                 SortOrder = media.SortOrder,
                 IsPendingCopyrightReview = isPendingCopyrightReview
@@ -696,7 +698,7 @@ namespace SocialSport.Api.Services.Implementations
             return new PostMediaUploadResponse
             {
                 Id = media.Id,
-                Url = media.Url,
+                Url = _mediaUrlService.CreatePostMediaUrl(media.Id),
                 MediaType = (int)media.MediaType,
                 SortOrder = media.SortOrder,
                 IsPendingCopyrightReview = isPendingCopyrightReview

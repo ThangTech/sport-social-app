@@ -16,11 +16,13 @@ public class ExploreService : IExploreService
 {
     private readonly ApplicationDbContext _context;
     private readonly UserManager<ApplicationUser> _userManager;
+    private readonly IMediaUrlService _mediaUrlService;
 
-    public ExploreService(ApplicationDbContext context, UserManager<ApplicationUser> userManager)
+    public ExploreService(ApplicationDbContext context, UserManager<ApplicationUser> userManager, IMediaUrlService mediaUrlService)
     {
         _context = context;
         _userManager = userManager;
+        _mediaUrlService = mediaUrlService;
     }
 
     public async Task<PagedResponse<PostDto>> GetPostsAsync(Guid userId, string? search, Guid? sportId, string? sort, int page, int pageSize)
@@ -62,7 +64,7 @@ public class ExploreService : IExploreService
                 CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
                 CurrentReaction = post.Reactions.FirstOrDefault(x => x.UserId == userId)?.Type, IsSaved = savedIds.Contains(post.Id),
                 CreatedAt = post.CreatedAt, UpdatedAt = post.UpdatedAt,
-                Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto { Id = x.Id, Url = x.Url, MediaType = (int)x.MediaType, SortOrder = x.SortOrder }).ToList()
+                Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto { Id = x.Id, Url = _mediaUrlService.CreatePostMediaUrl(x.Id), MediaType = (int)x.MediaType, SortOrder = x.SortOrder }).ToList()
             };
         }).ToList(), page, pageSize, total);
     }

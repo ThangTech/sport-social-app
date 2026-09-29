@@ -24,6 +24,7 @@ public class GroupService : IGroupService
     private readonly ISavedPostRepository _savedPostRepository;
     private readonly IWebHostEnvironment _environment;
     private readonly INotificationService _notificationService;
+    private readonly IMediaUrlService _mediaUrlService;
 
     public GroupService(
         IGroupRepository groupRepository,
@@ -32,7 +33,8 @@ public class GroupService : IGroupService
         IPostRepository postRepository,
         ISavedPostRepository savedPostRepository,
         IWebHostEnvironment environment,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IMediaUrlService mediaUrlService)
     {
         _groupRepository = groupRepository;
         _userManager = userManager;
@@ -41,6 +43,7 @@ public class GroupService : IGroupService
         _savedPostRepository = savedPostRepository;
         _environment = environment;
         _notificationService = notificationService;
+        _mediaUrlService = mediaUrlService;
     }
 
     public async Task<GroupDto> CreateAsync(Guid userId, CreateGroupRequest request)
@@ -941,7 +944,7 @@ public class GroupService : IGroupService
             Media = createdPost.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
             {
                 Id = x.Id,
-                Url = x.Url,
+                Url = _mediaUrlService.CreatePostMediaUrl(x.Id),
                 MediaType = (int)x.MediaType,
                 SortOrder = x.SortOrder
             }).ToList()
@@ -1010,7 +1013,7 @@ public class GroupService : IGroupService
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
                 {
                     Id = x.Id,
-                    Url = x.Url,
+                    Url = _mediaUrlService.CreatePostMediaUrl(x.Id),
                     MediaType = (int)x.MediaType,
                     SortOrder = x.SortOrder
                 }).ToList()

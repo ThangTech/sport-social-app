@@ -12,7 +12,8 @@ public class CopyrightService : ICopyrightService
 {
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _environment;
-    public CopyrightService(ApplicationDbContext context, IWebHostEnvironment environment) { _context = context; _environment = environment; }
+    private readonly IMediaUrlService _mediaUrlService;
+    public CopyrightService(ApplicationDbContext context, IWebHostEnvironment environment, IMediaUrlService mediaUrlService) { _context = context; _environment = environment; _mediaUrlService = mediaUrlService; }
 
     public async Task<string> ComputeHashAsync(string path)
     {
@@ -74,5 +75,5 @@ public class CopyrightService : ICopyrightService
         item.Status = CopyrightCaseStatus.Appealed; item.AppealReason = request.Reason.Trim(); item.AppealedAt = DateTimeOffset.UtcNow; await _context.SaveChangesAsync();
     }
 
-    private static CopyrightCaseDto ToDto(CopyrightCase x) => new() { Id = x.Id, PostId = x.PostMedia.PostId, PostMediaId = x.PostMediaId, MediaUrl = x.PostMedia.Url, CopyrightAssetId = x.CopyrightAssetId, AssetTitle = x.CopyrightAsset.Title, RightsOwnerName = x.CopyrightAsset.RightsOwnerName, UploaderId = x.UploaderId, Confidence = x.Confidence, Status = x.Status, DecisionNotes = x.DecisionNotes, AppealReason = x.AppealReason, CreatedAt = x.CreatedAt };
+    private CopyrightCaseDto ToDto(CopyrightCase x) => new() { Id = x.Id, PostId = x.PostMedia.PostId, PostMediaId = x.PostMediaId, MediaUrl = _mediaUrlService.CreatePostMediaUrl(x.PostMediaId), CopyrightAssetId = x.CopyrightAssetId, AssetTitle = x.CopyrightAsset.Title, RightsOwnerName = x.CopyrightAsset.RightsOwnerName, UploaderId = x.UploaderId, Confidence = x.Confidence, Status = x.Status, DecisionNotes = x.DecisionNotes, AppealReason = x.AppealReason, CreatedAt = x.CreatedAt };
 }

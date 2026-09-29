@@ -110,6 +110,8 @@ public static class DependencyInjection
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IExploreService, ExploreService>();
         services.AddScoped<ICopyrightService, CopyrightService>();
+        services.AddScoped<IMediaUrlService, MediaUrlService>();
+        services.AddDataProtection();
         services.AddScoped<ISportRepository, SportRepository>();
         services.AddScoped<ISportService, SportService>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
