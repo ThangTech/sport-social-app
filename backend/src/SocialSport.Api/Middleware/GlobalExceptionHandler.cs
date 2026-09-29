@@ -6,6 +6,13 @@ namespace SocialSport.Api.Middleware;
 public class GlobalExceptionHandler
     : IExceptionHandler
 {
+    private readonly ILogger<GlobalExceptionHandler> _logger;
+
+    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
+    {
+        _logger = logger;
+    }
+
     public async ValueTask<bool>
         TryHandleAsync(HttpContext httpContext,Exception exception,CancellationToken cancellationToken)
     {
@@ -23,6 +30,11 @@ public class GlobalExceptionHandler
                     StatusCodes.Status500InternalServerError
             };
 
+        if (statusCode >= 500)
+            _logger.LogError(exception, "Unhandled request error. TraceId: {TraceId}", httpContext.TraceIdentifier);
+        else
+            _logger.LogWarning("Request failed with {StatusCode}. TraceId: {TraceId}; Error: {ErrorType}", statusCode, httpContext.TraceIdentifier, exception.GetType().Name);
+
         var problemDetails =
             new ProblemDetails
             {
@@ -39,7 +51,8 @@ public class GlobalExceptionHandler
                 Detail =
                     statusCode == 500
                         ? "Đã xảy ra lỗi trong hệ thống."
-                        : exception.Message
+                        : exception.Message,
+                Extensions = { ["traceId"] = httpContext.TraceIdentifier }
             };
 
         httpContext.Response.StatusCode =

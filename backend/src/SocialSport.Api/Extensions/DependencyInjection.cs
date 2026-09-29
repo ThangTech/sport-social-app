@@ -105,6 +105,12 @@ public static class DependencyInjection
         services.AddScoped<ISportRepository, SportRepository>();
         services.AddScoped<ISportService, SportService>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
+        var allowedOrigins = configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
+        services.AddCors(options => options.AddPolicy("AppClients", policy =>
+        {
+            if (allowedOrigins.Length > 0)
+                policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
+        }));
         services.AddAuthorization();
         return services;
     }

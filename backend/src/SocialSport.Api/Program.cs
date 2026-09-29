@@ -25,6 +25,7 @@ if (!app.Environment.IsDevelopment())
 }
 //app.UseHttpsRedirection();
 app.UseStaticFiles();
+app.UseCors("AppClients");
 app.UseAuthentication();
 app.UseAuthorization();
 
