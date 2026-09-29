@@ -20,6 +20,7 @@ public class NotificationService : INotificationService
     private readonly IPostAccessService _postAccessService;
     private readonly IGroupRepository _groupRepository;
     private readonly IGroupMemberRepository _groupMemberRepository;
+    private readonly IPushNotificationSender _pushSender;
 
     public NotificationService(
         ApplicationDbContext context,
@@ -27,7 +28,8 @@ public class NotificationService : INotificationService
         IPostRepository postRepository,
         IPostAccessService postAccessService,
         IGroupRepository groupRepository,
-        IGroupMemberRepository groupMemberRepository)
+        IGroupMemberRepository groupMemberRepository,
+        IPushNotificationSender pushSender)
     {
         _context = context;
         _userManager = userManager;
@@ -35,6 +37,7 @@ public class NotificationService : INotificationService
         _postAccessService = postAccessService;
         _groupRepository = groupRepository;
         _groupMemberRepository = groupMemberRepository;
+        _pushSender = pushSender;
     }
 
     public async Task CreateAsync(Guid userId, Guid? actorId, NotificationType type, Guid? entityId = null)
@@ -52,6 +55,7 @@ public class NotificationService : INotificationService
             CreatedAt = DateTimeOffset.UtcNow
         });
         await _context.SaveChangesAsync();
+        await _pushSender.SendAsync(userId, GetMessage(type, await ActorName(actorId)), type, entityId);
     }
 
     public async Task<NotificationsResponse> GetAsync(Guid userId, int limit, string? cursor)
@@ -142,6 +146,25 @@ public class NotificationService : INotificationService
             .Where(x => x.UserId == userId && !x.IsRead)
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.IsRead, true).SetProperty(x => x.ReadAt, now));
     }
+
+    public async Task RegisterDeviceAsync(Guid userId, string expoPushToken, string platform)
+    {
+        var token = expoPushToken.Trim();
+        if (!(token.StartsWith("ExponentPushToken[") || token.StartsWith("ExpoPushToken[")) || !token.EndsWith(']')) throw new InvalidOperationException("Expo push token không hợp lệ.");
+        var item = await _context.DeviceTokens.FirstOrDefaultAsync(x => x.ExpoPushToken == token);
+        if (item is null) await _context.DeviceTokens.AddAsync(new DeviceToken { UserId = userId, ExpoPushToken = token, Platform = platform, IsActive = true, LastUsedAt = DateTimeOffset.UtcNow });
+        else { item.UserId = userId; item.Platform = platform; item.IsActive = true; item.LastUsedAt = DateTimeOffset.UtcNow; item.UpdatedAt = DateTimeOffset.UtcNow; }
+        await _context.SaveChangesAsync();
+    }
+
+    public async Task UnregisterDeviceAsync(Guid userId, string expoPushToken)
+    {
+        var item = await _context.DeviceTokens.FirstOrDefaultAsync(x => x.UserId == userId && x.ExpoPushToken == expoPushToken);
+        if (item is null) return;
+        item.IsActive = false; item.UpdatedAt = DateTimeOffset.UtcNow; await _context.SaveChangesAsync();
+    }
+
+    private async Task<string?> ActorName(Guid? actorId) => actorId.HasValue ? await _context.Users.Where(x => x.Id == actorId.Value).Select(x => x.DisplayName).FirstOrDefaultAsync() : null;
 
     private static string GetMessage(NotificationType type, string? actorName)
     {

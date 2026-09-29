@@ -101,6 +101,12 @@ public static class DependencyInjection
         services.AddScoped<IGroupMemberRepository, GroupMemberRepository>();
         services.AddScoped<IPostAccessService, PostAccessService>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IPushNotificationSender, ExpoPushNotificationSender>();
+        services.AddHttpClient("ExpoPush", client =>
+        {
+            client.BaseAddress = new Uri("https://exp.host/");
+            client.Timeout = TimeSpan.FromSeconds(10);
+        });
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IExploreService, ExploreService>();
         services.AddScoped<ICopyrightService, CopyrightService>();

@@ -36,6 +36,20 @@ public class NotificationsController : ControllerBase
         return NoContent();
     }
 
+    [HttpPost("devices")]
+    public async Task<IActionResult> RegisterDevice(RegisterDeviceTokenRequest request)
+    {
+        await _notificationService.RegisterDeviceAsync(GetCurrentUserId(), request.ExpoPushToken, request.Platform);
+        return NoContent();
+    }
+
+    [HttpDelete("devices")]
+    public async Task<IActionResult> UnregisterDevice(RegisterDeviceTokenRequest request)
+    {
+        await _notificationService.UnregisterDeviceAsync(GetCurrentUserId(), request.ExpoPushToken);
+        return NoContent();
+    }
+
     private Guid GetCurrentUserId()
     {
         var value = User.FindFirstValue(ClaimTypes.NameIdentifier);
