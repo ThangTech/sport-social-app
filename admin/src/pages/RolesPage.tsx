@@ -1,15 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, formatDate } from "../lib/api";
 import type { Administrator, RoleData } from "../lib/types";
-import {
-  inputClass,
-  PageHeader,
-  PageState,
-  Panel,
-  primaryButton,
-  secondaryButton,
-  StatusBadge,
-} from "../components/ui";
+import { PageHeader, PageState, Panel, StatusBadge } from "../components/ui";
+import { inputClass, primaryButton, secondaryButton } from "../lib/styles";
 export function RolesPage() {
   const [roles, setRoles] = useState<RoleData[]>([]),
     [admins, setAdmins] = useState<Administrator[]>([]),

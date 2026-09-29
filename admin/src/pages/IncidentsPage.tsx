@@ -1,14 +1,8 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { api, formatDate } from "../lib/api";
 import type { PageData } from "../lib/types";
-import {
-  inputClass,
-  PageHeader,
-  PageState,
-  Panel,
-  primaryButton,
-  StatusBadge,
-} from "../components/ui";
+import { PageHeader, PageState, Panel, StatusBadge } from "../components/ui";
+import { inputClass, primaryButton } from "../lib/styles";
 type Incident = {
   id: string;
   title: string;

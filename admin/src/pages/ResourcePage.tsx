@@ -1,12 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, formatDate } from "../lib/api";
 import type { AdminRow, PageData } from "../lib/types";
-import {
-  PageHeader,
-  PageState,
-  Panel,
-  secondaryButton,
-} from "../components/ui";
+import { PageHeader, PageState, Panel } from "../components/ui";
+import { secondaryButton } from "../lib/styles";
 export type Resource = "users" | "groups" | "posts" | "reports";
 const settings: Record<
   Resource,

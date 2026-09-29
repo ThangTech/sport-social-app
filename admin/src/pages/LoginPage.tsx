@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { api, tokenKey } from "../lib/api";
-import { inputClass, primaryButton } from "../components/ui";
+import { inputClass, primaryButton } from "../lib/styles";
 export function LoginPage({ done }: { done: () => void }) {
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
