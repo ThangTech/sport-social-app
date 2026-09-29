@@ -42,6 +42,26 @@ export async function api<T>(
     ? (undefined as T)
     : ((await response.json()) as T);
 }
+
+export async function apiBlob(path: string): Promise<Blob> {
+  if (!API_URL) {
+    throw new Error("VITE_API_URL chưa được cấu hình.");
+  }
+
+  const token = localStorage.getItem(tokenKey);
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
+        }
+      : {},
+  });
+  if (!response.ok) {
+    throw new Error("Không thể tải media được bảo vệ.");
+  }
+
+  return response.blob();
+}
 export const formatDate = (value?: string | null) =>
   value
     ? new Intl.DateTimeFormat("vi-VN", {
