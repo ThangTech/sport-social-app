@@ -102,6 +102,7 @@ public static class DependencyInjection
         services.AddScoped<IPostAccessService, PostAccessService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IReportService, ReportService>();
+        services.AddScoped<IExploreService, ExploreService>();
         services.AddScoped<ISportRepository, SportRepository>();
         services.AddScoped<ISportService, SportService>();
         services.AddExceptionHandler<GlobalExceptionHandler>();
