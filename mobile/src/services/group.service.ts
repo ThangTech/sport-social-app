@@ -46,6 +46,13 @@ export const updateGroup = async (id: string, request: SaveGroupRequest) => {
   });
 };
 
+export const deleteGroup = async (id: string) => {
+  await api<void>(`/groups/${id}`, {
+    method: "DELETE",
+    auth: true,
+  });
+};
+
 export const updateGroupAvatar = async (
   id: string,
   asset: ImagePickerAsset,

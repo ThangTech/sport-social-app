@@ -4,6 +4,7 @@ import AppText from "@/components/ui/AppText";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import {
+  deleteGroup,
   deleteGroupAvatar,
   deleteGroupCover,
   getGroupById,
@@ -19,6 +20,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -36,6 +38,7 @@ export default function EditGroupScreen() {
   const [group, setGroup] = useState<GroupDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [imageSubmitting, setImageSubmitting] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const loadGroup = useCallback(async (showLoading = true) => {
@@ -87,6 +90,35 @@ export default function EditGroupScreen() {
 
     await updateGroup(id, request);
     router.back();
+  };
+
+  const handleDelete = () => {
+    if (!group || deleting) return;
+
+    Alert.alert(
+      "Xóa nhóm",
+      "Nhóm sẽ biến mất khỏi danh sách. Thành viên sẽ không thể xem nhóm, bài viết hoặc tiếp tục tương tác. Dữ liệu được lưu dưới trạng thái đã xóa và không thể khôi phục trong ứng dụng.",
+      [
+        { text: "Không", style: "cancel" },
+        {
+          text: "Xóa nhóm",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setDeleting(true);
+              await deleteGroup(group.id);
+              router.replace("/(tabs)/community");
+            } catch (error) {
+              setDeleting(false);
+              Alert.alert(
+                "Không thể xóa nhóm",
+                error instanceof Error ? error.message : "Vui lòng thử lại.",
+              );
+            }
+          },
+        },
+      ],
+    );
   };
 
   return (
@@ -168,9 +200,38 @@ export default function EditGroupScreen() {
               initialDescription={group.description}
               initialPrivacy={group.privacy}
               submitLabel="Lưu thay đổi"
-              disabled={imageSubmitting}
+              disabled={imageSubmitting || deleting}
               onSubmit={handleSubmit}
             />
+
+            <View style={styles.dangerZone}>
+              <View style={styles.dangerCopy}>
+                <AppText variant="subtitle" color={COLORS.danger}>
+                  Xóa nhóm
+                </AppText>
+                <AppText color={COLORS.textMuted}>
+                  Nhóm và toàn bộ nội dung liên quan sẽ không còn truy cập được.
+                </AppText>
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Xóa nhóm"
+                disabled={deleting || imageSubmitting}
+                style={({ pressed }) => [
+                  styles.deleteButton,
+                  (pressed || deleting || imageSubmitting) && styles.buttonDisabled,
+                ]}
+                onPress={handleDelete}
+              >
+                {deleting ? (
+                  <ActivityIndicator color={COLORS.background} />
+                ) : (
+                  <AppText variant="label" color={COLORS.background}>
+                    Xóa nhóm
+                  </AppText>
+                )}
+              </Pressable>
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       ) : null}
@@ -222,5 +283,25 @@ const styles = StyleSheet.create({
     paddingVertical: SPACING.sm,
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.primary,
+  },
+  dangerZone: {
+    padding: SPACING.lg,
+    gap: SPACING.md,
+    borderWidth: 1,
+    borderColor: COLORS.danger,
+    borderRadius: RADIUS.md,
+  },
+  dangerCopy: {
+    gap: SPACING.xs,
+  },
+  deleteButton: {
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.danger,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
 });
