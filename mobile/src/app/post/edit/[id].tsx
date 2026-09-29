@@ -126,7 +126,11 @@ export default function EditPostScreen() {
       });
       if (selectedImage) {
         if (existingMedia && !removeExistingImage) {
-          const media = await updatePostMedia(id, existingMedia.id, selectedImage);
+          const media = await updatePostMedia(
+            id,
+            existingMedia.id,
+            selectedImage,
+          );
           pendingCopyrightReview = media.isPendingCopyrightReview;
         } else {
           if (existingMedia && removeExistingImage) {
@@ -140,7 +144,11 @@ export default function EditPostScreen() {
         await deletePostMedia(id, existingMedia.id);
       }
       router.back();
-      if (pendingCopyrightReview) Alert.alert("Đang kiểm tra bản quyền", "Bài viết tạm thời chưa hiển thị cho đến khi media được xem xét.");
+      if (pendingCopyrightReview)
+        Alert.alert(
+          "Đang kiểm tra bản quyền",
+          "Bài viết tạm thời chưa hiển thị cho đến khi media được xem xét.",
+        );
     } catch (error) {
       Alert.alert(
         "Không thể cập nhật bài viết",
@@ -208,17 +216,15 @@ export default function EditPostScreen() {
         placeholder="Nội dung bài viết..."
         variant="edit"
       >
-          <PostSportSelector
-            sports={sports}
-            value={
-              sportId && sportName ? { id: sportId, name: sportName } : null
-            }
-            onChange={(sport) => {
-              setSportId(sport?.id ?? null);
-              setSportName(sport?.name ?? null);
-            }}
-            disabled={submitting}
-          />
+        <PostSportSelector
+          sports={sports}
+          value={sportId && sportName ? { id: sportId, name: sportName } : null}
+          onChange={(sport) => {
+            setSportId(sport?.id ?? null);
+            setSportName(sport?.name ?? null);
+          }}
+          disabled={submitting}
+        />
       </PostEditorForm>
       <PostImagePreview
         selectedImage={selectedImage}
@@ -277,5 +283,4 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-
 });

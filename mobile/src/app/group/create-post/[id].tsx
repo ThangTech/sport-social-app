@@ -61,9 +61,7 @@ export default function CreateGroupPostScreen() {
         getSports().catch(() => null),
       ]);
 
-      if (
-        groupResult.currentUserMemberStatus !== GroupMemberStatus.Active
-      ) {
+      if (groupResult.currentUserMemberStatus !== GroupMemberStatus.Active) {
         setErrorMessage("Bạn phải là thành viên của nhóm để đăng bài.");
         return;
       }
@@ -114,7 +112,11 @@ export default function CreateGroupPostScreen() {
       }
 
       router.back();
-      if (pendingCopyrightReview) Alert.alert("Đang kiểm tra bản quyền", "Bài viết tạm thời chưa hiển thị vì media trùng với nội dung đã đăng ký.");
+      if (pendingCopyrightReview)
+        Alert.alert(
+          "Đang kiểm tra bản quyền",
+          "Bài viết tạm thời chưa hiển thị vì media trùng với nội dung đã đăng ký.",
+        );
     } catch (error) {
       if (postCreated) {
         Alert.alert(

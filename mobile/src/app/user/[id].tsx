@@ -126,12 +126,7 @@ export default function UserProfileScreen() {
   );
 
   const handleFollow = async () => {
-    if (
-      !user ||
-      followLoading ||
-      blockLoading ||
-      user.isBlockedByCurrentUser
-    ) {
+    if (!user || followLoading || blockLoading || user.isBlockedByCurrentUser) {
       return;
     }
 
@@ -234,7 +229,10 @@ export default function UserProfileScreen() {
       },
       (index) => {
         if (index === 1) {
-          router.push({ pathname: "/report" as never, params: { targetType: "1", targetId: user.id } });
+          router.push({
+            pathname: "/report" as never,
+            params: { targetType: "1", targetId: user.id },
+          });
           return;
         }
         if (index !== 0) return;
@@ -358,9 +356,7 @@ export default function UserProfileScreen() {
               ) : (
                 <>
                   <Ionicons
-                    name={
-                      user.isFollowing ? "checkmark" : "person-add-outline"
-                    }
+                    name={user.isFollowing ? "checkmark" : "person-add-outline"}
                     size={18}
                     color={user.isFollowing ? COLORS.text : COLORS.background}
                   />

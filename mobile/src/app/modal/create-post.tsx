@@ -3,11 +3,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { COLORS, SPACING } from "@/constants/theme";
 import { createPost, uploadPostMedia } from "@/services/post.service";
 import { useState, useEffect } from "react";
-import {
-  Alert,
-  StyleSheet,
-  View,
-} from "react-native";
+import { Alert, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { getSports } from "@/services/sport.service";
@@ -75,7 +71,11 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
 
       onClose();
       onCreated?.();
-      if (pendingCopyrightReview) Alert.alert("Đang kiểm tra bản quyền", "Bài viết tạm thời chưa hiển thị vì media trùng với nội dung đã đăng ký. Bạn sẽ nhận kết quả sau khi System Admin xem xét.");
+      if (pendingCopyrightReview)
+        Alert.alert(
+          "Đang kiểm tra bản quyền",
+          "Bài viết tạm thời chưa hiển thị vì media trùng với nội dung đã đăng ký. Bạn sẽ nhận kết quả sau khi System Admin xem xét.",
+        );
     } catch (error) {
       if (postCreated) {
         Alert.alert(
@@ -196,5 +196,4 @@ const styles = StyleSheet.create({
 
     gap: SPACING.xs,
   },
-
 });
