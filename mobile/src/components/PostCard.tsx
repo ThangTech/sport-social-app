@@ -179,7 +179,7 @@ export default function PostCard({
     );
   };
   const handlePostMenu = () => {
-    const actions: Array<"edit" | "delete" | "remove"> = [];
+    const actions: Array<"edit" | "delete" | "remove" | "report"> = [];
     const options: string[] = [];
 
     if (isOwner) {
@@ -190,6 +190,11 @@ export default function PostCard({
     if (onRemoveFromGroup) {
       actions.push("remove");
       options.push("Gỡ khỏi nhóm");
+    }
+
+    if (!isOwner) {
+      actions.push("report");
+      options.push("Báo cáo bài viết");
     }
 
     options.push("Hủy");
@@ -221,11 +226,12 @@ export default function PostCard({
 
         if (action === "delete") handleDeletePost();
         if (action === "remove") handleRemoveFromGroup();
+        if (action === "report") router.push({ pathname: "/report" as never, params: { targetType: "2", targetId: post.id } });
       },
     );
   };
   const showMenu =
-    !menuActionLoading && (isOwner || Boolean(onRemoveFromGroup));
+    !menuActionLoading && Boolean(currentUser);
   return (
     <View style={styles.card}>
       <PostCardHeader

@@ -227,12 +227,16 @@ export default function UserProfileScreen() {
 
     showActionSheetWithOptions(
       {
-        options: [blockLabel, "Hủy"],
-        cancelButtonIndex: 1,
+        options: [blockLabel, "Báo cáo người dùng", "Hủy"],
+        cancelButtonIndex: 2,
         destructiveButtonIndex: user.isBlockedByCurrentUser ? undefined : 0,
         title: "Tùy chọn người dùng",
       },
       (index) => {
+        if (index === 1) {
+          router.push({ pathname: "/report" as never, params: { targetType: "1", targetId: user.id } });
+          return;
+        }
         if (index !== 0) return;
 
         if (user.isBlockedByCurrentUser) {
