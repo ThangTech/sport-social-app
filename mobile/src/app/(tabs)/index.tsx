@@ -52,7 +52,9 @@ export default function HomeScreen() {
         if (!append) return mappedPosts;
 
         const existingIds = new Set(current.map((post) => post.id));
-        const newPosts = mappedPosts.filter((post) => !existingIds.has(post.id));
+        const newPosts = mappedPosts.filter(
+          (post) => !existingIds.has(post.id),
+        );
 
         return [...current, ...newPosts];
       });

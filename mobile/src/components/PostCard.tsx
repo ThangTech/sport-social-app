@@ -226,12 +226,15 @@ export default function PostCard({
 
         if (action === "delete") handleDeletePost();
         if (action === "remove") handleRemoveFromGroup();
-        if (action === "report") router.push({ pathname: "/report" as never, params: { targetType: "2", targetId: post.id } });
+        if (action === "report")
+          router.push({
+            pathname: "/report" as never,
+            params: { targetType: "2", targetId: post.id },
+          });
       },
     );
   };
-  const showMenu =
-    !menuActionLoading && Boolean(currentUser);
+  const showMenu = !menuActionLoading && Boolean(currentUser);
   return (
     <View style={styles.card}>
       <PostCardHeader
@@ -277,7 +280,6 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
     marginBottom: SPACING.md,
   },
-
 
   content: {
     paddingHorizontal: SPACING.lg,

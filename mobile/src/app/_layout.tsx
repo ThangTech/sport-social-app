@@ -27,18 +27,41 @@ function RootNavigator() {
     if (!user?.id) return;
     void registerForPushNotifications().catch(() => undefined);
     const open = (response: Notifications.NotificationResponse) => {
-      const data = response.notification.request.content.data as { type?: number; entityId?: string; actorId?: string };
-      if ([NotificationType.PostReaction, NotificationType.Comment, NotificationType.CommentReply].includes(data.type as NotificationType) && data.entityId) router.push({ pathname: "/post/[id]", params: { id: data.entityId } });
-      else if ([NotificationType.GroupJoinApproved, NotificationType.GroupJoinRejected].includes(data.type as NotificationType) && data.entityId) router.push({ pathname: "/group/[id]", params: { id: data.entityId } });
-      else if (data.type === NotificationType.Follow && data.actorId) router.push({ pathname: "/user/[id]", params: { id: data.actorId } });
+      const data = response.notification.request.content.data as {
+        type?: number;
+        entityId?: string;
+        actorId?: string;
+      };
+      if (
+        [
+          NotificationType.PostReaction,
+          NotificationType.Comment,
+          NotificationType.CommentReply,
+        ].includes(data.type as NotificationType) &&
+        data.entityId
+      )
+        router.push({ pathname: "/post/[id]", params: { id: data.entityId } });
+      else if (
+        [
+          NotificationType.GroupJoinApproved,
+          NotificationType.GroupJoinRejected,
+        ].includes(data.type as NotificationType) &&
+        data.entityId
+      )
+        router.push({ pathname: "/group/[id]", params: { id: data.entityId } });
+      else if (data.type === NotificationType.Follow && data.actorId)
+        router.push({ pathname: "/user/[id]", params: { id: data.actorId } });
       else router.push("/notifications");
     };
-    const subscription = Notifications.addNotificationResponseReceivedListener(open);
-    void Notifications.getLastNotificationResponseAsync().then(async response => {
-      if (!response) return;
-      open(response);
-      await Notifications.clearLastNotificationResponseAsync();
-    });
+    const subscription =
+      Notifications.addNotificationResponseReceivedListener(open);
+    void Notifications.getLastNotificationResponseAsync().then(
+      async (response) => {
+        if (!response) return;
+        open(response);
+        await Notifications.clearLastNotificationResponseAsync();
+      },
+    );
     return () => subscription.remove();
   }, [user?.id, router]);
 

@@ -4,7 +4,10 @@ import type { NotificationsResponse } from "@/types/notification";
 export const getNotifications = async (limit = 20, cursor?: string | null) => {
   const query = new URLSearchParams({ limit: limit.toString() });
   if (cursor) query.append("cursor", cursor);
-  return await api<NotificationsResponse>(`/notifications?${query.toString()}`, { auth: true });
+  return await api<NotificationsResponse>(
+    `/notifications?${query.toString()}`,
+    { auth: true },
+  );
 };
 
 export const getUnreadNotificationCount = async () =>
@@ -18,10 +21,24 @@ export const markAllNotificationsRead = async () => {
   await api<void>("/notifications/read-all", { method: "PATCH", auth: true });
 };
 
-export const registerDeviceToken = async (expoPushToken: string, platform: "ios" | "android") => {
-  await api<void>("/notifications/devices", { method: "POST", auth: true, body: JSON.stringify({ expoPushToken, platform }) });
+export const registerDeviceToken = async (
+  expoPushToken: string,
+  platform: "ios" | "android",
+) => {
+  await api<void>("/notifications/devices", {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify({ expoPushToken, platform }),
+  });
 };
 
-export const unregisterDeviceToken = async (expoPushToken: string, platform: "ios" | "android") => {
-  await api<void>("/notifications/devices", { method: "DELETE", auth: true, body: JSON.stringify({ expoPushToken, platform }) });
+export const unregisterDeviceToken = async (
+  expoPushToken: string,
+  platform: "ios" | "android",
+) => {
+  await api<void>("/notifications/devices", {
+    method: "DELETE",
+    auth: true,
+    body: JSON.stringify({ expoPushToken, platform }),
+  });
 };
