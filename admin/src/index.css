@@ -14,7 +14,7 @@
     @apply box-border;
   }
   body {
-    @apply m-0 min-w-80 min-h-screen bg-slate-50 text-slate-900 antialiased;
+    @apply m-0 min-w-80 min-h-screen bg-[#f4f6f8] text-slate-900 antialiased;
     font-family:
       Inter,
       ui-sans-serif,
@@ -33,4 +33,17 @@
   button {
     @apply cursor-pointer disabled:cursor-not-allowed;
   }
+}
+
+.ant-layout-sider .ant-menu-item-group-title {
+  padding-top: 16px;
+  color: #718096;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.ant-card {
+  box-shadow: 0 1px 2px rgb(15 23 42 / 4%);
 }

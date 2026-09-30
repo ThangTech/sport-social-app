@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
+import { Spin } from "antd";
 import { Navigate, Route, Routes } from "react-router";
 import { AdminLayout } from "./components/AdminLayout";
 import { tokenKey } from "./lib/api";
 import { AuditPage } from "./pages/AuditPage";
 import { CopyrightPage } from "./pages/CopyrightPage";
-import { DashboardPage } from "./pages/DashboardPage";
 import { IncidentsPage } from "./pages/IncidentsPage";
 import { LoginPage } from "./pages/LoginPage";
 import { OperationsPage } from "./pages/OperationsPage";
@@ -12,6 +12,12 @@ import { ResourcePage } from "./pages/ResourcePage";
 import { RolesPage } from "./pages/RolesPage";
 import { ReportsPage } from "./pages/ReportsPage";
 import { SportsPage } from "./pages/SportsPage";
+
+const DashboardPage = lazy(() =>
+  import("./pages/DashboardPage").then((module) => ({
+    default: module.DashboardPage,
+  })),
+);
 export default function App() {
   const [authenticated, setAuthenticated] = useState(
     Boolean(localStorage.getItem(tokenKey)),
@@ -29,7 +35,20 @@ export default function App() {
   return (
     <Routes>
       <Route element={<AdminLayout logout={logout} />}>
-        <Route index element={<DashboardPage />} />
+        <Route
+          index
+          element={
+            <Suspense
+              fallback={
+                <div className="grid min-h-96 place-items-center">
+                  <Spin size="large" tip="Đang tải dashboard" />
+                </div>
+              }
+            >
+              <DashboardPage />
+            </Suspense>
+          }
+        />
         <Route path="users" element={<ResourcePage resource="users" />} />
         <Route path="groups" element={<ResourcePage resource="groups" />} />
         <Route path="sports" element={<SportsPage />} />

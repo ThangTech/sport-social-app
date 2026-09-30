@@ -1,9 +1,13 @@
+import { ExportOutlined } from "@ant-design/icons";
+import type { TableProps } from "antd";
+import { Select, Space, Table, Tag, Typography } from "antd";
 import { useCallback, useEffect, useState } from "react";
+import { PageHeader, PageState } from "../components/ui";
 import { api, appUrl, formatDate } from "../lib/api";
 import type { AdminRow, PageData } from "../lib/types";
-import { PageHeader, PageState, Panel } from "../components/ui";
-import { secondaryButton } from "../lib/styles";
+
 export type Resource = "users" | "groups" | "posts";
+
 const settings: Record<
   Resource,
   {
@@ -43,144 +47,162 @@ const settings: Record<
     ],
   },
 };
+
 export function ResourcePage({ resource }: { resource: Resource }) {
   const config = settings[resource];
   const [page, setPage] = useState(1);
   const [data, setData] = useState<PageData<AdminRow> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
+
     try {
       setData(await api(`/admin/${resource}?page=${page}&pageSize=20`));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể tải dữ liệu.");
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "Không thể tải dữ liệu.",
+      );
     } finally {
       setLoading(false);
     }
   }, [page, resource]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
+
   const update = async (row: AdminRow, status: number) => {
+    setUpdatingId(row.id);
     setError("");
+
     try {
       await api(`/admin/${resource}/${row.id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status }),
       });
       await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Không thể cập nhật.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Không thể cập nhật.");
+    } finally {
+      setUpdatingId(null);
     }
   };
+
+  const columns: TableProps<AdminRow>["columns"] = [
+      {
+        title: "Nội dung",
+        key: "content",
+        render: (_, row) => {
+          const label = String(
+            row.name ??
+              row.content ??
+              row.displayName ??
+              row.userName ??
+              "—",
+          );
+          const publicUrl =
+            resource === "groups" || resource === "posts"
+              ? appUrl(
+                  resource === "groups"
+                    ? `/group/${row.id}`
+                    : `/post/${row.id}`,
+                )
+              : null;
+
+          return (
+            <div className="max-w-xl">
+              {publicUrl ? (
+                <Typography.Link
+                  href={publicUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  strong
+                >
+                  <Space size={6}>
+                    <span className="line-clamp-2">{label}</span>
+                    <ExportOutlined />
+                  </Space>
+                </Typography.Link>
+              ) : (
+                <Typography.Text strong>{label}</Typography.Text>
+              )}
+              {row.description ? (
+                <Typography.Text
+                  type="secondary"
+                  className="mt-1 block max-w-lg truncate text-xs"
+                >
+                  {String(row.description)}
+                </Typography.Text>
+              ) : null}
+            </div>
+          );
+        },
+      },
+      {
+        title: "Mã",
+        dataIndex: "id",
+        width: 130,
+        render: (value: string) => (
+          <Typography.Text code>{value.slice(0, 8)}…</Typography.Text>
+        ),
+      },
+      {
+        title: "Trạng thái",
+        dataIndex: "status",
+        width: 190,
+        render: (value: number, row) => (
+          <Select
+            value={value}
+            options={config.states.map(([state, label]) => ({
+              value: state,
+              label,
+            }))}
+            loading={updatingId === row.id}
+            disabled={updatingId === row.id}
+            onChange={(status) => void update(row, status)}
+            className="w-full"
+          />
+        ),
+      },
+      {
+        title: "Ngày tạo",
+        dataIndex: "createdAt",
+        width: 170,
+        render: (value?: string) => formatDate(value),
+      },
+  ];
+
   return (
     <>
       <PageHeader
         eyebrow="System management"
         title={config.title}
         description={config.description}
-        action={
-          <span className="text-sm font-semibold text-slate-500">
-            {data?.total ?? 0} mục
-          </span>
-        }
+        action={<Tag color="blue">{data?.total ?? 0} mục</Tag>}
       />
-      <PageState
-        loading={loading}
-        error={error}
-        empty={data?.items.length === 0}
-        retry={() => void load()}
-      >
-        {data && (
-          <Panel className="overflow-hidden !p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                  <tr>
-                    <th className="px-5 py-4">Nội dung</th>
-                    <th className="px-5 py-4">Mã</th>
-                    <th className="px-5 py-4">Trạng thái</th>
-                    <th className="px-5 py-4">Ngày tạo</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {data.items.map((row) => (
-                    <tr key={row.id} className="hover:bg-slate-50/60">
-                      <td className="max-w-xl px-5 py-4">
-                        {resource === "groups" || resource === "posts" ? (
-                          <a
-                            className="line-clamp-2 text-sm font-semibold text-brand-700 hover:underline"
-                            href={
-                              appUrl(
-                                resource === "groups"
-                                  ? `/group/${row.id}`
-                                  : `/post/${row.id}`,
-                              ) ?? undefined
-                            }
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            {String(row.name ?? row.content ?? "—")}
-                          </a>
-                        ) : (
-                          <p className="line-clamp-2 text-sm font-semibold text-slate-800">
-                            {String(row.displayName ?? row.userName ?? "—")}
-                          </p>
-                        )}
-                        {row.description ? (
-                          <p className="mt-1 line-clamp-1 text-xs text-slate-500">
-                            {String(row.description)}
-                          </p>
-                        ) : null}
-                      </td>
-                      <td className="px-5 py-4 font-mono text-xs text-slate-400">
-                        {row.id.slice(0, 8)}…
-                      </td>
-                      <td className="px-5 py-4">
-                        <select
-                          className="rounded-lg border border-slate-200 bg-white p-2 text-sm"
-                          value={row.status}
-                          onChange={(e) =>
-                            void update(row, Number(e.target.value))
-                          }
-                        >
-                          {config.states.map(([value, label]) => (
-                            <option value={value} key={value}>
-                              {label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-4 text-xs text-slate-500">
-                        {formatDate(row.createdAt as string)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex items-center justify-between border-t border-slate-100 px-5 py-4">
-              <button
-                className={secondaryButton}
-                disabled={page === 1}
-                onClick={() => setPage((x) => x - 1)}
-              >
-                Trang trước
-              </button>
-              <span className="text-sm text-slate-500">Trang {page}</span>
-              <button
-                className={secondaryButton}
-                disabled={page * data.pageSize >= data.total}
-                onClick={() => setPage((x) => x + 1)}
-              >
-                Trang sau
-              </button>
-            </div>
-          </Panel>
-        )}
+
+      <PageState loading={loading} error={error} retry={() => void load()}>
+        {data ? (
+          <Table
+            rowKey="id"
+            columns={columns}
+            dataSource={data.items}
+            scroll={{ x: 820 }}
+            pagination={{
+              current: page,
+              pageSize: data.pageSize,
+              total: data.total,
+              showSizeChanger: false,
+              showTotal: (total) => `${total} mục`,
+              onChange: setPage,
+            }}
+          />
+        ) : null}
       </PageState>
     </>
   );
