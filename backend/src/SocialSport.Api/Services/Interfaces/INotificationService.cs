@@ -10,6 +10,7 @@ public interface INotificationService
     Task<int> GetUnreadCountAsync(Guid userId);
     Task MarkReadAsync(Guid userId, Guid notificationId);
     Task MarkAllReadAsync(Guid userId);
+    Task DeleteAllAsync(Guid userId);
     Task RegisterDeviceAsync(Guid userId, string expoPushToken, string platform);
     Task UnregisterDeviceAsync(Guid userId, string expoPushToken);
 }

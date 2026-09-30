@@ -10,6 +10,8 @@ public class NotificationDto
     public string? ActorName { get; set; }
     public string? ActorAvatarUrl { get; set; }
     public string Message { get; set; } = string.Empty;
+    public string? TargetTitle { get; set; }
+    public string? TargetPreview { get; set; }
     public Guid? PostId { get; set; }
     public Guid? GroupId { get; set; }
     public Guid? CopyrightReviewId { get; set; }

@@ -36,6 +36,13 @@ public class NotificationsController : ControllerBase
         return NoContent();
     }
 
+    [HttpDelete]
+    public async Task<IActionResult> DeleteAll()
+    {
+        await _notificationService.DeleteAllAsync(GetCurrentUserId());
+        return NoContent();
+    }
+
     [HttpPost("devices")]
     public async Task<IActionResult> RegisterDevice(RegisterDeviceTokenRequest request)
     {

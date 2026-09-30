@@ -100,13 +100,20 @@ public class NotificationService : INotificationService
             if (notification.Type is NotificationType.PostReaction or NotificationType.Comment or NotificationType.CommentReply)
             {
                 var post = notification.EntityId.HasValue ? await _postRepository.GetByIdAsync(notification.EntityId.Value) : null;
-                if (post is not null && await _postAccessService.CanViewAsync(userId, post)) dto.PostId = post.Id;
+                if (post is not null
+                    && await _postAccessService.CanViewAsync(userId, post))
+                {
+                    dto.PostId = post.Id;
+                    dto.TargetTitle = post.Group?.Name ?? "Bài viết";
+                    dto.TargetPreview = Preview(post.Content);
+                }
             }
             else if (notification.Type is NotificationType.GroupJoinApproved or NotificationType.GroupJoinRejected)
             {
                 var group = notification.EntityId.HasValue ? await _groupRepository.GetByIdAsync(notification.EntityId.Value) : null;
                 if (group?.Status == GroupStatus.Active)
                 {
+                    dto.TargetTitle = group.Name;
                     var member = await _groupMemberRepository.GetAsync(group.Id, userId);
                     if (group.Privacy == GroupPrivacy.Public || member?.Status == GroupMemberStatus.Active) dto.GroupId = group.Id;
                 }
@@ -154,6 +161,13 @@ public class NotificationService : INotificationService
         await _context.Notifications
             .Where(x => x.UserId == userId && !x.IsRead)
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.IsRead, true).SetProperty(x => x.ReadAt, now));
+    }
+
+    public async Task DeleteAllAsync(Guid userId)
+    {
+        await _context.Notifications
+            .Where(x => x.UserId == userId)
+            .ExecuteDeleteAsync();
     }
 
     public async Task RegisterDeviceAsync(Guid userId, string expoPushToken, string platform)
@@ -236,6 +250,17 @@ public class NotificationService : INotificationService
             NotificationType.CopyrightScanResolved => "Lượt quét bản quyền video của bạn đã có kết quả.",
             _ => "Bạn có thông báo mới."
         };
+    }
+
+    private static string? Preview(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "Bài viết không có nội dung chữ.";
+        }
+
+        var text = value.Trim();
+        return text.Length <= 120 ? text : $"{text[..120]}…";
     }
 
     private static (DateTimeOffset? CreatedAt, Guid? Id) DecodeCursor(string? cursor)
