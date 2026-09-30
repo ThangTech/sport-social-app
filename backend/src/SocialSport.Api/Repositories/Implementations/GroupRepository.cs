@@ -27,7 +27,8 @@ namespace SocialSport.Api.Repositories.Implementations
             int limit,
             DateTimeOffset? cursorCreatedAt,
             Guid? cursorGroupId,
-            Guid? currentUserId)
+            Guid? currentUserId,
+            GroupListScope scope)
         {
             var query = _context.Groups
                 .AsNoTracking()
@@ -41,6 +42,28 @@ namespace SocialSport.Api.Repositories.Implementations
                 query = query.Where(x => !x.Members.Any(member =>
                     member.UserId == currentUserId.Value &&
                     member.Status == GroupMemberStatus.Banned));
+
+                if (scope == GroupListScope.Joined)
+                {
+                    query = query.Where(x => x.Members.Any(member =>
+                        member.UserId == currentUserId.Value
+                        && member.Status == GroupMemberStatus.Active));
+                }
+                else if (scope is GroupListScope.Public or GroupListScope.Private)
+                {
+                    query = query.Where(x => !x.Members.Any(member =>
+                        member.UserId == currentUserId.Value
+                        && member.Status == GroupMemberStatus.Active));
+                }
+            }
+
+            if (scope == GroupListScope.Public)
+            {
+                query = query.Where(x => x.Privacy == GroupPrivacy.Public);
+            }
+            else if (scope == GroupListScope.Private)
+            {
+                query = query.Where(x => x.Privacy == GroupPrivacy.Private);
             }
 
             if (cursorCreatedAt.HasValue && cursorGroupId.HasValue)

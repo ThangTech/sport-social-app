@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using SocialSport.Api.DTOs.Group;
 using SocialSport.Api.DTOs.Post;
+using SocialSport.Api.Models.Enums;
 using SocialSport.Api.Services.Interfaces;
 using System.Security.Claims;
 
@@ -30,9 +31,15 @@ namespace SocialSport.Api.Controllers
         public async Task<ActionResult<GroupsResponse>> GetAll(
             [FromQuery] string? search = null,
             [FromQuery] int limit = 20,
-            [FromQuery] string? cursor = null)
+            [FromQuery] string? cursor = null,
+            [FromQuery] GroupListScope scope = GroupListScope.All)
         {
-            return Ok(await _groupService.GetAllAsync(TryGetCurrentUserId(), search, limit, cursor));
+            return Ok(await _groupService.GetAllAsync(
+                TryGetCurrentUserId(),
+                search,
+                limit,
+                cursor,
+                scope));
         }
 
         [HttpGet("{id:guid}")]

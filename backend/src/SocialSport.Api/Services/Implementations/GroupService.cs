@@ -101,7 +101,12 @@ public class GroupService : IGroupService
         };
     }
 
-    public async Task<GroupsResponse> GetAllAsync(Guid? currentUserId, string? search, int limit, string? cursor)
+    public async Task<GroupsResponse> GetAllAsync(
+        Guid? currentUserId,
+        string? search,
+        int limit,
+        string? cursor,
+        GroupListScope scope)
     {
         limit = Math.Clamp(limit, 1, 50);
         search = string.IsNullOrWhiteSpace(search) ? null : search.Trim();
@@ -109,8 +114,20 @@ public class GroupService : IGroupService
         if (search?.Length > 150)
             throw new InvalidOperationException("Từ khóa tìm kiếm không được vượt quá 150 ký tự.");
 
+        if (!Enum.IsDefined(scope))
+            throw new InvalidOperationException("Phạm vi danh sách nhóm không hợp lệ.");
+
+        if (scope == GroupListScope.Joined && !currentUserId.HasValue)
+            throw new UnauthorizedAccessException("Bạn cần đăng nhập để xem nhóm đã tham gia.");
+
         var (cursorCreatedAt, cursorGroupId) = DecodeGroupCursor(cursor);
-        var groups = await _groupRepository.GetListAsync(search, limit, cursorCreatedAt, cursorGroupId, currentUserId);
+        var groups = await _groupRepository.GetListAsync(
+            search,
+            limit,
+            cursorCreatedAt,
+            cursorGroupId,
+            currentUserId,
+            scope);
         var hasMore = groups.Count > limit;
 
         if (hasMore)
