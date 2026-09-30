@@ -10,6 +10,8 @@ import { LoginPage } from "./pages/LoginPage";
 import { OperationsPage } from "./pages/OperationsPage";
 import { ResourcePage } from "./pages/ResourcePage";
 import { RolesPage } from "./pages/RolesPage";
+import { ReportsPage } from "./pages/ReportsPage";
+import { SportsPage } from "./pages/SportsPage";
 export default function App() {
   const [authenticated, setAuthenticated] = useState(
     Boolean(localStorage.getItem(tokenKey)),
@@ -30,8 +32,9 @@ export default function App() {
         <Route index element={<DashboardPage />} />
         <Route path="users" element={<ResourcePage resource="users" />} />
         <Route path="groups" element={<ResourcePage resource="groups" />} />
+        <Route path="sports" element={<SportsPage />} />
         <Route path="posts" element={<ResourcePage resource="posts" />} />
-        <Route path="reports" element={<ResourcePage resource="reports" />} />
+        <Route path="reports" element={<ReportsPage />} />
         <Route path="copyright" element={<CopyrightPage />} />
         <Route path="roles" element={<RolesPage />} />
         <Route path="operations" element={<OperationsPage />} />

@@ -23,6 +23,7 @@ export type DashboardData = {
     users: number;
     groups: number;
     posts: number;
+    sports: number;
     reportsPending: number;
     copyrightPending: number;
     openTasks: number;

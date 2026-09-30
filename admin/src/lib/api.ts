@@ -1,4 +1,5 @@
 const API_URL = import.meta.env.VITE_API_URL as string | undefined;
+const APP_URL = import.meta.env.VITE_APP_URL as string | undefined;
 export const tokenKey = "adminAccessToken";
 
 export function apiFileUrl(path: string): string {
@@ -7,6 +8,14 @@ export function apiFileUrl(path: string): string {
   }
 
   return new URL(path, API_URL).toString();
+}
+
+export function appUrl(path: string): string | null {
+  if (!APP_URL) {
+    return null;
+  }
+
+  return new URL(path, APP_URL).toString();
 }
 
 export async function api<T>(

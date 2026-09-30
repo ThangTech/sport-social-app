@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { api, formatDate } from "../lib/api";
+import { api, appUrl, formatDate } from "../lib/api";
 import type { AdminRow, PageData } from "../lib/types";
 import { PageHeader, PageState, Panel } from "../components/ui";
 import { secondaryButton } from "../lib/styles";
-export type Resource = "users" | "groups" | "posts" | "reports";
+export type Resource = "users" | "groups" | "posts";
 const settings: Record<
   Resource,
   {
@@ -18,7 +18,8 @@ const settings: Record<
     states: [
       [1, "Hoạt động"],
       [2, "Tạm khóa"],
-      [3, "Đã xóa"],
+      [3, "Bị cấm"],
+      [4, "Đã vô hiệu hóa"],
     ],
   },
   groups: {
@@ -41,23 +42,13 @@ const settings: Record<
       [4, "Đã xóa"],
     ],
   },
-  reports: {
-    title: "Báo cáo",
-    description: "Hàng đợi báo cáo của người dùng và kết quả xử lý.",
-    states: [
-      [1, "Chờ xử lý"],
-      [2, "Đang xem"],
-      [3, "Đã giải quyết"],
-      [4, "Từ chối"],
-    ],
-  },
 };
 export function ResourcePage({ resource }: { resource: Resource }) {
-  const config = settings[resource],
-    [page, setPage] = useState(1),
-    [data, setData] = useState<PageData<AdminRow> | null>(null),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState("");
+  const config = settings[resource];
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState<PageData<AdminRow> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -119,16 +110,26 @@ export function ResourcePage({ resource }: { resource: Resource }) {
                   {data.items.map((row) => (
                     <tr key={row.id} className="hover:bg-slate-50/60">
                       <td className="max-w-xl px-5 py-4">
-                        <p className="line-clamp-2 text-sm font-semibold text-slate-800">
-                          {String(
-                            row.displayName ??
-                              row.name ??
-                              row.reason ??
-                              row.content ??
-                              row.userName ??
-                              "—",
-                          )}
-                        </p>
+                        {resource === "groups" || resource === "posts" ? (
+                          <a
+                            className="line-clamp-2 text-sm font-semibold text-brand-700 hover:underline"
+                            href={
+                              appUrl(
+                                resource === "groups"
+                                  ? `/group/${row.id}`
+                                  : `/post/${row.id}`,
+                              ) ?? undefined
+                            }
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            {String(row.name ?? row.content ?? "—")}
+                          </a>
+                        ) : (
+                          <p className="line-clamp-2 text-sm font-semibold text-slate-800">
+                            {String(row.displayName ?? row.userName ?? "—")}
+                          </p>
+                        )}
                         {row.description ? (
                           <p className="mt-1 line-clamp-1 text-xs text-slate-500">
                             {String(row.description)}
