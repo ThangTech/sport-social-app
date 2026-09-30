@@ -12,7 +12,11 @@ namespace SocialSport.Api.Services.Interfaces
         Task<List<PostDto>> GetSavedPostsAsync(Guid userId);
         Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request);
         Task<ReactionResponse> RemoveReactionAsync(Guid userId, Guid postId);
-        Task<FeedResponse> GetFeedAsync(Guid userId, int limit, string? cursor);
+        Task<FeedResponse> GetFeedAsync(
+            Guid userId,
+            int limit,
+            string? cursor,
+            string? search);
         Task<PostDto> CreateAsync(Guid userId, CreatePostRequest request);
         Task<PostDto?> GetByIdAsync(Guid postId, Guid? currentUserId);
         Task<PostReactionsResponse?> GetReactionsAsync(Guid postId, Guid? currentUserId, int limit, string? cursor);

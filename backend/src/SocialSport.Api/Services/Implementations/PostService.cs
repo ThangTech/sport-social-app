@@ -395,9 +395,21 @@ namespace SocialSport.Api.Services.Implementations
 
             await _postRepository.SaveChangesAsync();
         }
-        public async Task<FeedResponse> GetFeedAsync(Guid userId, int limit, string? cursor)
+        public async Task<FeedResponse> GetFeedAsync(
+            Guid userId,
+            int limit,
+            string? cursor,
+            string? search)
         {
             limit = Math.Clamp(limit, 1, 50);
+            search = string.IsNullOrWhiteSpace(search)
+                ? null
+                : search.Trim();
+            if (search?.Length > 100)
+            {
+                throw new InvalidOperationException(
+                    "Từ khóa tìm kiếm không được vượt quá 100 ký tự.");
+            }
 
             DateTimeOffset? cursorDate = null;
 
@@ -418,7 +430,11 @@ namespace SocialSport.Api.Services.Implementations
                 }
             }
 
-            var posts = await _postRepository.GetFeedAsync(userId, limit, cursorDate);
+            var posts = await _postRepository.GetFeedAsync(
+                userId,
+                limit,
+                cursorDate,
+                search);
             var savedPostIds = await _savedPostRepository.GetSavedPostIdsAsync(userId, posts.Select(x => x.Id)
 );
             var hasMore = posts.Count > limit;

@@ -19,9 +19,16 @@ public class FeedsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<FeedResponse>> GetFeed([FromQuery] int limit = 20, [FromQuery] string? cursor = null)
+    public async Task<ActionResult<FeedResponse>> GetFeed(
+        [FromQuery] int limit = 20,
+        [FromQuery] string? cursor = null,
+        [FromQuery] string? search = null)
     {
-        var result = await _postService.GetFeedAsync(GetCurrentUserId(), limit, cursor);
+        var result = await _postService.GetFeedAsync(
+            GetCurrentUserId(),
+            limit,
+            cursor,
+            search);
         return Ok(result);
     }
 

@@ -102,7 +102,11 @@ namespace SocialSport.Api.Repositories.Implementations
         {
             await _context.Posts.AddAsync(post);
         }
-        public async Task<List<Post>> GetFeedAsync(Guid userId, int limit, DateTimeOffset? cursor)
+        public async Task<List<Post>> GetFeedAsync(
+            Guid userId,
+            int limit,
+            DateTimeOffset? cursor,
+            string? search)
         {
             var followingIds = _context.Follows.Where(x => x.FollowerId == userId).Select(x => x.FollowingId);
 
@@ -125,7 +129,19 @@ namespace SocialSport.Api.Repositories.Implementations
                     (x.Visibility == PostVisibility.Followers && followingIds.Contains(x.AuthorId)));
 
             if (cursor.HasValue)
+            {
                 query = query.Where(x => x.CreatedAt < cursor.Value);
+            }
+
+            if (search is not null)
+            {
+                query = query.Where(x =>
+                    (x.Content != null && x.Content.Contains(search))
+                    || (x.Sport != null && x.Sport.Name.Contains(search))
+                    || _context.Users.Any(user =>
+                        user.Id == x.AuthorId
+                        && user.DisplayName.Contains(search)));
+            }
 
             return await query
                 .OrderByDescending(x => x.CreatedAt)

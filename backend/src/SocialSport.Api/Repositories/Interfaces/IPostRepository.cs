@@ -12,7 +12,11 @@ namespace SocialSport.Api.Repositories.Interfaces
         Task<PostReaction?> GetReactionAsync(Guid postId, Guid userId);
         Task AddReactionAsync(PostReaction reaction);
         void RemoveReaction(PostReaction reaction);
-        Task<List<Post>> GetFeedAsync(Guid userId, int limit, DateTimeOffset? cursor);
+        Task<List<Post>> GetFeedAsync(
+            Guid userId,
+            int limit,
+            DateTimeOffset? cursor,
+            string? search);
         Task<Post?> GetByIdAsync(Guid id);
         Task<Post?> GetByIdForAccessAsync(Guid id);
         Task<List<PostReaction>> GetReactionsAsync(Guid postId, int limit, DateTimeOffset? cursorReactedAt, Guid? cursorUserId);
