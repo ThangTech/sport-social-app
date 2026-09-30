@@ -1,4 +1,4 @@
-import { Alert, Pressable, StyleSheet, View } from "react-native";
+import { Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import AppText from "@/components/ui/AppText";
@@ -14,6 +14,7 @@ type Props = {
   onReaction: () => void;
   onReactionCountPress: () => void;
   onComment?: () => void;
+  onShare: () => void;
   onSave: () => void;
 };
 
@@ -57,11 +58,12 @@ export default function PostCardActions(props: Props) {
           {props.commentCount}
         </AppText>
       </Pressable>
-      <Pressable
-        style={styles.actionButton}
-        onPress={() => Alert.alert("Chia sẻ")}
-      >
-        <Ionicons name="share-social-outline" size={22} color={COLORS.textMuted} />
+      <Pressable style={styles.actionButton} onPress={props.onShare}>
+        <Ionicons
+          name="share-social-outline"
+          size={22}
+          color={COLORS.textMuted}
+        />
       </Pressable>
       <Pressable
         style={[styles.saveButton, props.saveLoading && styles.disabled]}

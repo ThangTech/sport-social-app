@@ -11,6 +11,7 @@ type Props = {
   post: Post;
   showMenu: boolean;
   onAuthorPress?: () => void;
+  onGroupPress?: () => void;
   onMenuPress: () => void;
 };
 
@@ -18,6 +19,7 @@ export default function PostCardHeader({
   post,
   showMenu,
   onAuthorPress,
+  onGroupPress,
   onMenuPress,
 }: Props) {
   const visibilityIcon = post.groupId
@@ -30,22 +32,24 @@ export default function PostCardHeader({
 
   return (
     <View style={styles.header}>
-      <Pressable
-        style={styles.userInfo}
-        disabled={!onAuthorPress}
-        onPress={onAuthorPress}
-      >
-        <Avatar source={post.authorAvatar} />
+      <View style={styles.userInfo}>
+        <Pressable disabled={!onAuthorPress} onPress={onAuthorPress}>
+          <Avatar source={post.authorAvatar} />
+        </Pressable>
         <View style={styles.author}>
-          <AppText variant="label"> {post.authorName}</AppText>
+          <Pressable disabled={!onAuthorPress} onPress={onAuthorPress}>
+            <AppText variant="label">{post.authorName}</AppText>
+          </Pressable>
           {post.groupName ? (
-            <AppText
-              variant="caption"
-              color={COLORS.primary}
+            <Pressable
+              disabled={!onGroupPress}
+              onPress={onGroupPress}
               style={styles.groupName}
             >
-              {post.groupName}
-            </AppText>
+              <AppText variant="caption" color={COLORS.primary}>
+                {post.groupName}
+              </AppText>
+            </Pressable>
           ) : null}
           <View style={styles.postMeta}>
             <AppText variant="caption" color={COLORS.textMuted}>
@@ -59,7 +63,7 @@ export default function PostCardHeader({
             />
           </View>
         </View>
-      </Pressable>
+      </View>
 
       <View style={styles.headerActions}>
         {post.sport ? <SportBadge name={post.sport} /> : null}

@@ -1,5 +1,13 @@
 import { COLORS, SPACING } from "@/constants/theme";
-import { Image, StyleSheet, View, Alert, Pressable } from "react-native";
+import {
+  Alert,
+  Image,
+  Pressable,
+  Share,
+  StyleSheet,
+  View,
+} from "react-native";
+import * as Linking from "expo-linking";
 import AppText from "./ui/AppText";
 import { Post } from "../types/post";
 import {
@@ -122,6 +130,35 @@ export default function PostCard({
       },
     });
   };
+  const handleGroupPress = () => {
+    if (!post.groupId) return;
+
+    router.push({
+      pathname: "/group/[id]",
+      params: {
+        id: post.groupId,
+      },
+    });
+  };
+  const handleShare = async () => {
+    const configuredUrl = process.env.EXPO_PUBLIC_APP_URL?.replace(/\/$/, "");
+    const url = configuredUrl
+      ? `${configuredUrl}/post/${post.id}`
+      : Linking.createURL(`/post/${post.id}`);
+
+    try {
+      await Share.share({
+        message: `${post.authorName} trên SocialSport\n${url}`,
+        url,
+        title: "Chia sẻ bài viết",
+      });
+    } catch (error) {
+      Alert.alert(
+        "Không thể chia sẻ",
+        error instanceof Error ? error.message : "Vui lòng thử lại.",
+      );
+    }
+  };
   const handleDeletePost = () => {
     Alert.alert("Xóa bài viết", "Bạn có chắc muốn xóa bài viết này?", [
       {
@@ -241,6 +278,7 @@ export default function PostCard({
         post={displayedPost}
         showMenu={showMenu}
         onAuthorPress={onAuthorPress}
+        onGroupPress={post.groupId ? handleGroupPress : undefined}
         onMenuPress={handlePostMenu}
       />
       <Pressable onPress={onPress}>
@@ -267,6 +305,7 @@ export default function PostCard({
         onReaction={handleReaction}
         onReactionCountPress={handleReactionCountPress}
         onComment={onCommentPress ?? onPress}
+        onShare={handleShare}
         onSave={handleSave}
       />
     </View>
