@@ -11,6 +11,9 @@ export enum NotificationType {
   CopyrightDismissed = 10,
   CopyrightAppealResolved = 11,
   CopyrightScanResolved = 12,
+  GroupPostReviewPending = 13,
+  GroupPostApproved = 14,
+  GroupPostRejected = 15,
 }
 
 export type NotificationDto = {

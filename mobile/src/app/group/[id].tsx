@@ -326,26 +326,48 @@ export default function GroupDetailScreen() {
 
               <View style={styles.sectionHeader}>
                 <AppText variant="subtitle">Bài viết trong nhóm</AppText>
-                {canCreatePost ? (
-                  <Pressable
-                    style={styles.createPostButton}
-                    onPress={() =>
-                      router.push({
-                        pathname: "/group/create-post/[id]",
-                        params: { id: group.id },
-                      })
-                    }
-                  >
-                    <Ionicons
-                      name="create-outline"
-                      size={18}
-                      color={COLORS.background}
-                    />
-                    <AppText variant="label" color={COLORS.background}>
-                      Đăng bài
-                    </AppText>
-                  </Pressable>
-                ) : null}
+                <View style={styles.postHeaderActions}>
+                  {canModeratePosts ? (
+                    <Pressable
+                      style={styles.reviewQueueButton}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/group/post-review-queue/[id]",
+                          params: { id: group.id },
+                        })
+                      }
+                    >
+                      <Ionicons
+                        name="shield-checkmark-outline"
+                        size={18}
+                        color={COLORS.primary}
+                      />
+                      <AppText variant="label" color={COLORS.primary}>
+                        Duyệt bài
+                      </AppText>
+                    </Pressable>
+                  ) : null}
+                  {canCreatePost ? (
+                    <Pressable
+                      style={styles.createPostButton}
+                      onPress={() =>
+                        router.push({
+                          pathname: "/group/create-post/[id]",
+                          params: { id: group.id },
+                        })
+                      }
+                    >
+                      <Ionicons
+                        name="create-outline"
+                        size={18}
+                        color={COLORS.background}
+                      />
+                      <AppText variant="label" color={COLORS.background}>
+                        Đăng bài
+                      </AppText>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
 
               {postsErrorMessage ? (
@@ -487,6 +509,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     gap: SPACING.md,
+  },
+  postHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  reviewQueueButton: {
+    minHeight: 38,
+    paddingHorizontal: SPACING.md,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: RADIUS.full,
   },
   createPostButton: {
     minHeight: 38,

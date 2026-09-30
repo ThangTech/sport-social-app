@@ -21,6 +21,7 @@ export type FeedPostDto = {
   content?: string | null;
 
   visibility: number;
+  groupModerationStatus: number;
 
   likeCount: number;
   commentCount: number;

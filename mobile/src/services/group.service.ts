@@ -31,6 +31,42 @@ export const removeGroupPost = async (groupId: string, postId: string) => {
   });
 };
 
+export const getGroupPostReviewQueue = async (groupId: string) => {
+  return await api<FeedPostDto[]>(
+    `/groups/${groupId}/post-review-queue`,
+    {
+      method: "GET",
+      auth: true,
+    },
+  );
+};
+
+export const approveGroupPost = async (
+  groupId: string,
+  postId: string,
+) => {
+  await api<void>(
+    `/groups/${groupId}/post-review-queue/${postId}/approve`,
+    {
+      method: "POST",
+      auth: true,
+    },
+  );
+};
+
+export const rejectGroupPost = async (
+  groupId: string,
+  postId: string,
+) => {
+  await api<void>(
+    `/groups/${groupId}/post-review-queue/${postId}/reject`,
+    {
+      method: "POST",
+      auth: true,
+    },
+  );
+};
+
 export const createGroup = async (request: SaveGroupRequest) => {
   return await api<GroupDto>("/groups", {
     method: "POST",

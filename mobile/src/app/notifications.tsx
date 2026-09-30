@@ -32,11 +32,14 @@ const postNotificationTypes = new Set([
   NotificationType.PostReaction,
   NotificationType.Comment,
   NotificationType.CommentReply,
+  NotificationType.GroupPostApproved,
 ]);
 const groupNotificationTypes = new Set([
   NotificationType.GroupInvite,
   NotificationType.GroupJoinApproved,
   NotificationType.GroupJoinRejected,
+  NotificationType.GroupPostReviewPending,
+  NotificationType.GroupPostRejected,
 ]);
 
 export default function NotificationsScreen() {

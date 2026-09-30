@@ -112,11 +112,19 @@ export default function CreateGroupPostScreen() {
       }
 
       router.back();
-      if (pendingCopyrightReview)
+      if (post.groupModerationStatus === 1) {
+        Alert.alert(
+          "Đã gửi bài để duyệt",
+          pendingCopyrightReview
+            ? "Bài viết đang chờ quản trị nhóm duyệt và media cũng đang được kiểm tra bản quyền."
+            : "Chủ nhóm, quản trị viên hoặc kiểm duyệt viên sẽ xem bài trước khi bài được hiển thị.",
+        );
+      } else if (pendingCopyrightReview) {
         Alert.alert(
           "Đang kiểm tra bản quyền",
           "Bài viết tạm thời chưa hiển thị vì media trùng với nội dung đã đăng ký.",
         );
+      }
     } catch (error) {
       if (postCreated) {
         Alert.alert(
