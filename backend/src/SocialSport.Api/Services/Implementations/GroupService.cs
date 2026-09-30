@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using SocialSport.Api.DTOs.Group;
 using SocialSport.Api.DTOs.Post;
+using SocialSport.Api.Data;
 using SocialSport.Api.Identity;
 using SocialSport.Api.Models.Entities;
 using SocialSport.Api.Models.Enums;
@@ -25,6 +26,7 @@ public class GroupService : IGroupService
     private readonly IWebHostEnvironment _environment;
     private readonly INotificationService _notificationService;
     private readonly IMediaUrlService _mediaUrlService;
+    private readonly ApplicationDbContext _context;
 
     public GroupService(
         IGroupRepository groupRepository,
@@ -34,7 +36,8 @@ public class GroupService : IGroupService
         ISavedPostRepository savedPostRepository,
         IWebHostEnvironment environment,
         INotificationService notificationService,
-        IMediaUrlService mediaUrlService)
+        IMediaUrlService mediaUrlService,
+        ApplicationDbContext context)
     {
         _groupRepository = groupRepository;
         _userManager = userManager;
@@ -44,6 +47,7 @@ public class GroupService : IGroupService
         _environment = environment;
         _notificationService = notificationService;
         _mediaUrlService = mediaUrlService;
+        _context = context;
     }
 
     public async Task<GroupDto> CreateAsync(Guid userId, CreateGroupRequest request)
@@ -922,6 +926,10 @@ public class GroupService : IGroupService
         if (request.SportId.HasValue && !await _postRepository.SportExistsAsync(request.SportId.Value))
             throw new KeyNotFoundException("Không tìm thấy môn thể thao.");
 
+        var canPublishImmediately = group.OwnerId == userId
+            || member.Role is GroupMemberRole.Admin
+                or GroupMemberRole.Moderator;
+
         var post = new Post
         {
             Id = Guid.NewGuid(),
@@ -930,12 +938,26 @@ public class GroupService : IGroupService
             SportId = request.SportId,
             Content = request.Content.Trim(),
             Visibility = PostVisibility.Public,
-            Status = PostStatus.Published,
+            Status = canPublishImmediately
+                ? PostStatus.Published
+                : PostStatus.Hidden,
+            GroupModerationStatus = canPublishImmediately
+                ? GroupPostModerationStatus.Approved
+                : GroupPostModerationStatus.Pending,
             CreatedAt = DateTimeOffset.UtcNow
         };
 
         await _postRepository.AddAsync(post);
         await _postRepository.SaveChangesAsync();
+
+        if (!canPublishImmediately)
+        {
+            await _notificationService.CreateAsync(
+                userId,
+                null,
+                NotificationType.GroupPostReviewPending,
+                post.Id);
+        }
 
         var createdPost = await _postRepository.GetByIdAsync(post.Id);
         var author = await _userManager.FindByIdAsync(userId.ToString());
@@ -952,6 +974,7 @@ public class GroupService : IGroupService
             SportName = createdPost.Sport?.Name,
             Content = createdPost.Content,
             Visibility = createdPost.Visibility,
+            GroupModerationStatus = createdPost.GroupModerationStatus,
             LikeCount = createdPost.Reactions.Count,
             CommentCount = createdPost.Comments.Count(x => x.Status == CommentStatus.Published),
             CurrentReaction = null,
@@ -965,6 +988,160 @@ public class GroupService : IGroupService
                 MediaType = (int)x.MediaType,
                 SortOrder = x.SortOrder
             }).ToList()
+        };
+    }
+
+    public async Task<List<PostDto>> GetPendingPostsAsync(
+        Guid userId,
+        Guid groupId)
+    {
+        await EnsureCanModeratePostsAsync(userId, groupId);
+
+        var posts = await _context.Posts
+            .AsNoTracking()
+            .Include(x => x.Group)
+            .Include(x => x.Sport)
+            .Include(x => x.Media)
+            .Include(x => x.Reactions)
+            .Include(x => x.Comments)
+            .Where(x =>
+                x.GroupId == groupId
+                && x.GroupModerationStatus
+                    == GroupPostModerationStatus.Pending)
+            .OrderBy(x => x.CreatedAt)
+            .Take(50)
+            .ToListAsync();
+        var authorIds = posts
+            .Select(x => x.AuthorId)
+            .Distinct()
+            .ToList();
+        var users = await _userManager.Users
+            .Where(x => authorIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id);
+
+        return posts.Select(post =>
+        {
+            users.TryGetValue(post.AuthorId, out var author);
+            return ToPostDto(post, author);
+        }).ToList();
+    }
+
+    public async Task ApprovePostAsync(
+        Guid userId,
+        Guid groupId,
+        Guid postId)
+    {
+        await EnsureCanModeratePostsAsync(userId, groupId);
+        var post = await _context.Posts
+            .Include(x => x.Media)
+            .FirstOrDefaultAsync(x =>
+                x.Id == postId
+                && x.GroupId == groupId
+                && x.GroupModerationStatus
+                    == GroupPostModerationStatus.Pending)
+            ?? throw new KeyNotFoundException(
+                "Không tìm thấy bài viết đang chờ duyệt.");
+        var mediaIds = post.Media.Select(x => x.Id).ToList();
+        var hasBlockingCase = await _context.CopyrightCases.AnyAsync(x =>
+            mediaIds.Contains(x.PostMediaId)
+            && x.Status != CopyrightCaseStatus.Dismissed
+            && x.Status != CopyrightCaseStatus.AppealAccepted);
+        var hasBlockingScan = await _context.ExternalCopyrightScans.AnyAsync(x =>
+            mediaIds.Contains(x.PostMediaId)
+            && x.Status != ExternalCopyrightScanStatus.Clear
+            && x.Status != ExternalCopyrightScanStatus.ClearedByAdmin);
+
+        post.GroupModerationStatus = GroupPostModerationStatus.Approved;
+        post.Status = hasBlockingCase || hasBlockingScan
+            ? PostStatus.Hidden
+            : PostStatus.Published;
+        post.UpdatedAt = DateTimeOffset.UtcNow;
+        await _context.SaveChangesAsync();
+        await _notificationService.CreateAsync(
+            post.AuthorId,
+            userId,
+            NotificationType.GroupPostApproved,
+            post.Id);
+    }
+
+    public async Task RejectPostAsync(
+        Guid userId,
+        Guid groupId,
+        Guid postId)
+    {
+        await EnsureCanModeratePostsAsync(userId, groupId);
+        var post = await _context.Posts.FirstOrDefaultAsync(x =>
+            x.Id == postId
+            && x.GroupId == groupId
+            && x.GroupModerationStatus == GroupPostModerationStatus.Pending)
+            ?? throw new KeyNotFoundException(
+                "Không tìm thấy bài viết đang chờ duyệt.");
+
+        post.GroupModerationStatus = GroupPostModerationStatus.Rejected;
+        post.Status = PostStatus.Removed;
+        post.UpdatedAt = DateTimeOffset.UtcNow;
+        await _context.SaveChangesAsync();
+        await _notificationService.CreateAsync(
+            post.AuthorId,
+            userId,
+            NotificationType.GroupPostRejected,
+            post.Id);
+    }
+
+    private async Task EnsureCanModeratePostsAsync(
+        Guid userId,
+        Guid groupId)
+    {
+        var group = await _groupRepository.GetByIdAsync(groupId);
+        if (group is null || group.Status != GroupStatus.Active)
+        {
+            throw new KeyNotFoundException("Không tìm thấy nhóm.");
+        }
+
+        var member = await _groupMemberRepository.GetAsync(groupId, userId);
+        var canModerate = member?.Status == GroupMemberStatus.Active
+            && (group.OwnerId == userId
+                || member.Role is GroupMemberRole.Admin
+                    or GroupMemberRole.Moderator);
+        if (!canModerate)
+        {
+            throw new UnauthorizedAccessException(
+                "Bạn không có quyền duyệt bài viết trong nhóm.");
+        }
+    }
+
+    private PostDto ToPostDto(Post post, ApplicationUser? author)
+    {
+        return new PostDto
+        {
+            Id = post.Id,
+            AuthorId = post.AuthorId,
+            AuthorName = author?.DisplayName ?? string.Empty,
+            AuthorAvatar = author?.AvatarUrl,
+            GroupId = post.GroupId,
+            GroupName = post.Group?.Name,
+            SportId = post.SportId,
+            SportName = post.Sport?.Name,
+            Content = post.Content,
+            Visibility = post.Visibility,
+            GroupModerationStatus = post.GroupModerationStatus,
+            LikeCount = post.Reactions.Count,
+            CommentCount = post.Comments.Count(x =>
+                x.Status == CommentStatus.Published),
+            CurrentReaction = null,
+            IsSaved = false,
+            CreatedAt = post.CreatedAt,
+            UpdatedAt = post.UpdatedAt,
+            Media = post.Media
+                .OrderBy(x => x.SortOrder)
+                .Select(x => new PostMediaDto
+                {
+                    Id = x.Id,
+                    Url = _mediaUrlService.CreatePostMediaUrl(x.Id),
+                    MediaType = (int)x.MediaType,
+                    SortOrder = x.SortOrder
+                })
+                .ToList()
         };
     }
     public async Task<GroupPostsResponse> GetPostsAsync(Guid? userId, Guid groupId, int limit, string? cursor)

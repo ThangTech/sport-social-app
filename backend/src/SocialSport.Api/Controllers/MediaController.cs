@@ -37,8 +37,12 @@ public class MediaController : ControllerBase
         var groupUnavailable = media?.Post?.Group is not null &&
             (media.Post.Group.Status != GroupStatus.Active || media.Post.Group.DeletedAt != null);
 
+        var isPendingGroupReview = media?.Post is not null
+            && media.Post.GroupModerationStatus
+                == GroupPostModerationStatus.Pending;
         if (media?.Post is null ||
-            media.Post.Status != PostStatus.Published ||
+            (media.Post.Status != PostStatus.Published
+                && !isPendingGroupReview) ||
             media.Post.DeletedAt != null ||
             groupUnavailable)
         {

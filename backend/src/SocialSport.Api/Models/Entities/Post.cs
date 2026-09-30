@@ -23,6 +23,9 @@ namespace SocialSport.Api.Models.Entities
 
         public PostStatus Status { get; set; } = PostStatus.Published;
 
+        public GroupPostModerationStatus GroupModerationStatus { get; set; } =
+            GroupPostModerationStatus.NotApplicable;
+
         public Group? Group { get; set; }
 
         public Sport? Sport { get; set; }

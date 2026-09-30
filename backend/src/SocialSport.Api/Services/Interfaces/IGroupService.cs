@@ -34,6 +34,9 @@ namespace SocialSport.Api.Services.Interfaces
         Task UnbanMemberAsync(Guid userId, Guid groupId, Guid targetUserId);
 
         Task<PostDto> CreatePostAsync(Guid userId, Guid groupId, CreateGroupPostRequest request);
+        Task<List<PostDto>> GetPendingPostsAsync(Guid userId, Guid groupId);
+        Task ApprovePostAsync(Guid userId, Guid groupId, Guid postId);
+        Task RejectPostAsync(Guid userId, Guid groupId, Guid postId);
         Task<GroupPostsResponse> GetPostsAsync(Guid? userId, Guid groupId, int limit, string? cursor);
 
         Task RemovePostAsync(Guid userId, Guid groupId, Guid postId);

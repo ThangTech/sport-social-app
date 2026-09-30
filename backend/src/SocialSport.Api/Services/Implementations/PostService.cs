@@ -584,12 +584,20 @@ namespace SocialSport.Api.Services.Implementations
         public async Task<PostMediaUploadResponse> UploadMediaAsync(Guid userId, Guid postId, IFormFile file)
         {
             var post = await _postRepository.GetByIdAsync(postId);
+            var isPendingGroupReview = post is not null
+                && post.AuthorId == userId
+                && post.GroupId.HasValue
+                && post.Status == PostStatus.Hidden
+                && post.GroupModerationStatus
+                    == GroupPostModerationStatus.Pending;
 
-
-            if (post is null || post.Status != PostStatus.Published)
+            if (post is null
+                || (post.Status != PostStatus.Published
+                    && !isPendingGroupReview))
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
 
-            await _postAccessService.EnsureCanInteractAsync(userId, post);
+            if (!isPendingGroupReview)
+                await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             if (post.AuthorId != userId)
                 throw new UnauthorizedAccessException("Bạn không có quyền thêm media vào bài viết này.");

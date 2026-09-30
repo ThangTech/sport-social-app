@@ -392,7 +392,12 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
             && x.PostMedia.PostId == post.Id
             && x.Status != ExternalCopyrightScanStatus.Clear
             && x.Status != ExternalCopyrightScanStatus.ClearedByAdmin);
-        if (!hasCopyrightCase && !hasOtherScan && post.Status == PostStatus.Hidden)
+        if (!hasCopyrightCase
+            && !hasOtherScan
+            && post.Status == PostStatus.Hidden
+            && post.GroupModerationStatus is
+                GroupPostModerationStatus.NotApplicable
+                or GroupPostModerationStatus.Approved)
         {
             post.Status = PostStatus.Published;
             post.UpdatedAt = DateTimeOffset.UtcNow;

@@ -309,7 +309,10 @@ public class CopyrightService : ICopyrightService
                 && x.PostMedia.PostId == item.PostMedia.PostId
                 && x.Status != CopyrightCaseStatus.Dismissed
                 && x.Status != CopyrightCaseStatus.AppealAccepted);
-            if (!hasOtherBlockingCase)
+            if (!hasOtherBlockingCase
+                && item.PostMedia.Post.GroupModerationStatus is
+                    GroupPostModerationStatus.NotApplicable
+                    or GroupPostModerationStatus.Approved)
             {
                 item.PostMedia.Post.Status = PostStatus.Published;
             }

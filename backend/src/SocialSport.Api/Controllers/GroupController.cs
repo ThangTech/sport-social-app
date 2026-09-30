@@ -183,6 +183,37 @@ namespace SocialSport.Api.Controllers
             return Ok(await _groupService.CreatePostAsync(GetCurrentUserId(), id, request));
         }
 
+        [Authorize]
+        [HttpGet("{id:guid}/post-review-queue")]
+        public async Task<ActionResult<List<PostDto>>> GetPostReviewQueue(Guid id)
+        {
+            return Ok(await _groupService.GetPendingPostsAsync(
+                GetCurrentUserId(),
+                id));
+        }
+
+        [Authorize]
+        [HttpPost("{id:guid}/post-review-queue/{postId:guid}/approve")]
+        public async Task<IActionResult> ApprovePost(Guid id, Guid postId)
+        {
+            await _groupService.ApprovePostAsync(
+                GetCurrentUserId(),
+                id,
+                postId);
+            return NoContent();
+        }
+
+        [Authorize]
+        [HttpPost("{id:guid}/post-review-queue/{postId:guid}/reject")]
+        public async Task<IActionResult> RejectPost(Guid id, Guid postId)
+        {
+            await _groupService.RejectPostAsync(
+                GetCurrentUserId(),
+                id,
+                postId);
+            return NoContent();
+        }
+
         [HttpGet("{id:guid}/posts")]
         public async Task<ActionResult<GroupPostsResponse>> GetPosts(Guid id, [FromQuery] int limit = 20, [FromQuery] string? cursor = null)
         {

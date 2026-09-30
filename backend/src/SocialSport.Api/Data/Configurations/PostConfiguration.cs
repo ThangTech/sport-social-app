@@ -22,6 +22,9 @@ public class PostConfiguration : IEntityTypeConfiguration<Post>
         builder.Property(x => x.Status)
             .HasConversion<int>();
 
+        builder.Property(x => x.GroupModerationStatus)
+            .HasConversion<int>();
+
         // Người đăng
         builder.HasOne<ApplicationUser>()
             .WithMany()

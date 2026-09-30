@@ -19,6 +19,9 @@ namespace SocialSport.Api.Models.Enums
         CopyrightConfirmed = 9,
         CopyrightDismissed = 10,
         CopyrightAppealResolved = 11,
-        CopyrightScanResolved = 12
+        CopyrightScanResolved = 12,
+        GroupPostReviewPending = 13,
+        GroupPostApproved = 14,
+        GroupPostRejected = 15
     }
 }
