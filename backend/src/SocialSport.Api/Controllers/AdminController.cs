@@ -6,6 +6,7 @@ using SocialSport.Api.DTOs.Admin;
 using SocialSport.Api.Models.Enums;
 using SocialSport.Api.Models.Entities;
 using System.Security.Claims;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace SocialSport.Api.Controllers;
 
@@ -13,7 +14,15 @@ namespace SocialSport.Api.Controllers;
 public class AdminController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
-    public AdminController(ApplicationDbContext context) => _context = context;
+    private readonly IWebHostEnvironment _environment;
+
+    public AdminController(
+        ApplicationDbContext context,
+        IWebHostEnvironment environment)
+    {
+        _context = context;
+        _environment = environment;
+    }
 
     [HttpGet("users")]
     public async Task<IActionResult> Users([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
@@ -184,6 +193,60 @@ public class AdminController : ControllerBase
         });
     }
 
+    [HttpGet("reports/{id:guid}/target")]
+    public async Task<IActionResult> ReportTarget(Guid id)
+    {
+        var report = await _context.Reports
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == id)
+            ?? throw new KeyNotFoundException("Không tìm thấy báo cáo.");
+
+        return report.TargetType switch
+        {
+            ReportTargetType.User => Ok(await UserReportTarget(report.TargetId)),
+            ReportTargetType.Post => Ok(await PostReportTarget(report.TargetId)),
+            ReportTargetType.Comment => Ok(await CommentReportTarget(report.TargetId)),
+            ReportTargetType.Group => Ok(await GroupReportTarget(report.TargetId)),
+            _ => throw new InvalidOperationException("Loại đối tượng báo cáo không hợp lệ.")
+        };
+    }
+
+    [HttpGet("post-media/{mediaId:guid}")]
+    public async Task<IActionResult> PostMedia(Guid mediaId)
+    {
+        var mediaUrl = await _context.PostMedia
+            .AsNoTracking()
+            .Where(x => x.Id == mediaId)
+            .Select(x => x.Url)
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException("Không tìm thấy media bài viết.");
+        const string prefix = "/uploads/posts/";
+        if (!mediaUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new KeyNotFoundException("Đường dẫn media không hợp lệ.");
+        }
+
+        var webRoot = _environment.WebRootPath
+            ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+        var root = Path.GetFullPath(Path.Combine(webRoot, "uploads", "posts"));
+        var path = Path.GetFullPath(Path.Combine(root, Path.GetFileName(mediaUrl)));
+        if (!path.StartsWith(
+                $"{root}{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase)
+            || !System.IO.File.Exists(path))
+        {
+            throw new KeyNotFoundException("File media không còn khả dụng.");
+        }
+
+        var provider = new FileExtensionContentTypeProvider();
+        if (!provider.TryGetContentType(path, out var contentType))
+        {
+            contentType = "application/octet-stream";
+        }
+
+        return PhysicalFile(path, contentType, enableRangeProcessing: true);
+    }
+
     [HttpPatch("reports/{id:guid}/status")]
     public async Task<IActionResult> ReportStatus(Guid id, UpdateAdminStatusRequest request)
     {
@@ -198,6 +261,177 @@ public class AdminController : ControllerBase
         AddAudit("report.status", "report", id, $"Set report status to {report.Status}.");
         await _context.SaveChangesAsync();
         return NoContent();
+    }
+
+    [HttpGet("sports")]
+    public async Task<IActionResult> Sports()
+    {
+        var items = await _context.Sports
+            .AsNoTracking()
+            .OrderByDescending(x => x.IsActive)
+            .ThenBy(x => x.Name)
+            .Select(x => new
+            {
+                x.Id,
+                x.Name,
+                x.Slug,
+                x.IconUrl,
+                x.IsActive,
+                PostCount = x.Posts.Count,
+                x.CreatedAt,
+                x.UpdatedAt
+            })
+            .ToListAsync();
+        return Ok(items);
+    }
+
+    [HttpPost("sports")]
+    public async Task<IActionResult> CreateSport(CreateAdminSportRequest request)
+    {
+        var name = request.Name.Trim();
+        var slug = request.Slug.Trim().ToLowerInvariant();
+        if (await _context.Sports.AnyAsync(x => x.Name == name || x.Slug == slug))
+        {
+            throw new InvalidOperationException("Tên hoặc slug môn thể thao đã tồn tại.");
+        }
+
+        var sport = new Sport
+        {
+            Id = Guid.NewGuid(),
+            Name = name,
+            Slug = slug,
+            IconUrl = CleanOptional(request.IconUrl),
+            IsActive = true,
+            CreatedAt = DateTimeOffset.UtcNow
+        };
+        _context.Sports.Add(sport);
+        AddAudit("sport.created", "sport", sport.Id, $"Created sport tag {sport.Name}.");
+        await _context.SaveChangesAsync();
+        return Ok(new
+        {
+            sport.Id,
+            sport.Name,
+            sport.Slug,
+            sport.IconUrl,
+            sport.IsActive,
+            PostCount = 0,
+            sport.CreatedAt,
+            sport.UpdatedAt
+        });
+    }
+
+    [HttpPatch("sports/{id:guid}")]
+    public async Task<IActionResult> UpdateSport(
+        Guid id,
+        UpdateAdminSportRequest request)
+    {
+        var sport = await _context.Sports.FindAsync(id)
+            ?? throw new KeyNotFoundException("Không tìm thấy môn thể thao.");
+        var name = request.Name.Trim();
+        var slug = request.Slug.Trim().ToLowerInvariant();
+        if (await _context.Sports.AnyAsync(x =>
+                x.Id != id && (x.Name == name || x.Slug == slug)))
+        {
+            throw new InvalidOperationException("Tên hoặc slug môn thể thao đã tồn tại.");
+        }
+
+        sport.Name = name;
+        sport.Slug = slug;
+        sport.IconUrl = CleanOptional(request.IconUrl);
+        sport.IsActive = request.IsActive;
+        sport.UpdatedAt = DateTimeOffset.UtcNow;
+        AddAudit("sport.updated", "sport", sport.Id, $"Updated sport tag {sport.Name}.");
+        await _context.SaveChangesAsync();
+        return NoContent();
+    }
+
+    private async Task<object> UserReportTarget(Guid targetId)
+    {
+        return await _context.Users
+            .AsNoTracking()
+            .Where(x => x.Id == targetId)
+            .Select(x => new
+            {
+                Kind = "user",
+                Title = x.DisplayName,
+                Subtitle = x.Email,
+                x.Status,
+                AppPath = $"/user/{x.Id}",
+                Media = Array.Empty<object>()
+            })
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException("Người dùng bị báo cáo không còn tồn tại.");
+    }
+
+    private async Task<object> PostReportTarget(Guid targetId)
+    {
+        return await _context.Posts
+            .AsNoTracking()
+            .Where(x => x.Id == targetId)
+            .Select(x => new
+            {
+                Kind = "post",
+                Title = string.IsNullOrWhiteSpace(x.Content)
+                    ? "Bài viết không có nội dung chữ"
+                    : x.Content,
+                Subtitle = x.Group == null
+                    ? "Bài viết cá nhân"
+                    : $"Trong nhóm {x.Group.Name}",
+                x.Status,
+                AppPath = $"/post/{x.Id}",
+                Media = x.Media
+                    .OrderBy(media => media.SortOrder)
+                    .Select(media => new
+                    {
+                        media.Id,
+                        media.MediaType,
+                        Url = $"/admin/post-media/{media.Id}"
+                    })
+                    .ToList()
+            })
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException("Bài viết bị báo cáo không còn tồn tại.");
+    }
+
+    private async Task<object> CommentReportTarget(Guid targetId)
+    {
+        return await _context.Comments
+            .AsNoTracking()
+            .Where(x => x.Id == targetId)
+            .Select(x => new
+            {
+                Kind = "comment",
+                Title = x.Content,
+                Subtitle = "Bình luận trong bài viết",
+                x.Status,
+                AppPath = $"/post/{x.PostId}?commentId={x.Id}",
+                Media = Array.Empty<object>()
+            })
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException("Bình luận bị báo cáo không còn tồn tại.");
+    }
+
+    private async Task<object> GroupReportTarget(Guid targetId)
+    {
+        return await _context.Groups
+            .AsNoTracking()
+            .Where(x => x.Id == targetId)
+            .Select(x => new
+            {
+                Kind = "group",
+                Title = x.Name,
+                Subtitle = x.Description ?? "Nhóm không có mô tả",
+                x.Status,
+                AppPath = $"/group/{x.Id}",
+                Media = Array.Empty<object>()
+            })
+            .FirstOrDefaultAsync()
+            ?? throw new KeyNotFoundException("Nhóm bị báo cáo không còn tồn tại.");
+    }
+
+    private static string? CleanOptional(string? value)
+    {
+        return string.IsNullOrWhiteSpace(value) ? null : value.Trim();
     }
 
     private static (int Page, int PageSize) Normalize(int page, int pageSize)

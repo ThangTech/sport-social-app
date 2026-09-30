@@ -34,6 +34,7 @@ public class AdminOperationsController : ControllerBase
                 users = await _context.Users.CountAsync(),
                 groups = await _context.Groups.CountAsync(x => x.DeletedAt == null),
                 posts = await _context.Posts.CountAsync(x => x.DeletedAt == null),
+                sports = await _context.Sports.CountAsync(x => x.IsActive),
                 reportsPending = await _context.Reports.CountAsync(x => x.Status == ReportStatus.Pending),
                 copyrightPending = await _context.CopyrightCases.CountAsync(
                     x => x.Status == CopyrightCaseStatus.Pending ||
