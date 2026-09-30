@@ -2,7 +2,7 @@ import GroupListItem from "@/components/group/GroupListItem";
 import AppText from "@/components/ui/AppText";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 import { getGroups } from "@/services/group.service";
-import type { GroupDto } from "@/types/group";
+import { GroupListScope, type GroupDto } from "@/types/group";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -19,11 +19,29 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 const PAGE_SIZE = 20;
+const scopes = [
+  {
+    value: GroupListScope.Public,
+    label: "Công khai",
+    empty: "Chưa có nhóm công khai nào để khám phá.",
+  },
+  {
+    value: GroupListScope.Private,
+    label: "Riêng tư",
+    empty: "Chưa có nhóm riêng tư nào để khám phá.",
+  },
+  {
+    value: GroupListScope.Joined,
+    label: "Đã tham gia",
+    empty: "Bạn chưa tham gia nhóm nào.",
+  },
+];
 
 export default function CommunityScreen() {
   const [groups, setGroups] = useState<GroupDto[]>([]);
   const [searchText, setSearchText] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
+  const [activeScope, setActiveScope] = useState(GroupListScope.Public);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -31,15 +49,26 @@ export default function CommunityScreen() {
   const [errorMessage, setErrorMessage] = useState("");
   const loadingMoreRef = useRef(false);
   const activeSearchRef = useRef("");
+  const activeScopeRef = useRef(GroupListScope.Public);
 
   const loadGroups = useCallback(
-    async (search: string, cursor: string | null = null, append = false) => {
+    async (
+      search: string,
+      scope: GroupListScope,
+      cursor: string | null = null,
+      append = false,
+    ) => {
       try {
         if (!append) setErrorMessage("");
 
-        const response = await getGroups(search, PAGE_SIZE, cursor);
+        const response = await getGroups(search, scope, PAGE_SIZE, cursor);
 
-        if (activeSearchRef.current !== search) return;
+        if (
+          activeSearchRef.current !== search
+          || activeScopeRef.current !== scope
+        ) {
+          return;
+        }
 
         setGroups((current) => {
           if (!append) return response.items;
@@ -52,13 +81,21 @@ export default function CommunityScreen() {
         });
         setNextCursor(response.nextCursor ?? null);
       } catch (error) {
-        if (activeSearchRef.current !== search) return;
+        if (
+          activeSearchRef.current !== search
+          || activeScopeRef.current !== scope
+        ) {
+          return;
+        }
 
         setErrorMessage(
           error instanceof Error ? error.message : "Không thể tải nhóm.",
         );
       } finally {
-        if (activeSearchRef.current === search) {
+        if (
+          activeSearchRef.current === search
+          && activeScopeRef.current === scope
+        ) {
           setLoading(false);
           setRefreshing(false);
           setLoadingMore(false);
@@ -71,7 +108,7 @@ export default function CommunityScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      loadGroups(activeSearchRef.current);
+      loadGroups(activeSearchRef.current, activeScopeRef.current);
     }, [loadGroups]),
   );
 
@@ -83,7 +120,7 @@ export default function CommunityScreen() {
     setGroups([]);
     setNextCursor(null);
     setLoading(true);
-    loadGroups(nextSearch);
+    loadGroups(nextSearch, activeScopeRef.current);
   };
 
   const clearSearch = () => {
@@ -96,12 +133,23 @@ export default function CommunityScreen() {
     setGroups([]);
     setNextCursor(null);
     setLoading(true);
-    loadGroups("");
+    loadGroups("", activeScopeRef.current);
+  };
+
+  const changeScope = (scope: GroupListScope) => {
+    if (scope === activeScopeRef.current) return;
+
+    activeScopeRef.current = scope;
+    setActiveScope(scope);
+    setGroups([]);
+    setNextCursor(null);
+    setLoading(true);
+    loadGroups(activeSearchRef.current, scope);
   };
 
   const handleRefresh = () => {
     setRefreshing(true);
-    loadGroups(activeSearchRef.current);
+    loadGroups(activeSearchRef.current, activeScopeRef.current);
   };
 
   const handleLoadMore = () => {
@@ -116,7 +164,12 @@ export default function CommunityScreen() {
 
     loadingMoreRef.current = true;
     setLoadingMore(true);
-    loadGroups(activeSearchRef.current, nextCursor, true);
+    loadGroups(
+      activeSearchRef.current,
+      activeScopeRef.current,
+      nextCursor,
+      true,
+    );
   };
 
   return (
@@ -163,6 +216,31 @@ export default function CommunityScreen() {
         </Pressable>
       </View>
 
+      <View style={styles.scopeTabs}>
+        {scopes.map((scope) => (
+          <Pressable
+            key={scope.value}
+            onPress={() => changeScope(scope.value)}
+            style={[
+              styles.scopeTab,
+              activeScope === scope.value && styles.activeScopeTab,
+            ]}
+          >
+            <AppText
+              variant="caption"
+              color={
+                activeScope === scope.value
+                  ? COLORS.background
+                  : COLORS.textMuted
+              }
+              style={styles.scopeLabel}
+            >
+              {scope.label}
+            </AppText>
+          </Pressable>
+        ))}
+      </View>
+
       {loading ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={COLORS.primary} />
@@ -184,7 +262,7 @@ export default function CommunityScreen() {
             style={styles.retryButton}
             onPress={() => {
               setLoading(true);
-              loadGroups(activeSearchRef.current);
+              loadGroups(activeSearchRef.current, activeScopeRef.current);
             }}
           >
             <AppText variant="label" color={COLORS.background}>
@@ -217,7 +295,7 @@ export default function CommunityScreen() {
               <AppText color={COLORS.textMuted} style={styles.message}>
                 {activeSearch
                   ? "Không tìm thấy nhóm phù hợp."
-                  : "Chưa có nhóm nào để khám phá."}
+                  : scopes.find((scope) => scope.value === activeScope)?.empty}
               </AppText>
             </View>
           }
@@ -293,6 +371,29 @@ const styles = StyleSheet.create({
     flex: 1,
     color: COLORS.text,
     fontSize: 15,
+  },
+  scopeTabs: {
+    marginHorizontal: SPACING.lg,
+    marginBottom: SPACING.md,
+    padding: 4,
+    borderRadius: RADIUS.full,
+    backgroundColor: COLORS.surfaceAlt,
+    flexDirection: "row",
+  },
+  scopeTab: {
+    flex: 1,
+    minHeight: 38,
+    paddingHorizontal: SPACING.xs,
+    borderRadius: RADIUS.full,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  activeScopeTab: {
+    backgroundColor: COLORS.primary,
+  },
+  scopeLabel: {
+    fontWeight: "600",
+    textAlign: "center",
   },
   list: {
     padding: SPACING.lg,

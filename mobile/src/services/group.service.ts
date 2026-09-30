@@ -4,6 +4,7 @@ import type { FeedPostDto } from "@/types/feed";
 import type {
   CreateGroupPostRequest,
   GroupDto,
+  GroupListScope,
   GroupMemberDto,
   GroupPostsResponse,
   GroupsResponse,
@@ -179,10 +180,14 @@ export const unbanGroupMember = async (id: string, userId: string) => {
 
 export const getGroups = async (
   search: string,
+  scope: GroupListScope,
   limit = 20,
   cursor?: string | null,
 ) => {
-  const query = new URLSearchParams({ limit: limit.toString() });
+  const query = new URLSearchParams({
+    limit: limit.toString(),
+    scope: scope.toString(),
+  });
 
   if (search) query.append("search", search);
   if (cursor) query.append("cursor", cursor);

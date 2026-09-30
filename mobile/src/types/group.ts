@@ -5,6 +5,13 @@ export enum GroupPrivacy {
   Private = 2,
 }
 
+export enum GroupListScope {
+  All = 0,
+  Public = 1,
+  Private = 2,
+  Joined = 3,
+}
+
 export enum GroupStatus {
   Active = 1,
   Suspended = 2,
