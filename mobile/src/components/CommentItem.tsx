@@ -129,9 +129,18 @@ export default function CommentItem({
         <View style={styles.body}>
           <View style={styles.bubble}>
             <View style={styles.commentHeader}>
-              <Pressable onPress={() => onAuthorPress(comment.authorId)}>
-                <AppText variant="label">{comment.authorName}</AppText>
-              </Pressable>
+              <View style={styles.authorIdentity}>
+                <Pressable onPress={() => onAuthorPress(comment.authorId)}>
+                  <AppText variant="label">{comment.authorName}</AppText>
+                </Pressable>
+                {comment.authorGroupRole ? (
+                  <View style={styles.roleBadge}>
+                    <AppText variant="caption" color={COLORS.primary}>
+                      {comment.authorGroupRole}
+                    </AppText>
+                  </View>
+                ) : null}
+              </View>
 
               {isOwner && !comment.isDeleted ? (
                 <Pressable hitSlop={10} disabled={loading} onPress={handleMenu}>
@@ -187,6 +196,11 @@ export default function CommentItem({
               <AppText
                 color={comment.isDeleted ? COLORS.textMuted : COLORS.text}
               >
+                {comment.replyToUserName ? (
+                  <AppText color={COLORS.primary}>
+                    @{comment.replyToUserName}{" "}
+                  </AppText>
+                ) : null}
                 {comment.content}
               </AppText>
             )}
@@ -275,6 +289,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: SPACING.sm,
   },
+  authorIdentity: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: SPACING.xs,
+  },
+  roleBadge: {
+    borderRadius: 999,
+    backgroundColor: COLORS.primarySoft,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: 2,
+  },
 
   editBox: {
     marginTop: SPACING.xs,
@@ -309,6 +336,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   replyContainer: {
-  marginLeft: 28,
-},
+    marginLeft: 28,
+  },
 });

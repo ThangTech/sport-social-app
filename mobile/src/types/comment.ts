@@ -5,8 +5,11 @@ export type CommentDto = {
   authorId: string;
   authorName: string;
   authorAvatar?: string | null;
+  authorGroupRole?: string | null;
 
   parentCommentId?: string | null;
+  replyToUserId?: string | null;
+  replyToUserName?: string | null;
 
   content: string;
   isDeleted: boolean;
