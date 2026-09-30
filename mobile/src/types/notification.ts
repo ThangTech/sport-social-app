@@ -20,6 +20,8 @@ export type NotificationDto = {
   actorName?: string | null;
   actorAvatarUrl?: string | null;
   message: string;
+  targetTitle?: string | null;
+  targetPreview?: string | null;
   postId?: string | null;
   groupId?: string | null;
   copyrightReviewId?: string | null;

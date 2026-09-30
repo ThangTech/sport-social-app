@@ -21,6 +21,10 @@ export const markAllNotificationsRead = async () => {
   await api<void>("/notifications/read-all", { method: "PATCH", auth: true });
 };
 
+export const deleteAllNotifications = async () => {
+  await api<void>("/notifications", { method: "DELETE", auth: true });
+};
+
 export const registerDeviceToken = async (
   expoPushToken: string,
   platform: "ios" | "android",
