@@ -10,17 +10,27 @@ import { router } from "expo-router";
 import { useCallback, useState } from "react";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 
-export default function AppHeader() {
+type Props = {
+  searchActive?: boolean;
+  onSearchPress: () => void;
+};
+
+export default function AppHeader({ searchActive, onSearchPress }: Props) {
   const { user, profileImageVersion } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useFocusEffect(useCallback(() => {
-    if (!user?.id) {
-      setUnreadCount(0);
-      return;
-    }
-    void getUnreadNotificationCount().then((result) => setUnreadCount(result.count)).catch(() => setUnreadCount(0));
-  }, [user?.id]));
+  useFocusEffect(
+    useCallback(() => {
+      if (!user?.id) {
+        setUnreadCount(0);
+        return;
+      }
+
+      void getUnreadNotificationCount()
+        .then((result) => setUnreadCount(result.count))
+        .catch(() => setUnreadCount(0));
+    }, [user?.id]),
+  );
 
   return (
     <View style={styles.container}>
@@ -41,12 +51,14 @@ export default function AppHeader() {
 
       <View style={styles.actions}>
         <Pressable
-          style={styles.iconButton}
-          onPress={() => {
-            // Search sẽ triển khai sau.
-          }}
+          style={[styles.iconButton, searchActive && styles.activeIconButton]}
+          onPress={onSearchPress}
         >
-          <Ionicons name="search-outline" size={24} color={COLORS.text} />
+          <Ionicons
+            name="search-outline"
+            size={24}
+            color={searchActive ? COLORS.primary : COLORS.text}
+          />
         </Pressable>
 
         <Pressable
@@ -61,7 +73,11 @@ export default function AppHeader() {
 
           {unreadCount > 0 ? (
             <View style={styles.badge}>
-              <AppText variant="caption" color={COLORS.background} style={styles.badgeText}>
+              <AppText
+                variant="caption"
+                color={COLORS.background}
+                style={styles.badgeText}
+              >
                 {unreadCount > 99 ? "99+" : unreadCount}
               </AppText>
             </View>
@@ -134,6 +150,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  activeIconButton: {
+    backgroundColor: COLORS.primarySoft,
+  },
   badge: {
     position: "absolute",
     top: 1,
@@ -146,5 +165,8 @@ const styles = StyleSheet.create({
     borderRadius: RADIUS.full,
     backgroundColor: COLORS.danger,
   },
-  badgeText: { fontSize: 10, lineHeight: 12 },
+  badgeText: {
+    fontSize: 10,
+    lineHeight: 12,
+  },
 });

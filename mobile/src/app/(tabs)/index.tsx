@@ -11,10 +11,13 @@ import { useState, useRef, useCallback } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
+  TextInput,
   View,
 } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFocusEffect } from "@react-navigation/native";
@@ -25,57 +28,65 @@ export default function HomeScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [searchVisible, setSearchVisible] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
   const { user: currentUser } = useAuth();
   const currentUserIdRef = useRef<string | undefined>(currentUser?.id);
   const loadingMoreRef = useRef(false);
+  const searchQueryRef = useRef("");
   const { refresh } = useLocalSearchParams<{ refresh?: string }>();
 
-  const loadFeed = async (
-    userId: string,
-    cursor: string | null = null,
-    append = false,
-  ) => {
-    try {
-      if (!append) {
-        setErrorMessage("");
-      }
+  const loadFeed = useCallback(
+    async (
+      userId: string,
+      cursor: string | null,
+      append: boolean,
+      search: string,
+    ) => {
+      try {
+        if (!append) {
+          setErrorMessage("");
+        }
 
-      const response = await getFeed(20, cursor);
+        const response = await getFeed(20, cursor, search);
 
-      if (currentUserIdRef.current !== userId) {
-        return;
-      }
+        if (currentUserIdRef.current !== userId) {
+          return;
+        }
 
-      const mappedPosts = response.items.map(mapFeedPostToPost);
+        const mappedPosts = response.items.map(mapFeedPostToPost);
 
-      setPosts((current) => {
-        if (!append) return mappedPosts;
+        setPosts((current) => {
+          if (!append) return mappedPosts;
 
-        const existingIds = new Set(current.map((post) => post.id));
-        const newPosts = mappedPosts.filter(
-          (post) => !existingIds.has(post.id),
+          const existingIds = new Set(current.map((post) => post.id));
+          const newPosts = mappedPosts.filter(
+            (post) => !existingIds.has(post.id),
+          );
+
+          return [...current, ...newPosts];
+        });
+        setNextCursor(response.nextCursor ?? null);
+      } catch (error) {
+        if (currentUserIdRef.current !== userId) {
+          return;
+        }
+
+        setErrorMessage(
+          error instanceof Error ? error.message : "Không thể tải bảng tin.",
         );
-
-        return [...current, ...newPosts];
-      });
-      setNextCursor(response.nextCursor ?? null);
-    } catch (error) {
-      if (currentUserIdRef.current !== userId) {
-        return;
+      } finally {
+        if (currentUserIdRef.current === userId) {
+          setLoading(false);
+          setRefreshing(false);
+          setLoadingMore(false);
+          loadingMoreRef.current = false;
+        }
       }
-
-      setErrorMessage(
-        error instanceof Error ? error.message : "Không thể tải bảng tin.",
-      );
-    } finally {
-      if (currentUserIdRef.current === userId) {
-        setLoading(false);
-        setRefreshing(false);
-        setLoadingMore(false);
-        loadingMoreRef.current = false;
-      }
-    }
-  };
+    },
+    [],
+  );
   useFocusEffect(
     useCallback(() => {
       void refresh;
@@ -94,17 +105,20 @@ export default function HomeScreen() {
       if (previousUserId !== currentUser.id) {
         setPosts([]);
         setLoading(true);
+        setSearchInput("");
+        setSearchQuery("");
+        searchQueryRef.current = "";
       }
 
-      loadFeed(currentUser.id);
-    }, [currentUser?.id, refresh]),
+      loadFeed(currentUser.id, null, false, searchQueryRef.current);
+    }, [currentUser?.id, loadFeed, refresh]),
   );
   const handleRefresh = async () => {
     if (!currentUser?.id) return;
 
     setRefreshing(true);
 
-    await loadFeed(currentUser.id);
+    await loadFeed(currentUser.id, null, false, searchQuery);
   };
 
   const handleLoadMore = async () => {
@@ -120,13 +134,34 @@ export default function HomeScreen() {
 
     loadingMoreRef.current = true;
     setLoadingMore(true);
-    await loadFeed(currentUser.id, nextCursor, true);
+    await loadFeed(currentUser.id, nextCursor, true, searchQuery);
+  };
+  const handleSearch = async () => {
+    if (!currentUser?.id) return;
+
+    const query = searchInput.trim();
+    setSearchQuery(query);
+    searchQueryRef.current = query;
+    setLoading(true);
+    await loadFeed(currentUser.id, null, false, query);
+  };
+  const clearSearch = async () => {
+    if (!currentUser?.id) return;
+
+    setSearchInput("");
+    setSearchQuery("");
+    searchQueryRef.current = "";
+    setLoading(true);
+    await loadFeed(currentUser.id, null, false, "");
   };
 
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
-        <AppHeader />
+        <AppHeader
+          searchActive={searchVisible}
+          onSearchPress={() => setSearchVisible((current) => !current)}
+        />
 
         <View style={styles.center}>
           <ActivityIndicator size="large" color={COLORS.primary} />
@@ -141,7 +176,40 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <AppHeader />
+      <AppHeader
+        searchActive={searchVisible}
+        onSearchPress={() => setSearchVisible((current) => !current)}
+      />
+
+      {searchVisible ? (
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={20} color={COLORS.textMuted} />
+          <TextInput
+            value={searchInput}
+            onChangeText={setSearchInput}
+            onSubmitEditing={() => void handleSearch()}
+            placeholder="Tìm nội dung, tác giả hoặc môn thể thao"
+            placeholderTextColor={COLORS.textMuted}
+            returnKeyType="search"
+            maxLength={100}
+            style={styles.searchInput}
+          />
+          {searchInput || searchQuery ? (
+            <Pressable hitSlop={8} onPress={() => void clearSearch()}>
+              <Ionicons name="close-circle" size={21} color={COLORS.textMuted} />
+            </Pressable>
+          ) : null}
+          <Pressable
+            disabled={!searchInput.trim()}
+            onPress={() => void handleSearch()}
+            style={styles.searchButton}
+          >
+            <AppText variant="caption" color={COLORS.background}>
+              Tìm
+            </AppText>
+          </Pressable>
+        </View>
+      ) : null}
 
       <FlatList
         data={posts}
@@ -162,7 +230,9 @@ export default function HomeScreen() {
           !errorMessage ? (
             <View style={styles.center}>
               <AppText color={COLORS.textMuted}>
-                Chưa có bài viết nào trên bảng tin.
+                {searchQuery
+                  ? `Không tìm thấy bài viết cho “${searchQuery}”.`
+                  : "Chưa có bài viết nào trên bảng tin."}
               </AppText>
             </View>
           ) : null
@@ -247,6 +317,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.danger,
     borderRadius: 10,
+  },
+  searchBar: {
+    marginHorizontal: SPACING.lg,
+    marginVertical: SPACING.sm,
+    minHeight: 46,
+    paddingLeft: SPACING.md,
+    paddingRight: SPACING.xs,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 14,
+    backgroundColor: COLORS.surface,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: SPACING.sm,
+  },
+  searchInput: {
+    flex: 1,
+    color: COLORS.text,
+    fontSize: 15,
+  },
+  searchButton: {
+    minHeight: 36,
+    paddingHorizontal: SPACING.md,
+    borderRadius: 10,
+    backgroundColor: COLORS.primary,
+    alignItems: "center",
+    justifyContent: "center",
   },
   listFooter: {
     padding: SPACING.lg,
