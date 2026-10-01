@@ -25,5 +25,7 @@ namespace SocialSport.Api.Models.Entities
         public Guid? ReviewedBy { get; set; }
 
         public DateTimeOffset? ReviewedAt { get; set; }
+
+        public string? ResolutionNote { get; set; }
     }
 }

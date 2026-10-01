@@ -181,6 +181,21 @@ public class AdminController : ControllerBase
                 x.Status,
                 x.ReviewedBy,
                 x.ReviewedAt,
+                x.ResolutionNote,
+                ReporterDisplayName = _context.Users
+                    .Where(user => user.Id == x.ReporterId)
+                    .Select(user => user.DisplayName)
+                    .FirstOrDefault(),
+                ReporterEmail = _context.Users
+                    .Where(user => user.Id == x.ReporterId)
+                    .Select(user => user.Email)
+                    .FirstOrDefault(),
+                ReviewedByDisplayName = x.ReviewedBy == null
+                    ? null
+                    : _context.Users
+                        .Where(user => user.Id == x.ReviewedBy)
+                        .Select(user => user.DisplayName)
+                        .FirstOrDefault(),
                 x.CreatedAt
             })
             .ToListAsync();
@@ -248,17 +263,35 @@ public class AdminController : ControllerBase
     }
 
     [HttpPatch("reports/{id:guid}/status")]
-    public async Task<IActionResult> ReportStatus(Guid id, UpdateAdminStatusRequest request)
+    public async Task<IActionResult> ReportStatus(
+        Guid id,
+        UpdateReportStatusRequest request)
     {
-        if (!Enum.IsDefined(typeof(ReportStatus), request.Status))
+        if (!Enum.IsDefined(request.Status))
         {
             throw new InvalidOperationException("Trạng thái báo cáo không hợp lệ.");
         }
-        var report = await _context.Reports.FindAsync(id) ?? throw new KeyNotFoundException("Không tìm thấy báo cáo.");
-        report.Status = (ReportStatus)request.Status;
+
+        var resolutionNote = CleanOptional(request.ResolutionNote);
+        if (request.Status is Models.Enums.ReportStatus.Resolved
+            or Models.Enums.ReportStatus.Rejected
+            && resolutionNote is null)
+        {
+            throw new InvalidOperationException(
+                "Vui lòng nhập ghi chú kết quả trước khi đóng báo cáo.");
+        }
+
+        var report = await _context.Reports.FindAsync(id)
+            ?? throw new KeyNotFoundException("Không tìm thấy báo cáo.");
+        report.Status = request.Status;
         report.ReviewedBy = CurrentUserId();
         report.ReviewedAt = DateTimeOffset.UtcNow;
-        AddAudit("report.status", "report", id, $"Set report status to {report.Status}.");
+        report.ResolutionNote = resolutionNote;
+        AddAudit(
+            "report.status",
+            "report",
+            id,
+            $"Set {report.TargetType} report for {report.TargetId} to {report.Status}.");
         await _context.SaveChangesAsync();
         return NoContent();
     }

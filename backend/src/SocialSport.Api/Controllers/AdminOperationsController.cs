@@ -186,7 +186,10 @@ public class AdminOperationsController : ControllerBase
             .OrderBy(x => x.Status == OperationalTaskStatus.Completed)
             .ThenByDescending(x => x.Priority)
             .ThenBy(x => x.DueAt);
-        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        var items = await q
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
         var total = await q.CountAsync();
 
         return Ok(new { items, total, page, pageSize });
@@ -235,7 +238,10 @@ public class AdminOperationsController : ControllerBase
     {
         (page, pageSize) = Normalize(page, pageSize);
         var q = _context.ChangeRequests.AsNoTracking().OrderByDescending(x => x.CreatedAt);
-        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        var items = await q
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync();
         var total = await q.CountAsync();
 
         return Ok(new { items, total, page, pageSize });
@@ -387,7 +393,28 @@ public class AdminOperationsController : ControllerBase
     {
         (page, pageSize) = Normalize(page, pageSize);
         var q = _context.AdminAuditLogs.AsNoTracking().OrderByDescending(x => x.CreatedAt);
-        var items = await q.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        var items = await q
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(item => new
+            {
+                item.Id,
+                item.ActorId,
+                ActorDisplayName = _context.Users
+                    .Where(user => user.Id == item.ActorId)
+                    .Select(user => user.DisplayName)
+                    .FirstOrDefault(),
+                ActorEmail = _context.Users
+                    .Where(user => user.Id == item.ActorId)
+                    .Select(user => user.Email)
+                    .FirstOrDefault(),
+                item.Action,
+                item.TargetType,
+                item.TargetId,
+                item.Summary,
+                item.CreatedAt
+            })
+            .ToListAsync();
         var total = await q.CountAsync();
 
         return Ok(new { items, total, page, pageSize });

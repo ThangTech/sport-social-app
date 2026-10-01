@@ -9,8 +9,18 @@ namespace SocialSport.Api.Services.Implementations;
 
 public class ReportService : IReportService
 {
-    private static readonly HashSet<string> AllowedReasons = new(StringComparer.OrdinalIgnoreCase)
-    { "spam", "harassment", "hate", "violence", "sexual", "impersonation", "other" };
+    private static readonly HashSet<string> AllowedReasons = new(
+        new[]
+        {
+            "spam",
+            "harassment",
+            "hate",
+            "violence",
+            "sexual",
+            "impersonation",
+            "other"
+        },
+        StringComparer.OrdinalIgnoreCase);
     private readonly ApplicationDbContext _context;
     private readonly IPostAccessService _postAccessService;
 
@@ -30,25 +40,64 @@ public class ReportService : IReportService
             throw new InvalidOperationException("Vui lòng mô tả lý do báo cáo.");
 
         await EnsureTargetVisibleAsync(reporterId, request.TargetType, request.TargetId);
-        var duplicate = await _context.Reports.AnyAsync(x => x.ReporterId == reporterId && x.TargetType == request.TargetType && x.TargetId == request.TargetId && (x.Status == ReportStatus.Pending || x.Status == ReportStatus.Reviewing));
-        if (duplicate) throw new InvalidOperationException("Bạn đã có báo cáo đang được xử lý cho nội dung này.");
+        var duplicate = await _context.Reports.AnyAsync(x =>
+            x.ReporterId == reporterId
+            && x.TargetType == request.TargetType
+            && x.TargetId == request.TargetId
+            && (x.Status == ReportStatus.Pending
+                || x.Status == ReportStatus.Reviewing));
+        if (duplicate)
+        {
+            throw new InvalidOperationException(
+                "Bạn đã có báo cáo đang được xử lý cho nội dung này.");
+        }
+
         var since = DateTimeOffset.UtcNow.AddHours(-24);
-        if (await _context.Reports.CountAsync(x => x.ReporterId == reporterId && x.CreatedAt >= since) >= 10)
-            throw new InvalidOperationException("Bạn đã gửi quá nhiều báo cáo. Vui lòng thử lại sau.");
+        if (await _context.Reports.CountAsync(x =>
+                x.ReporterId == reporterId
+                && x.CreatedAt >= since) >= 10)
+        {
+            throw new InvalidOperationException(
+                "Bạn đã gửi quá nhiều báo cáo. Vui lòng thử lại sau.");
+        }
 
         var report = new Report
         {
-            Id = Guid.NewGuid(), ReporterId = reporterId, TargetType = request.TargetType,
-            TargetId = request.TargetId, Reason = reason, Description = description,
-            Status = ReportStatus.Pending, CreatedAt = DateTimeOffset.UtcNow
+            Id = Guid.NewGuid(),
+            ReporterId = reporterId,
+            TargetType = request.TargetType,
+            TargetId = request.TargetId,
+            Reason = reason,
+            Description = description,
+            Status = ReportStatus.Pending,
+            CreatedAt = DateTimeOffset.UtcNow
         };
         await _context.Reports.AddAsync(report);
         await _context.SaveChangesAsync();
         return ToDto(report);
     }
 
-    public async Task<List<ReportDto>> GetMineAsync(Guid reporterId) =>
-        (await _context.Reports.AsNoTracking().Where(x => x.ReporterId == reporterId).OrderByDescending(x => x.CreatedAt).Take(100).ToListAsync()).Select(ToDto).ToList();
+    public async Task<List<ReportDto>> GetMineAsync(Guid reporterId)
+    {
+        var reports = await _context.Reports
+            .AsNoTracking()
+            .Where(x => x.ReporterId == reporterId)
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(100)
+            .ToListAsync();
+
+        return reports.Select(ToDto).ToList();
+    }
+
+    public async Task<ReportDto> GetMineByIdAsync(Guid reporterId, Guid reportId)
+    {
+        var report = await _context.Reports
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x => x.Id == reportId && x.ReporterId == reporterId)
+            ?? throw new KeyNotFoundException("Không tìm thấy báo cáo.");
+
+        return ToDto(report);
+    }
 
     private async Task EnsureTargetVisibleAsync(Guid userId, ReportTargetType type, Guid targetId)
     {
@@ -73,5 +122,16 @@ public class ReportService : IReportService
         }
     }
 
-    private static ReportDto ToDto(Report x) => new() { Id = x.Id, TargetType = x.TargetType, TargetId = x.TargetId, Reason = x.Reason, Description = x.Description, Status = x.Status, CreatedAt = x.CreatedAt, ReviewedAt = x.ReviewedAt };
+    private static ReportDto ToDto(Report x) => new()
+    {
+        Id = x.Id,
+        TargetType = x.TargetType,
+        TargetId = x.TargetId,
+        Reason = x.Reason,
+        Description = x.Description,
+        Status = x.Status,
+        CreatedAt = x.CreatedAt,
+        ReviewedAt = x.ReviewedAt,
+        ResolutionNote = x.ResolutionNote
+    };
 }

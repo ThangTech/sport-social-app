@@ -21,6 +21,9 @@ public class ReportConfiguration
         builder.Property(x => x.Description)
             .HasMaxLength(3000);
 
+        builder.Property(x => x.ResolutionNote)
+            .HasMaxLength(1000);
+
         builder.Property(x => x.TargetType)
             .HasConversion<int>();
 
@@ -47,6 +50,14 @@ public class ReportConfiguration
         {
             x.TargetType,
             x.TargetId
+        });
+
+        builder.HasIndex(x => new
+        {
+            x.ReporterId,
+            x.TargetType,
+            x.TargetId,
+            x.Status
         });
     }
 }

@@ -6,4 +6,5 @@ public interface IReportService
 {
     Task<ReportDto> CreateAsync(Guid reporterId, CreateReportRequest request);
     Task<List<ReportDto>> GetMineAsync(Guid reporterId);
+    Task<ReportDto> GetMineByIdAsync(Guid reporterId, Guid reportId);
 }

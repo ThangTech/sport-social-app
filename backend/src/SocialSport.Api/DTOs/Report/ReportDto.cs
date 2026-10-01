@@ -12,4 +12,5 @@ public class ReportDto
     public ReportStatus Status { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? ReviewedAt { get; set; }
+    public string? ResolutionNote { get; set; }
 }
