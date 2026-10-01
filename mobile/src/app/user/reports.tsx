@@ -19,6 +19,11 @@ const statusLabel = (status: number) =>
     status
   ] ?? "Không xác định";
 
+const targetLabel = (targetType: number) =>
+  ({ 1: "Người dùng", 2: "Bài viết", 3: "Bình luận", 4: "Nhóm" })[
+    targetType
+  ] ?? "Đối tượng";
+
 export default function MyReportsScreen() {
   const [items, setItems] = useState<ReportDto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,10 +81,33 @@ export default function MyReportsScreen() {
           }
           renderItem={({ item }) => (
             <View style={styles.item}>
-              <AppText variant="label">{item.reason}</AppText>
+              <View style={styles.itemHeader}>
+                <AppText variant="label">{item.reason}</AppText>
+                <View style={styles.statusBadge}>
+                  <AppText color={COLORS.primary}>
+                    {statusLabel(item.status)}
+                  </AppText>
+                </View>
+              </View>
               <AppText color={COLORS.textMuted}>
-                {statusLabel(item.status)} ·{" "}
-                {new Date(item.createdAt).toLocaleDateString("vi-VN")}
+                {targetLabel(item.targetType)} · {item.targetId.slice(0, 8)}…
+              </AppText>
+              {item.description ? (
+                <AppText color={COLORS.textMuted}>{item.description}</AppText>
+              ) : null}
+              {item.resolutionNote ? (
+                <View style={styles.resultBox}>
+                  <AppText variant="label">Kết quả xử lý</AppText>
+                  <AppText>{item.resolutionNote}</AppText>
+                  {item.reviewedAt ? (
+                    <AppText color={COLORS.textMuted}>
+                      {new Date(item.reviewedAt).toLocaleString("vi-VN")}
+                    </AppText>
+                  ) : null}
+                </View>
+              ) : null}
+              <AppText color={COLORS.textMuted}>
+                Gửi lúc {new Date(item.createdAt).toLocaleString("vi-VN")}
               </AppText>
             </View>
           )}
@@ -115,8 +143,26 @@ const styles = StyleSheet.create({
   },
   item: {
     padding: SPACING.lg,
-    gap: SPACING.xs,
+    gap: SPACING.sm,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: COLORS.border,
+  },
+  itemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: SPACING.md,
+  },
+  statusBadge: {
+    borderRadius: 999,
+    backgroundColor: COLORS.surface,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  resultBox: {
+    gap: SPACING.xs,
+    borderRadius: 12,
+    backgroundColor: COLORS.surface,
+    padding: SPACING.md,
   },
 });

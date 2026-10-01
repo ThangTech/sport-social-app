@@ -9,6 +9,7 @@ export type ReportDto = {
   status: number;
   createdAt: string;
   reviewedAt?: string | null;
+  resolutionNote?: string | null;
 };
 
 export const createReport = async (

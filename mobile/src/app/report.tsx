@@ -36,7 +36,17 @@ export default function ReportScreen() {
   const [submitting, setSubmitting] = useState(false);
 
   const submit = async () => {
-    if (!targetId || ![1, 2, 3, 4].includes(targetType) || !reason) return;
+    if (!targetId || ![1, 2, 3, 4].includes(targetType)) {
+      Alert.alert(
+        "Không thể báo cáo",
+        "Đối tượng báo cáo không hợp lệ hoặc không còn tồn tại.",
+      );
+      return;
+    }
+    if (!reason) {
+      Alert.alert("Thiếu lý do", "Vui lòng chọn một lý do báo cáo.");
+      return;
+    }
     if (reason === "other" && !description.trim()) {
       Alert.alert("Thiếu mô tả", "Vui lòng mô tả lý do báo cáo.");
       return;
@@ -94,9 +104,12 @@ export default function ReportScreen() {
           placeholder="Mô tả thêm (không bắt buộc)"
           placeholderTextColor={COLORS.textMuted}
         />
+        <AppText color={COLORS.textMuted} style={styles.counter}>
+          {description.length}/3000
+        </AppText>
         <Pressable
-          disabled={!reason || submitting}
-          style={[styles.submit, (!reason || submitting) && styles.disabled]}
+          disabled={submitting}
+          style={[styles.submit, submitting && styles.disabled]}
           onPress={submit}
         >
           {submitting ? (
@@ -156,4 +169,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.primary,
   },
   disabled: { opacity: 0.5 },
+  counter: {
+    marginTop: -SPACING.md,
+    textAlign: "right",
+  },
 });
