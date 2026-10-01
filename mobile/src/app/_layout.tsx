@@ -5,11 +5,17 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { Stack, useRouter, useSegments } from "expo-router";
+import {
+  Href,
+  Stack,
+  usePathname,
+  useRouter,
+  useSegments,
+} from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ActivityIndicator, View } from "react-native";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
@@ -21,7 +27,9 @@ SplashScreen.preventAutoHideAsync();
 function RootNavigator() {
   const { user, loading } = useAuth();
   const segments = useSegments();
+  const pathname = usePathname();
   const router = useRouter();
+  const pendingPath = useRef<Href | null>(null);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -81,14 +89,18 @@ function RootNavigator() {
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!user && !inAuthGroup) {
+      pendingPath.current = pathname as Href;
       router.replace("/(auth)/login");
       return;
     }
 
     if (user && inAuthGroup) {
-      router.replace("/(tabs)");
+      const destination = pendingPath.current ?? "/(tabs)";
+
+      pendingPath.current = null;
+      router.replace(destination);
     }
-  }, [user, loading, segments, router]);
+  }, [user, loading, pathname, segments, router]);
 
   if (loading) {
     return (
@@ -181,7 +193,7 @@ function RootNavigator() {
         }}
       />
       <Stack.Screen
-        name="create-post"
+        name="modal/create-post"
         options={{
           presentation: "modal",
           headerShown: false,

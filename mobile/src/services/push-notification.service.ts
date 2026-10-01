@@ -44,8 +44,16 @@ export async function registerForPushNotifications() {
 }
 
 export async function unregisterCurrentPushToken() {
+  if (Platform.OS !== "ios" && Platform.OS !== "android") {
+    return;
+  }
+
   const token = await SecureStore.getItemAsync(tokenStorageKey);
-  if (!token || (Platform.OS !== "ios" && Platform.OS !== "android")) return;
+
+  if (!token) {
+    return;
+  }
+
   try {
     await unregisterDeviceToken(token, Platform.OS);
   } finally {
