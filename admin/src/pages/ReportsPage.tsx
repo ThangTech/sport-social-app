@@ -1,19 +1,46 @@
+import {
+  ExportOutlined,
+  SafetyCertificateOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  Descriptions,
+  Empty,
+  Image,
+  List,
+  Pagination,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Tag,
+  Typography,
+  Input,
+  message,
+} from "antd";
 import { useCallback, useEffect, useState } from "react";
-import { PageHeader, PageState, Panel, StatusBadge } from "../components/ui";
+import { PageHeader, PageState } from "../components/ui";
 import { api, apiBlob, appUrl, formatDate } from "../lib/api";
 import type { PageData } from "../lib/types";
-import { secondaryButton } from "../lib/styles";
 
 type ReportItem = {
   id: string;
   reporterId: string;
+  reporterDisplayName?: string | null;
+  reporterEmail?: string | null;
   targetType: number;
   targetId: string;
   reason: string;
   description?: string | null;
   status: number;
   reviewedBy?: string | null;
+  reviewedByDisplayName?: string | null;
   reviewedAt?: string | null;
+  resolutionNote?: string | null;
   createdAt: string;
 };
 
@@ -32,12 +59,24 @@ type ReportTarget = {
   media: TargetMedia[];
 };
 
-const statusNames: Record<number, string> = {
-  1: "Chờ xử lý",
-  2: "Đang xem xét",
-  3: "Đã giải quyết",
-  4: "Đã từ chối",
-};
+const statusOptions = [
+  {
+    value: 1,
+    label: "Chờ xử lý",
+  },
+  {
+    value: 2,
+    label: "Đang xem xét",
+  },
+  {
+    value: 3,
+    label: "Đã giải quyết",
+  },
+  {
+    value: 4,
+    label: "Đã từ chối",
+  },
+];
 
 const targetNames: Record<number, string> = {
   1: "Người dùng",
@@ -46,6 +85,25 @@ const targetNames: Record<number, string> = {
   4: "Nhóm",
 };
 
+const statusColor = (status: number) => {
+  if (status === 1) {
+    return "warning";
+  }
+
+  if (status === 2) {
+    return "processing";
+  }
+
+  if (status === 3) {
+    return "success";
+  }
+
+  return "default";
+};
+
+const statusName = (status: number) =>
+  statusOptions.find((item) => item.value === status)?.label ?? "Không rõ";
+
 export function ReportsPage() {
   const [data, setData] = useState<PageData<ReportItem> | null>(null);
   const [selected, setSelected] = useState<ReportItem | null>(null);
@@ -53,11 +111,15 @@ export function ReportsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [targetLoading, setTargetLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [reviewStatus, setReviewStatus] = useState(1);
+  const [resolutionNote, setResolutionNote] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
+
     try {
       setData(await api(`/admin/reports?page=${page}&pageSize=20`));
     } catch (reason) {
@@ -76,9 +138,12 @@ export function ReportsPage() {
 
   const inspect = async (item: ReportItem) => {
     setSelected(item);
+    setReviewStatus(item.status);
+    setResolutionNote(item.resolutionNote ?? "");
     setTarget(null);
     setTargetLoading(true);
     setError("");
+
     try {
       setTarget(await api<ReportTarget>(`/admin/reports/${item.id}/target`));
     } catch (reason) {
@@ -92,23 +157,46 @@ export function ReportsPage() {
     }
   };
 
-  const update = async (status: number) => {
+  const update = async () => {
     if (!selected) {
       return;
     }
 
+    const note = resolutionNote.trim();
+    if ((reviewStatus === 3 || reviewStatus === 4) && !note) {
+      message.error("Cần nhập ghi chú trước khi đóng báo cáo.");
+      return;
+    }
+
+    setSaving(true);
     setError("");
+
     try {
       await api(`/admin/reports/${selected.id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({
+          status: reviewStatus,
+          resolutionNote: note || null,
+        }),
       });
-      setSelected((current) => (current ? { ...current, status } : null));
+      setSelected((current) =>
+        current
+          ? {
+              ...current,
+              status: reviewStatus,
+              resolutionNote: note || null,
+              reviewedAt: new Date().toISOString(),
+            }
+          : null,
+      );
+      message.success("Đã lưu kết quả xử lý báo cáo.");
       await load();
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "Không thể cập nhật báo cáo.",
       );
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -117,102 +205,107 @@ export function ReportsPage() {
       <PageHeader
         eyebrow="Trust & safety"
         title="Hàng đợi báo cáo"
-        description="Chọn một báo cáo để xem nội dung, trạng thái đối tượng và liên kết SocialSport trước khi đưa ra quyết định."
-        action={
-          <span className="text-sm font-semibold text-slate-500">
-            {data?.total ?? 0} báo cáo
-          </span>
-        }
+        description="Xem đầy đủ người gửi, nội dung và media ngay trong Admin trước khi lưu quyết định. Đóng report không tự động gỡ đối tượng."
+        action={<Tag color="blue">{data?.total ?? 0} báo cáo</Tag>}
       />
-      <PageState loading={loading} error={error} retry={() => void load()}>
-        <div className="grid min-h-[650px] gap-6 xl:grid-cols-[.8fr_1.2fr]">
-          <Panel className="overflow-hidden !p-0">
-            <div className="divide-y divide-slate-100">
-              {data?.items.map((item) => (
-                <button
-                  className={`w-full p-5 text-left transition ${selected?.id === item.id ? "bg-brand-50" : "hover:bg-slate-50"}`}
-                  key={item.id}
-                  onClick={() => void inspect(item)}
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">
-                        {item.reason}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {targetNames[item.targetType]} · {formatDate(item.createdAt)}
-                      </p>
-                    </div>
-                    <StatusBadge
-                      tone={
-                        item.status === 1
-                          ? "amber"
-                          : item.status === 3
-                            ? "green"
-                            : "slate"
-                      }
-                    >
-                      {statusNames[item.status]}
-                    </StatusBadge>
-                  </div>
-                  {item.description ? (
-                    <p className="mt-3 line-clamp-2 text-xs leading-5 text-slate-500">
-                      {item.description}
-                    </p>
-                  ) : null}
-                </button>
-              ))}
-            </div>
-            {data ? (
-              <div className="flex items-center justify-between border-t border-slate-100 p-4">
-                <button
-                  className={secondaryButton}
-                  disabled={page === 1}
-                  onClick={() => setPage((value) => value - 1)}
-                >
-                  Trang trước
-                </button>
-                <span className="text-xs text-slate-500">Trang {page}</span>
-                <button
-                  className={secondaryButton}
-                  disabled={page * data.pageSize >= data.total}
-                  onClick={() => setPage((value) => value + 1)}
-                >
-                  Trang sau
-                </button>
-              </div>
-            ) : null}
-          </Panel>
 
-          <Panel
-            title="Chi tiết xử lý"
-            subtitle="Quyết định chỉ nên thực hiện sau khi đã xem đối tượng."
-          >
-            {!selected ? (
-              <div className="grid min-h-[480px] place-items-center text-center">
-                <div>
-                  <p className="text-4xl text-slate-300">◎</p>
-                  <p className="mt-3 text-sm font-semibold text-slate-600">
-                    Chọn một báo cáo bên trái
-                  </p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    Nội dung bị báo cáo sẽ hiển thị tại đây.
-                  </p>
-                </div>
-              </div>
-            ) : targetLoading ? (
-              <div className="grid min-h-[480px] place-items-center text-sm text-slate-500">
-                Đang tải nội dung bị báo cáo…
-              </div>
-            ) : target ? (
-              <ReportInspection
-                report={selected}
-                target={target}
-                update={update}
+      <PageState loading={loading} error={error} retry={() => void load()}>
+        <Row gutter={[16, 16]} align="stretch">
+          <Col xs={24} xl={9}>
+            <Card className="h-full" styles={{ body: { padding: 0 } }}>
+              <List
+                dataSource={data?.items ?? []}
+                locale={{
+                  emptyText: <Empty description="Chưa có báo cáo" />,
+                }}
+                renderItem={(item) => (
+                  <List.Item
+                    onClick={() => void inspect(item)}
+                    className={`cursor-pointer px-5 transition-colors ${
+                      selected?.id === item.id
+                        ? "bg-emerald-50"
+                        : "hover:bg-slate-50"
+                    }`}
+                  >
+                    <List.Item.Meta
+                      avatar={<UserOutlined className="text-slate-400" />}
+                      title={
+                        <Space wrap>
+                          <Typography.Text strong>
+                            {item.reason}
+                          </Typography.Text>
+                          <Tag color={statusColor(item.status)}>
+                            {statusName(item.status)}
+                          </Tag>
+                        </Space>
+                      }
+                      description={
+                        <Space direction="vertical" size={2}>
+                          <Typography.Text type="secondary" className="text-xs">
+                            {item.reporterDisplayName || "Người dùng"}
+                            {item.reporterEmail
+                              ? ` · ${item.reporterEmail}`
+                              : ""}
+                          </Typography.Text>
+                          <Typography.Text type="secondary" className="text-xs">
+                            {targetNames[item.targetType]} ·{" "}
+                            {formatDate(item.createdAt)}
+                          </Typography.Text>
+                          {item.description ? (
+                            <Typography.Text
+                              type="secondary"
+                              className="line-clamp-2 text-xs"
+                            >
+                              {item.description}
+                            </Typography.Text>
+                          ) : null}
+                        </Space>
+                      }
+                    />
+                  </List.Item>
+                )}
               />
-            ) : null}
-          </Panel>
-        </div>
+              {data && data.total > data.pageSize ? (
+                <div className="border-t border-slate-100 p-4">
+                  <Pagination
+                    current={page}
+                    pageSize={data.pageSize}
+                    total={data.total}
+                    showSizeChanger={false}
+                    onChange={setPage}
+                  />
+                </div>
+              ) : null}
+            </Card>
+          </Col>
+
+          <Col xs={24} xl={15}>
+            <Card
+              title="Chi tiết xử lý"
+              extra={<SafetyCertificateOutlined />}
+              className="h-full"
+            >
+              {!selected ? (
+                <Empty description="Chọn một báo cáo để kiểm tra" />
+              ) : targetLoading ? (
+                <div className="grid min-h-96 place-items-center">
+                  <Spin tip="Đang tải nội dung bị báo cáo" />
+                </div>
+              ) : target ? (
+                <ReportInspection
+                  report={selected}
+                  target={target}
+                  reviewStatus={reviewStatus}
+                  resolutionNote={resolutionNote}
+                  saving={saving}
+                  onStatusChange={setReviewStatus}
+                  onNoteChange={setResolutionNote}
+                  onSave={() => void update()}
+                />
+              ) : null}
+            </Card>
+          </Col>
+        </Row>
       </PageState>
     </>
   );
@@ -221,105 +314,127 @@ export function ReportsPage() {
 function ReportInspection({
   report,
   target,
-  update,
+  reviewStatus,
+  resolutionNote,
+  saving,
+  onStatusChange,
+  onNoteChange,
+  onSave,
 }: {
   report: ReportItem;
   target: ReportTarget;
-  update: (status: number) => Promise<void>;
+  reviewStatus: number;
+  resolutionNote: string;
+  saving: boolean;
+  onStatusChange: (status: number) => void;
+  onNoteChange: (note: string) => void;
+  onSave: () => void;
 }) {
   const externalUrl = appUrl(target.appPath);
+
   return (
-    <div className="space-y-5">
-      <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-wide text-brand-600">
-              {target.kind}
-            </p>
-            <h2 className="mt-1 whitespace-pre-wrap text-lg font-bold text-slate-900">
-              {target.title}
-            </h2>
-            <p className="mt-2 text-sm text-slate-500">{target.subtitle}</p>
-          </div>
-          {externalUrl ? (
-            <a
-              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-              href={externalUrl}
-              target="_blank"
-              rel="noreferrer"
-            >
-              Mở trong SocialSport ↗
-            </a>
-          ) : null}
-        </div>
+    <Space direction="vertical" size={20} className="w-full">
+      <div>
+        <Space wrap className="mb-2">
+          <Tag color="blue">{target.kind}</Tag>
+          <Tag>Trạng thái đối tượng: {target.status}</Tag>
+        </Space>
+        <Typography.Title level={4} className="whitespace-pre-wrap">
+          {target.title}
+        </Typography.Title>
+        <Typography.Paragraph type="secondary">
+          {target.subtitle}
+        </Typography.Paragraph>
+        {externalUrl ? (
+          <Button
+            type="link"
+            icon={<ExportOutlined />}
+            href={externalUrl}
+            target="_blank"
+            className="px-0"
+          >
+            Mở trang SocialSport (có thể yêu cầu đăng nhập hoặc quyền nhóm)
+          </Button>
+        ) : null}
       </div>
 
       {target.media.length > 0 ? (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <Row gutter={[12, 12]}>
           {target.media.map((media) => (
-            <ProtectedReportMedia item={media} key={media.id} />
+            <Col xs={24} md={12} key={media.id}>
+              <ProtectedReportMedia item={media} />
+            </Col>
           ))}
-        </div>
+        </Row>
       ) : null}
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="rounded-xl border border-slate-200 p-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-            Lý do báo cáo
-          </p>
-          <p className="mt-2 text-sm font-semibold text-slate-800">
-            {report.reason}
-          </p>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-slate-500">
-            {report.description || "Người gửi không cung cấp mô tả bổ sung."}
-          </p>
-        </div>
-        <div className="rounded-xl border border-slate-200 p-4">
-          <p className="text-xs font-bold uppercase tracking-wide text-slate-400">
-            Thông tin hồ sơ
-          </p>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Người gửi</dt>
-              <dd className="font-mono text-xs text-slate-700">
-                {report.reporterId.slice(0, 8)}…
-              </dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Đối tượng</dt>
-              <dd className="font-mono text-xs text-slate-700">
-                {report.targetId.slice(0, 8)}…
-              </dd>
-            </div>
-            <div className="flex justify-between gap-4">
-              <dt className="text-slate-500">Ngày gửi</dt>
-              <dd className="text-xs text-slate-700">
-                {formatDate(report.createdAt)}
-              </dd>
-            </div>
-          </dl>
-        </div>
-      </div>
+      <Descriptions bordered column={{ xs: 1, md: 2 }} size="small">
+        <Descriptions.Item label="Người gửi">
+          <Space direction="vertical" size={0}>
+            <Typography.Text>
+              {report.reporterDisplayName || "Người dùng"}
+            </Typography.Text>
+            <Typography.Text type="secondary" className="text-xs">
+              {report.reporterEmail || report.reporterId}
+            </Typography.Text>
+          </Space>
+        </Descriptions.Item>
+        <Descriptions.Item label="Đối tượng">
+          {targetNames[report.targetType]} · {report.targetId}
+        </Descriptions.Item>
+        <Descriptions.Item label="Lý do">
+          {report.reason}
+        </Descriptions.Item>
+        <Descriptions.Item label="Ngày gửi">
+          {formatDate(report.createdAt)}
+        </Descriptions.Item>
+        <Descriptions.Item label="Mô tả" span={2}>
+          {report.description || "Không có mô tả bổ sung."}
+        </Descriptions.Item>
+        {report.reviewedAt ? (
+          <Descriptions.Item label="Lần xử lý gần nhất" span={2}>
+            {report.reviewedByDisplayName || report.reviewedBy || "System Admin"}
+            {` · ${formatDate(report.reviewedAt)}`}
+          </Descriptions.Item>
+        ) : null}
+      </Descriptions>
 
-      <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-        <p className="text-sm font-bold text-amber-900">Quyết định xử lý</p>
-        <p className="mt-1 text-xs leading-5 text-amber-700">
-          Trạng thái report không tự gỡ nội dung. Nếu xác định vi phạm, hãy xử lý
-          đối tượng tại trang Bài viết, Nhóm hoặc Người dùng tương ứng.
-        </p>
-        <div className="mt-4 flex flex-wrap gap-2">
-          {Object.entries(statusNames).map(([value, label]) => (
-            <button
-              className={`rounded-lg px-3 py-2 text-xs font-semibold ${report.status === Number(value) ? "bg-slate-900 text-white" : "border border-amber-200 bg-white text-slate-700"}`}
-              key={value}
-              onClick={() => void update(Number(value))}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
+      <Alert
+        type="warning"
+        showIcon
+        title="Trạng thái report không tự gỡ nội dung"
+        description="Nếu đối tượng vi phạm, hãy chuyển sang trang Người dùng, Nhóm hoặc Bài viết để áp dụng hành động hệ thống riêng và có audit độc lập."
+      />
+
+      <Card size="small" title="Kết quả xử lý">
+        <Space direction="vertical" size={12} className="w-full">
+          <Select
+            value={reviewStatus}
+            options={statusOptions}
+            onChange={onStatusChange}
+            className="w-full"
+          />
+          <Input.TextArea
+            value={resolutionNote}
+            onChange={(event) => onNoteChange(event.target.value)}
+            maxLength={1000}
+            showCount
+            autoSize={{
+              minRows: 4,
+              maxRows: 8,
+            }}
+            placeholder={
+              reviewStatus === 3 || reviewStatus === 4
+                ? "Bắt buộc: giải thích kết quả cho người gửi báo cáo"
+                : "Ghi chú nội bộ hoặc tiến độ xem xét"
+            }
+          />
+          <Button type="primary" loading={saving} onClick={onSave}>
+            Lưu kết quả xử lý
+          </Button>
+        </Space>
+      </Card>
+    </Space>
   );
 }
 
@@ -330,6 +445,7 @@ function ProtectedReportMedia({ item }: { item: TargetMedia }) {
   useEffect(() => {
     let active = true;
     let objectUrl = "";
+
     void apiBlob(item.url)
       .then((blob) => {
         if (!active) {
@@ -346,6 +462,7 @@ function ProtectedReportMedia({ item }: { item: TargetMedia }) {
           );
         }
       });
+
     return () => {
       active = false;
       if (objectUrl) {
@@ -355,26 +472,26 @@ function ProtectedReportMedia({ item }: { item: TargetMedia }) {
   }, [item.url]);
 
   if (error) {
-    return <p className="rounded-xl bg-red-50 p-4 text-xs text-red-600">{error}</p>;
+    return <Alert type="error" showIcon title={error} />;
   }
 
   if (!url) {
     return (
-      <p className="rounded-xl bg-slate-100 p-4 text-xs text-slate-500">
-        Đang tải media…
-      </p>
+      <div className="grid h-64 place-items-center rounded-lg bg-slate-50">
+        <Spin />
+      </div>
     );
   }
 
   return item.mediaType === 2 ? (
     <video
-      className="h-64 w-full rounded-xl bg-slate-950 object-contain"
+      className="h-64 w-full rounded-lg bg-slate-950 object-contain"
       controls
       src={url}
     />
   ) : (
-    <img
-      className="h-64 w-full rounded-xl bg-slate-100 object-contain"
+    <Image
+      className="h-64 w-full rounded-lg object-contain"
       src={url}
       alt="Media bị báo cáo"
     />

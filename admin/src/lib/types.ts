@@ -12,6 +12,8 @@ export type AdminRow = Record<string, unknown> & {
 export type AuditItem = {
   id: string;
   actorId: string;
+  actorDisplayName?: string | null;
+  actorEmail?: string | null;
   action: string;
   targetType: string;
   targetId?: string;

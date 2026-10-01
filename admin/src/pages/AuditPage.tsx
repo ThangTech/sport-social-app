@@ -3,9 +3,10 @@ import { api, formatDate } from "../lib/api";
 import type { AuditItem, PageData } from "../lib/types";
 import { PageHeader, PageState, Panel, StatusBadge } from "../components/ui";
 export function AuditPage() {
-  const [data, setData] = useState<PageData<AuditItem> | null>(null),
-    [loading, setLoading] = useState(true),
-    [error, setError] = useState("");
+  const [data, setData] = useState<PageData<AuditItem> | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -17,11 +18,13 @@ export function AuditPage() {
       setLoading(false);
     }
   }, []);
+
   useEffect(() => {
     // Initial remote synchronization is intentionally owned by this effect.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
+
   return (
     <>
       <PageHeader
@@ -45,8 +48,11 @@ export function AuditPage() {
                 >
                   <div>
                     <StatusBadge tone="blue">{item.action}</StatusBadge>
-                    <p className="mt-2 font-mono text-[11px] text-slate-400">
-                      {item.actorId.slice(0, 8)}…
+                    <p className="mt-2 text-xs font-semibold text-slate-700">
+                      {item.actorDisplayName || "System Admin"}
+                    </p>
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      {item.actorEmail || `${item.actorId.slice(0, 8)}…`}
                     </p>
                   </div>
                   <div>
