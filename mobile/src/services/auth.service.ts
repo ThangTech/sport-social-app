@@ -16,7 +16,12 @@ export const login = async (request: LoginRequest) => {
     body: JSON.stringify(request),
   });
 
-  await saveTokens(response.accessToken, response.refreshToken);
+  await saveTokens(
+    response.accessToken,
+    response.refreshToken,
+    response.accessTokenExpiresAt,
+    response.refreshTokenExpiresAt,
+  );
 
   return response;
 };

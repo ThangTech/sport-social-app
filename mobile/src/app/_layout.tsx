@@ -16,7 +16,7 @@ import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, Platform, View } from "react-native";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { registerForPushNotifications } from "@/services/push-notification.service";
@@ -32,7 +32,8 @@ function RootNavigator() {
   const pendingPath = useRef<Href | null>(null);
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!user?.id || Platform.OS === "web") return;
+
     void registerForPushNotifications().catch(() => undefined);
     const open = (response: Notifications.NotificationResponse) => {
       const data = response.notification.request.content.data as {

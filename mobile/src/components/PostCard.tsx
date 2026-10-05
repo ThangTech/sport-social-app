@@ -9,6 +9,7 @@ import {
   View,
 } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import Constants from "expo-constants";
 import * as Linking from "expo-linking";
 import AppText from "./ui/AppText";
 import { Post } from "../types/post";
@@ -34,6 +35,25 @@ type PostCardProps = {
   onSavedChange?: (saved: boolean) => void;
   onDeleted?: (postId: string) => void;
   onRemoveFromGroup?: (postId: string) => Promise<void>;
+};
+
+const getDevelopmentWebOrigin = () => {
+  if (!__DEV__) return null;
+
+  const hostUri = Constants.expoConfig?.hostUri;
+
+  if (!hostUri) return null;
+
+  try {
+    const normalizedUri = hostUri.includes("://")
+      ? hostUri
+      : `http://${hostUri}`;
+    const hostname = new URL(normalizedUri).hostname;
+
+    return hostname ? `http://${hostname}:8082` : null;
+  } catch {
+    return null;
+  }
 };
 export default function PostCard({
   post,
@@ -148,8 +168,9 @@ export default function PostCard({
       Platform.OS === "web" && typeof window !== "undefined"
         ? window.location.origin
         : null;
-    const url = configuredUrl || webOrigin
-      ? `${configuredUrl || webOrigin}/post/${post.id}`
+    const shareOrigin = configuredUrl || webOrigin || getDevelopmentWebOrigin();
+    const url = shareOrigin
+      ? `${shareOrigin}/post/${post.id}`
       : Linking.createURL(`/post/${post.id}`);
     const message = `${post.authorName} trên SocialSport\n${url}`;
 

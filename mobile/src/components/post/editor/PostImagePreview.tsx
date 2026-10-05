@@ -2,8 +2,8 @@ import AppText from "@/components/ui/AppText";
 import { COLORS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import * as Linking from "expo-linking";
 import type { ImagePickerAsset } from "expo-image-picker";
+import { useVideoPlayer, VideoView } from "expo-video";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 
 type ExistingMedia = {
@@ -21,6 +21,21 @@ type Props = {
   disabled?: boolean;
   variant: "create" | "edit";
 };
+
+function VideoPreview({ uri }: { uri: string }) {
+  const player = useVideoPlayer(uri);
+
+  return (
+    <VideoView
+      player={player}
+      style={styles.video}
+      nativeControls
+      contentFit="contain"
+      playsInline
+      surfaceType="textureView"
+    />
+  );
+}
 
 export default function PostImagePreview({
   selectedImage,
@@ -47,22 +62,8 @@ export default function PostImagePreview({
         variant === "create" ? styles.createContainer : styles.editContainer,
       ]}
     >
-      {isVideo ? (
-        <Pressable
-          style={styles.videoPreview}
-          disabled={!uri}
-          onPress={() => {
-            if (uri) {
-              void Linking.openURL(uri);
-            }
-          }}
-        >
-          <Ionicons name="play-circle" size={46} color={COLORS.primary} />
-          <AppText variant="label">Video đã chọn</AppText>
-          <AppText variant="caption" color={COLORS.textMuted}>
-            Nhấn để mở video kiểm tra
-          </AppText>
-        </Pressable>
+      {isVideo && uri ? (
+        <VideoPreview uri={uri} />
       ) : (
         <Image source={{ uri }} style={styles.image} resizeMode="cover" />
       )}
@@ -114,12 +115,9 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-  videoPreview: {
+  video: {
     width: "100%",
     height: "100%",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.xs,
   },
   removeButton: {
     position: "absolute",

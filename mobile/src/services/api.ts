@@ -1,6 +1,7 @@
 import {
   clearTokens,
   getAccessToken,
+  getAccessTokenExpiresAt,
   getRefreshToken,
   saveTokens,
 } from "@/storage/token.storage";
@@ -67,7 +68,12 @@ const refreshAccessToken = async (): Promise<string | null> => {
 
     const data: AuthResponse = await response.json();
 
-    await saveTokens(data.accessToken, data.refreshToken);
+    await saveTokens(
+      data.accessToken,
+      data.refreshToken,
+      data.accessTokenExpiresAt,
+      data.refreshTokenExpiresAt,
+    );
 
     return data.accessToken;
   } catch {
@@ -83,6 +89,18 @@ const getNewAccessToken = async () => {
   }
 
   return await refreshPromise;
+};
+
+const shouldRefreshAccessToken = async () => {
+  const expiresAt = await getAccessTokenExpiresAt();
+
+  if (!expiresAt) return false;
+
+  const expiresAtTimestamp = Date.parse(expiresAt);
+
+  if (Number.isNaN(expiresAtTimestamp)) return false;
+
+  return expiresAtTimestamp <= Date.now() + 2 * 60 * 1000;
 };
 
 const createApiError = async (response: Response) => {
@@ -146,9 +164,14 @@ export const api = async <T>(
     return headers;
   };
 
+  const proactiveToken =
+    options.auth && (await shouldRefreshAccessToken())
+      ? await getNewAccessToken()
+      : undefined;
+
   let response = await fetch(`${API_URL}${endpoint}`, {
     ...options,
-    headers: await buildHeaders(),
+    headers: await buildHeaders(proactiveToken ?? undefined),
   });
 
   if (response.status === 401 && options.auth) {
