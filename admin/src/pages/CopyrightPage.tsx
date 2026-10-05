@@ -26,10 +26,14 @@ type CopyrightCase = {
 type ExternalScan = {
   id: string;
   postId: string;
+  mediaType: number;
   provider: string;
   status: number;
   matchSummary?: string;
   errorMessage?: string;
+  reviewNotes?: string;
+  appealReason?: string;
+  evidenceLinks: string[];
   createdAt: string;
   updatedAt?: string;
 };
@@ -64,6 +68,9 @@ const scanStatusNames: Record<number, string> = {
   4: "Admin đã cho phép",
   5: "Xác nhận vi phạm",
   6: "Quét lỗi",
+  7: "Đang xem xét kháng nghị",
+  8: "Đã chấp nhận kháng nghị",
+  9: "Đã bác kháng nghị",
 };
 
 function ProtectedMedia({
@@ -244,7 +251,7 @@ export function CopyrightPage() {
       <PageHeader
         eyebrow="Rights protection"
         title="Trung tâm bản quyền ảnh và video"
-        description="Đối chiếu reference nội bộ, quét âm thanh video bằng ACRCloud và quyết định cuối bởi System Admin."
+        description="Đối chiếu SHA-256/dHash, tham chiếu web từ Google Vision và nhận diện âm thanh ACRCloud. Mọi tín hiệu đều do System Admin quyết định."
       />
       <PageState loading={loading} error={error} retry={() => void load()}>
         <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
@@ -282,9 +289,9 @@ export function CopyrightPage() {
               </button>
             </form>
             <p className="mt-4 text-xs leading-5 text-slate-400">
-              SHA-256 phát hiện bản sao byte giống hệt. ACRCloud chỉ hỗ trợ nhận
-              diện nhạc/âm thanh trong video; Admin vẫn phải xem bằng chứng trước
-              khi gỡ nội dung.
+              SHA-256 phát hiện bản sao byte giống hệt; dHash phát hiện ảnh đã
+              resize hoặc nén nhẹ. Google Vision và ACRCloud chỉ tạo tín hiệu để
+              Admin xem xét, không tự kết luận vi phạm.
             </p>
           </Panel>
 
@@ -327,13 +334,13 @@ function ExternalScanQueue({
 }) {
   return (
     <Panel
-      title="Kết quả quét video bên thứ ba"
+      title="Kết quả quét ảnh và video bên thứ ba"
       subtitle={`${data?.total ?? 0} lượt quét`}
     >
       <div className="space-y-4">
         {data?.items.length === 0 ? (
           <p className="py-10 text-center text-sm text-slate-400">
-            Chưa có video gửi sang nhà cung cấp.
+            Chưa có nội dung gửi sang nhà cung cấp.
           </p>
         ) : null}
         {data?.items.map((item) => (
@@ -354,9 +361,13 @@ function ExternalScanQueue({
               </div>
               <StatusBadge
                 tone={
-                  item.status === 1 || item.status === 3
+                  item.status === 1
+                    || item.status === 3
+                    || item.status === 7
                     ? "amber"
-                    : item.status === 5 || item.status === 6
+                    : item.status === 5
+                        || item.status === 6
+                        || item.status === 9
                       ? "red"
                       : "green"
                 }
@@ -367,20 +378,52 @@ function ExternalScanQueue({
             <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
               <ProtectedMedia
                 path={`/copyright/external-scans/${item.id}/media`}
-                mediaType={2}
-                label="video cần kiểm tra"
+                mediaType={item.mediaType}
+                label="nội dung cần kiểm tra"
               />
             </div>
+            {item.appealReason ? (
+              <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+                Kháng nghị: {item.appealReason}
+              </p>
+            ) : null}
+            {item.evidenceLinks.length > 0 ? (
+              <div className="mt-3 rounded-lg bg-slate-50 p-3">
+                <p className="text-xs font-semibold text-slate-700">
+                  Nguồn tham chiếu từ Google Vision
+                </p>
+                <div className="mt-2 space-y-1">
+                  {item.evidenceLinks.map((link) => (
+                    <a
+                      className="block truncate text-xs text-brand-700 hover:underline"
+                      href={link}
+                      key={link}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      {link}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {item.reviewNotes ? (
+              <p className="mt-3 text-xs text-slate-600">
+                Kết luận: {item.reviewNotes}
+              </p>
+            ) : null}
             <div className="mt-4 flex flex-wrap gap-2">
-              {item.status === 1 ? (
+              {item.status === 6 ? (
                 <button
                   className="rounded-lg bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700"
                   onClick={() => void refreshScan(item)}
                 >
-                  Đồng bộ kết quả
+                  Quét lại
                 </button>
               ) : null}
-              {item.status === 3 || item.status === 6 ? (
+              {item.status === 3
+              || item.status === 6
+              || item.status === 7 ? (
                 <>
                   <button
                     className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"
@@ -389,11 +432,15 @@ function ExternalScanQueue({
                         kind: "scan",
                         id: item.id,
                         isViolation: true,
-                        title: "Xác nhận vi phạm từ lượt quét",
+                        title: item.status === 7
+                          ? "Bác kháng nghị và giữ kết luận vi phạm"
+                          : "Xác nhận vi phạm từ lượt quét",
                       });
                     }}
                   >
-                    Xác nhận vi phạm
+                    {item.status === 7
+                      ? "Bác kháng nghị"
+                      : "Xác nhận vi phạm"}
                   </button>
                   <button
                     className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
@@ -402,11 +449,15 @@ function ExternalScanQueue({
                         kind: "scan",
                         id: item.id,
                         isViolation: false,
-                        title: "Cho phép nội dung",
+                        title: item.status === 7
+                          ? "Chấp nhận kháng nghị"
+                          : "Cho phép nội dung",
                       });
                     }}
                   >
-                    Cho phép nội dung
+                    {item.status === 7
+                      ? "Chấp nhận kháng nghị"
+                      : "Cho phép nội dung"}
                   </button>
                 </>
               ) : null}
