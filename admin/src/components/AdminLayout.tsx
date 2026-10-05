@@ -99,7 +99,7 @@ const navigationGroups: {
       {
         key: "/copyright",
         label: "Bản quyền",
-        description: "Reference và quét video",
+        description: "Tín hiệu ảnh, âm thanh và kháng nghị",
         icon: <CopyrightOutlined />,
       },
     ],

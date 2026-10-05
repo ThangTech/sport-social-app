@@ -1,27 +1,8 @@
-import {
-  useCallback,
-  useEffect,
-  useState,
-  type FormEvent,
-} from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PageHeader, PageState, Panel, StatusBadge } from "../components/ui";
 import { api, apiBlob, formatDate } from "../lib/api";
 import { inputClass, primaryButton } from "../lib/styles";
 import type { PageData } from "../lib/types";
-
-type CopyrightCase = {
-  id: string;
-  postId: string;
-  mediaUrl: string;
-  referenceMediaUrl: string;
-  mediaType: number;
-  assetTitle: string;
-  rightsOwnerName: string;
-  confidence: number;
-  status: number;
-  appealReason?: string;
-  createdAt: string;
-};
 
 type ExternalScan = {
   id: string;
@@ -38,27 +19,10 @@ type ExternalScan = {
   updatedAt?: string;
 };
 
-type DecisionTarget =
-  | {
-      kind: "case";
-      id: string;
-      status: number;
-      title: string;
-    }
-  | {
-      kind: "scan";
-      id: string;
-      isViolation: boolean;
-      title: string;
-    };
-
-const caseStatusNames: Record<number, string> = {
-  1: "Chờ duyệt",
-  2: "Đã xác nhận",
-  3: "Đã bác bỏ",
-  4: "Kháng nghị",
-  5: "Chấp nhận kháng nghị",
-  6: "Bác kháng nghị",
+type DecisionTarget = {
+  id: string;
+  isViolation: boolean;
+  title: string;
 };
 
 const scanStatusNames: Record<number, string> = {
@@ -136,7 +100,6 @@ function ProtectedMedia({
 }
 
 export function CopyrightPage() {
-  const [cases, setCases] = useState<PageData<CopyrightCase> | null>(null);
   const [scans, setScans] = useState<PageData<ExternalScan> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -148,13 +111,9 @@ export function CopyrightPage() {
     setLoading(true);
     setError("");
     try {
-      const [caseData, scanData] = await Promise.all([
-        api<PageData<CopyrightCase>>("/copyright/cases?page=1&pageSize=100"),
-        api<PageData<ExternalScan>>(
-          "/copyright/external-scans?page=1&pageSize=100",
-        ),
-      ]);
-      setCases(caseData);
+      const scanData = await api<PageData<ExternalScan>>(
+        "/copyright/external-scans?page=1&pageSize=100",
+      );
       setScans(scanData);
     } catch (reason) {
       setError(
@@ -171,26 +130,6 @@ export function CopyrightPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
   }, [load]);
-
-  const register = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const body = new FormData(form);
-    try {
-      await api("/copyright/assets", {
-        method: "POST",
-        body,
-      });
-      form.reset();
-      await load();
-    } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : "Không thể đăng ký reference.",
-      );
-    }
-  };
 
   const refreshScan = async (item: ExternalScan) => {
     try {
@@ -214,23 +153,13 @@ export function CopyrightPage() {
 
     setSaving(true);
     try {
-      if (decision.kind === "case") {
-        await api(`/copyright/cases/${decision.id}/decision`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            status: decision.status,
-            notes: notes.trim(),
-          }),
-        });
-      } else {
-        await api(`/copyright/external-scans/${decision.id}/decision`, {
-          method: "PATCH",
-          body: JSON.stringify({
-            isViolation: decision.isViolation,
-            notes: notes.trim(),
-          }),
-        });
-      }
+      await api(`/copyright/external-scans/${decision.id}/decision`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          isViolation: decision.isViolation,
+          notes: notes.trim(),
+        }),
+      });
 
       setDecision(null);
       setNotes("");
@@ -251,59 +180,14 @@ export function CopyrightPage() {
       <PageHeader
         eyebrow="Rights protection"
         title="Trung tâm bản quyền ảnh và video"
-        description="Đối chiếu SHA-256/dHash, tham chiếu web từ Google Vision và nhận diện âm thanh ACRCloud. Mọi tín hiệu đều do System Admin quyết định."
+        description="Google Vision và ACRCloud chỉ cung cấp tín hiệu. System Admin xem bằng chứng, quyết định và xử lý kháng nghị; hệ thống không tự kết luận quyền sở hữu."
       />
       <PageState loading={loading} error={error} retry={() => void load()}>
-        <div className="grid gap-6 xl:grid-cols-[360px_1fr]">
-          <Panel
-            title="Đăng ký reference"
-            subtitle="Chỉ tải nội dung có bằng chứng quyền hợp lệ."
-          >
-            <form className="space-y-3" onSubmit={register}>
-              <input
-                className={inputClass}
-                name="title"
-                placeholder="Tên tác phẩm"
-                required
-              />
-              <input
-                className={inputClass}
-                name="rightsOwnerName"
-                placeholder="Chủ sở hữu quyền"
-                required
-              />
-              <textarea
-                className={`${inputClass} min-h-24 py-3`}
-                name="evidenceNotes"
-                placeholder="Bằng chứng / phạm vi quyền"
-              />
-              <input
-                className="block w-full text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-brand-50 file:px-3 file:py-2 file:font-semibold file:text-brand-700"
-                type="file"
-                name="file"
-                accept="image/*,video/*"
-                required
-              />
-              <button className={`${primaryButton} w-full`}>
-                Đăng ký reference
-              </button>
-            </form>
-            <p className="mt-4 text-xs leading-5 text-slate-400">
-              SHA-256 phát hiện bản sao byte giống hệt; dHash phát hiện ảnh đã
-              resize hoặc nén nhẹ. Google Vision và ACRCloud chỉ tạo tín hiệu để
-              Admin xem xét, không tự kết luận vi phạm.
-            </p>
-          </Panel>
-
-          <div className="space-y-6">
-            <ExternalScanQueue
-              data={scans}
-              refreshScan={refreshScan}
-              setDecision={setDecision}
-            />
-            <ReferenceCaseQueue data={cases} setDecision={setDecision} />
-          </div>
-        </div>
+        <ExternalScanQueue
+          data={scans}
+          refreshScan={refreshScan}
+          setDecision={setDecision}
+        />
       </PageState>
 
       {decision ? (
@@ -429,7 +313,6 @@ function ExternalScanQueue({
                     className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"
                     onClick={() => {
                       setDecision({
-                        kind: "scan",
                         id: item.id,
                         isViolation: true,
                         title: item.status === 7
@@ -446,7 +329,6 @@ function ExternalScanQueue({
                     className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
                     onClick={() => {
                       setDecision({
-                        kind: "scan",
                         id: item.id,
                         isViolation: false,
                         title: item.status === 7
@@ -469,129 +351,6 @@ function ExternalScanQueue({
         ))}
       </div>
     </Panel>
-  );
-}
-
-function ReferenceCaseQueue({
-  data,
-  setDecision,
-}: {
-  data: PageData<CopyrightCase> | null;
-  setDecision: (target: DecisionTarget) => void;
-}) {
-  return (
-    <Panel
-      title="Đối chiếu reference nội bộ"
-      subtitle={`${data?.total ?? 0} hồ sơ`}
-    >
-      <div className="space-y-4">
-        {data?.items.length === 0 ? (
-          <p className="py-10 text-center text-sm text-slate-400">
-            Không có hồ sơ.
-          </p>
-        ) : null}
-        {data?.items.map((item) => (
-          <article
-            className="rounded-xl border border-slate-200 p-4"
-            key={item.id}
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h3 className="font-semibold text-slate-900">
-                  {item.assetTitle}
-                </h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  Chủ quyền: {item.rightsOwnerName} · độ khớp{" "}
-                  {(item.confidence * 100).toFixed(0)}%
-                </p>
-              </div>
-              <StatusBadge
-                tone={
-                  item.status === 1 || item.status === 4
-                    ? "amber"
-                    : item.status === 2 || item.status === 6
-                      ? "red"
-                      : "green"
-                }
-              >
-                {caseStatusNames[item.status]}
-              </StatusBadge>
-            </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <MediaCard
-                title="Reference đã đăng ký"
-                path={item.referenceMediaUrl}
-                mediaType={item.mediaType}
-              />
-              <MediaCard
-                title="Nội dung người dùng đăng"
-                path={item.mediaUrl}
-                mediaType={item.mediaType}
-              />
-            </div>
-            {item.appealReason ? (
-              <p className="mt-3 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-                Kháng nghị: {item.appealReason}
-              </p>
-            ) : null}
-            <div className="mt-4 flex flex-wrap items-center gap-2">
-              {item.status === 1 || item.status === 4 ? (
-                <>
-                  <button
-                    className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"
-                    onClick={() => {
-                      setDecision({
-                        kind: "case",
-                        id: item.id,
-                        status: item.status === 4 ? 6 : 2,
-                        title: "Xác nhận vi phạm bản quyền",
-                      });
-                    }}
-                  >
-                    Xác nhận vi phạm
-                  </button>
-                  <button
-                    className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
-                    onClick={() => {
-                      setDecision({
-                        kind: "case",
-                        id: item.id,
-                        status: item.status === 4 ? 5 : 3,
-                        title: "Bác hồ sơ bản quyền",
-                      });
-                    }}
-                  >
-                    Bác hồ sơ
-                  </button>
-                </>
-              ) : null}
-              <span className="ml-auto text-xs text-slate-400">
-                {formatDate(item.createdAt)}
-              </span>
-            </div>
-          </article>
-        ))}
-      </div>
-    </Panel>
-  );
-}
-
-function MediaCard({
-  title,
-  path,
-  mediaType,
-}: {
-  title: string;
-  path: string;
-  mediaType: number;
-}) {
-  return (
-    <div className="overflow-hidden rounded-lg border border-slate-200">
-      <p className="bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
-        {title}
-      </p>
-      <ProtectedMedia path={path} mediaType={mediaType} label={title} />
-    </div>
   );
 }
 

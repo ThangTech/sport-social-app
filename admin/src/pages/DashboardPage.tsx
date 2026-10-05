@@ -40,7 +40,7 @@ const quickActions = [
   {
     to: "/copyright",
     title: "Duyệt bản quyền",
-    description: "Đối chiếu reference và video nghi ngờ",
+    description: "Xem tín hiệu ảnh, âm thanh và kháng nghị",
     icon: <CopyrightOutlined />,
   },
   {
