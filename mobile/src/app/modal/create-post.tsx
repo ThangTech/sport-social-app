@@ -79,8 +79,8 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
     } catch (error) {
       if (postCreated) {
         Alert.alert(
-          "Ảnh chưa được tải lên",
-          "Bài viết đã được tạo nhưng ảnh tải lên không thành công. Bạn có thể thử lại sau.",
+          "Media chưa được tải lên",
+          "Bài viết đã được tạo nhưng ảnh hoặc video tải lên không thành công. Bạn có thể thử lại sau.",
         );
 
         onClose();
@@ -141,7 +141,7 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
             color={COLORS.textMuted}
             style={styles.actionsDescription}
           >
-            Ảnh và môn thể thao
+            Ảnh, video và môn thể thao
           </AppText>
         </View>
 

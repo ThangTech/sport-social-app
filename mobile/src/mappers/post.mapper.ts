@@ -5,6 +5,7 @@ import { formatRelativeTime } from "@/utils/date";
 
 export const mapFeedPostToPost = (item: FeedPostDto): Post => {
   const firstImage = item.media.find((media) => media.mediaType === 1);
+  const firstVideo = item.media.find((media) => media.mediaType === 2);
 
   return {
     id: item.id,
@@ -19,6 +20,7 @@ export const mapFeedPostToPost = (item: FeedPostDto): Post => {
     content: item.content ?? "",
     visibility: item.visibility,
     image: firstImage ? { uri: getFileUrl(firstImage.url)! } : undefined,
+    videoUrl: firstVideo ? getFileUrl(firstVideo.url)! : undefined,
     sport: item.sportName ?? undefined,
     likeCount: item.likeCount,
     commentCount: item.commentCount,

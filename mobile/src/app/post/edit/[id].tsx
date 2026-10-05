@@ -46,6 +46,7 @@ export default function EditPostScreen() {
   const [existingMedia, setExistingMedia] = useState<{
     id: string;
     url: string;
+    mediaType: number;
   } | null>(null);
 
   const [selectedImage, setSelectedImage] =
@@ -78,12 +79,13 @@ export default function EditPostScreen() {
         setVisibility(post.visibility);
         setSportId(post.sportId ?? null);
         setSportName(post.sportName ?? null);
-        const image = post.media.find((media) => media.mediaType === 1);
+        const media = post.media[0];
 
-        if (image) {
+        if (media) {
           setExistingMedia({
-            id: image.id,
-            url: image.url,
+            id: media.id,
+            url: media.url,
+            mediaType: media.mediaType,
           });
         }
       } catch (error) {
@@ -240,13 +242,13 @@ export default function EditPostScreen() {
           onChange={setSelectedImage}
           disabled={submitting}
           variant="label"
-          label={existingMedia ? "Thay ảnh" : "Thêm ảnh"}
+          label={existingMedia ? "Thay ảnh/video" : "Thêm ảnh/video"}
         />
 
         {removeExistingImage ? (
           <Pressable onPress={() => setRemoveExistingImage(false)}>
             <AppText variant="caption" color={COLORS.textMuted}>
-              Hoàn tác xóa ảnh
+              Hoàn tác xóa media
             </AppText>
           </Pressable>
         ) : null}

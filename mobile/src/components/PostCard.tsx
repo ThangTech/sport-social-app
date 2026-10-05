@@ -8,6 +8,7 @@ import {
   StyleSheet,
   View,
 } from "react-native";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import * as Linking from "expo-linking";
 import AppText from "./ui/AppText";
 import { Post } from "../types/post";
@@ -322,6 +323,18 @@ export default function PostCard({
             />
           </View>
         ) : null}
+        {!post.image && post.videoUrl ? (
+          <Pressable
+            style={styles.videoContainer}
+            onPress={() => void Linking.openURL(post.videoUrl!)}
+          >
+            <Ionicons name="play-circle" size={54} color={COLORS.primary} />
+            <AppText variant="label">Video bài viết</AppText>
+            <AppText variant="caption" color={COLORS.textMuted}>
+              Nhấn để mở bằng trình phát video
+            </AppText>
+          </Pressable>
+        ) : null}
       </Pressable>
       <PostCardActions
         reactionCount={reactionCount}
@@ -363,5 +376,13 @@ const styles = StyleSheet.create({
   postImage: {
     width: "100%",
     height: "100%",
+  },
+  videoContainer: {
+    width: "100%",
+    height: 240,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.xs,
+    backgroundColor: COLORS.surfaceAlt,
   },
 });

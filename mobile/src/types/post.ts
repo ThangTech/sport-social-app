@@ -14,6 +14,7 @@ export type Post = {
   content: string;
   visibility: number;
   image?: ImageSourcePropType;
+  videoUrl?: string;
   sport?: string;
 
   likeCount: number;

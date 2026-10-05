@@ -107,12 +107,17 @@ export const uploadPostMedia = async (
 function createMediaFormData(asset: ImagePickerAsset) {
   const formData = new FormData();
 
-  const extension = asset.mimeType?.split("/")[1] ?? "jpg";
+  const isVideo =
+    asset.type === "video" || asset.mimeType?.startsWith("video/");
+  const extension =
+    asset.mimeType?.split("/")[1] ??
+    asset.fileName?.split(".").pop() ??
+    (isVideo ? "mp4" : "jpg");
 
   formData.append("file", {
     uri: asset.uri,
     name: asset.fileName ?? `post-${Date.now()}.${extension}`,
-    type: asset.mimeType ?? "image/jpeg",
+    type: asset.mimeType ?? (isVideo ? "video/mp4" : "image/jpeg"),
   } as any);
 
   return formData;

@@ -6,7 +6,7 @@ import { Alert, Pressable, StyleSheet } from "react-native";
 
 type Props = {
   value: ImagePicker.ImagePickerAsset | null;
-  onChange: (image: ImagePicker.ImagePickerAsset) => void;
+  onChange: (media: ImagePicker.ImagePickerAsset) => void;
   disabled?: boolean;
   variant?: "icon" | "label";
   label?: string;
@@ -17,7 +17,7 @@ export default function PostImagePickerButton({
   onChange,
   disabled = false,
   variant = "icon",
-  label = "Thêm ảnh",
+  label = "Thêm ảnh/video",
 }: Props) {
   const handlePress = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -25,26 +25,44 @@ export default function PostImagePickerButton({
     if (!permission.granted) {
       Alert.alert(
         "Cần quyền truy cập",
-        "Bạn cần cho phép ứng dụng truy cập thư viện ảnh.",
+        "Bạn cần cho phép ứng dụng truy cập thư viện ảnh và video.",
       );
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ["images", "videos"],
       allowsMultipleSelection: false,
       quality: 0.9,
+      videoMaxDuration: 90,
     });
 
     if (!result.canceled) {
-      onChange(result.assets[0]);
+      const asset = result.assets[0];
+      if (asset.fileSize && asset.fileSize > 20 * 1024 * 1024) {
+        Alert.alert(
+          "File quá lớn",
+          "Ảnh hoặc video không được vượt quá 20 MB.",
+        );
+        return;
+      }
+
+      onChange(asset);
     }
   };
 
   if (variant === "label") {
     return (
-      <Pressable style={styles.labelButton} disabled={disabled} onPress={handlePress}>
-        <Ionicons name="image-outline" size={20} color={COLORS.primary} />
+      <Pressable
+        style={styles.labelButton}
+        disabled={disabled}
+        onPress={handlePress}
+      >
+        <Ionicons
+          name={value?.type === "video" ? "videocam-outline" : "images-outline"}
+          size={20}
+          color={COLORS.primary}
+        />
 
         <AppText variant="caption" color={COLORS.primary}>
           {label}
@@ -54,9 +72,19 @@ export default function PostImagePickerButton({
   }
 
   return (
-    <Pressable style={styles.iconButton} disabled={disabled} onPress={handlePress}>
+    <Pressable
+      style={styles.iconButton}
+      disabled={disabled}
+      onPress={handlePress}
+    >
       <Ionicons
-        name={value ? "image" : "image-outline"}
+        name={
+          value?.type === "video"
+            ? "videocam"
+            : value
+              ? "images"
+              : "images-outline"
+        }
         size={26}
         color={COLORS.primary}
       />

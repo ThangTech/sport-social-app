@@ -128,8 +128,8 @@ export default function CreateGroupPostScreen() {
     } catch (error) {
       if (postCreated) {
         Alert.alert(
-          "Ảnh chưa được tải lên",
-          "Bài viết đã được tạo nhưng ảnh tải lên không thành công. Bài sẽ không được tạo lại.",
+          "Media chưa được tải lên",
+          "Bài viết đã được tạo nhưng ảnh hoặc video tải lên không thành công. Bài sẽ không được tạo lại.",
         );
         router.back();
         return;
@@ -235,7 +235,7 @@ export default function CreateGroupPostScreen() {
           />
           <AppText variant="subtitle">Thêm vào bài viết</AppText>
           <AppText variant="caption" color={COLORS.textMuted}>
-            Ảnh và môn thể thao
+            Ảnh, video và môn thể thao
           </AppText>
           {sportsError ? (
             <AppText variant="caption" color={COLORS.danger}>

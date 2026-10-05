@@ -2,12 +2,14 @@ import AppText from "@/components/ui/AppText";
 import { COLORS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import * as Linking from "expo-linking";
 import type { ImagePickerAsset } from "expo-image-picker";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 
 type ExistingMedia = {
   id: string;
   url: string;
+  mediaType: number;
 };
 
 type Props = {
@@ -33,6 +35,10 @@ export default function PostImagePreview({
 
   const isNewImage = Boolean(selectedImage);
   const uri = selectedImage?.uri ?? getFileUrl(existingMedia?.url) ?? undefined;
+  const isVideo = selectedImage
+    ? selectedImage.type === "video" ||
+      selectedImage.mimeType?.startsWith("video/")
+    : existingMedia?.mediaType === 2;
 
   return (
     <View
@@ -41,7 +47,25 @@ export default function PostImagePreview({
         variant === "create" ? styles.createContainer : styles.editContainer,
       ]}
     >
-      <Image source={{ uri }} style={styles.image} resizeMode="cover" />
+      {isVideo ? (
+        <Pressable
+          style={styles.videoPreview}
+          disabled={!uri}
+          onPress={() => {
+            if (uri) {
+              void Linking.openURL(uri);
+            }
+          }}
+        >
+          <Ionicons name="play-circle" size={46} color={COLORS.primary} />
+          <AppText variant="label">Video đã chọn</AppText>
+          <AppText variant="caption" color={COLORS.textMuted}>
+            Nhấn để mở video kiểm tra
+          </AppText>
+        </Pressable>
+      ) : (
+        <Image source={{ uri }} style={styles.image} resizeMode="cover" />
+      )}
 
       <Pressable
         style={[
@@ -63,7 +87,7 @@ export default function PostImagePreview({
       {variant === "edit" && isNewImage ? (
         <View style={styles.newImageBadge}>
           <AppText variant="caption" color={COLORS.white}>
-            Ảnh mới
+            {isVideo ? "Video mới" : "Ảnh mới"}
           </AppText>
         </View>
       ) : null}
@@ -89,6 +113,13 @@ const styles = StyleSheet.create({
   image: {
     width: "100%",
     height: "100%",
+  },
+  videoPreview: {
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: SPACING.xs,
   },
   removeButton: {
     position: "absolute",
