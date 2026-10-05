@@ -15,9 +15,13 @@ export type AuditItem = {
   actorDisplayName?: string | null;
   actorEmail?: string | null;
   action: string;
+  actionLabel: string;
   targetType: string;
+  targetTypeLabel: string;
   targetId?: string;
+  targetLabel: string;
   summary: string;
+  displaySummary: string;
   createdAt: string;
 };
 export type DashboardData = {

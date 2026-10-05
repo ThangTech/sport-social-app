@@ -242,12 +242,14 @@ export function DashboardPage() {
                     color: "#16794f",
                     children: (
                       <div>
-                        <Typography.Text>{item.summary}</Typography.Text>
+                        <Typography.Text>
+                          {item.displaySummary}
+                        </Typography.Text>
                         <Typography.Text
                           type="secondary"
                           className="mt-1 block text-xs"
                         >
-                          {item.action} · {formatDate(item.createdAt)}
+                          {item.actionLabel} · {formatDate(item.createdAt)}
                         </Typography.Text>
                       </div>
                     ),

@@ -28,9 +28,9 @@ export function AuditPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Accountability"
+        eyebrow="Trách nhiệm quản trị"
         title="Nhật ký hệ thống"
-        description="Dấu vết bất biến ở tầng giao diện cho các thao tác quản trị quan trọng."
+        description="Theo dõi người thực hiện, hành động và nội dung bị tác động bằng thông tin dễ đọc."
       />
       <PageState
         loading={loading}
@@ -47,7 +47,7 @@ export function AuditPage() {
                   className="grid gap-2 border-b border-slate-100 py-4 last:border-0 md:grid-cols-[180px_1fr_auto]"
                 >
                   <div>
-                    <StatusBadge tone="blue">{item.action}</StatusBadge>
+                    <StatusBadge tone="blue">{item.actionLabel}</StatusBadge>
                     <p className="mt-2 text-xs font-semibold text-slate-700">
                       {item.actorDisplayName || "System Admin"}
                     </p>
@@ -57,10 +57,10 @@ export function AuditPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-slate-800">
-                      {item.summary}
+                      {item.displaySummary}
                     </p>
                     <p className="mt-1 text-xs text-slate-400">
-                      {item.targetType} · {item.targetId ?? "—"}
+                      {item.targetTypeLabel}: {item.targetLabel}
                     </p>
                   </div>
                   <time className="text-xs text-slate-500">
