@@ -1,8 +1,11 @@
+using System.Globalization;
 using System.Net.Http.Headers;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using Microsoft.AspNetCore.StaticFiles;
 using SocialSport.Api.Data;
 using SocialSport.Api.DTOs.Common;
 using SocialSport.Api.DTOs.Copyright;
@@ -16,6 +19,7 @@ namespace SocialSport.Api.Services.Implementations;
 public class ExternalCopyrightScanService : IExternalCopyrightScanService
 {
     private const string AcrCloudProvider = "AcrCloud";
+    private const string GoogleVisionProvider = "GoogleVision";
     private readonly ApplicationDbContext _context;
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IMediaUrlService _mediaUrlService;
@@ -50,15 +54,16 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
         bool replaceExisting = false,
         CancellationToken cancellationToken = default)
     {
-        if (!_settings.Enabled || media.MediaType != MediaType.Video)
+        var provider = ResolveProvider(media.MediaType);
+        if (provider is null)
         {
             return null;
         }
 
-        EnsureConfigured();
         var existing = await _context.ExternalCopyrightScans
             .FirstOrDefaultAsync(
-                x => x.PostMediaId == media.Id && x.Provider == AcrCloudProvider,
+                item => item.PostMediaId == media.Id
+                    && item.Provider == provider,
                 cancellationToken);
         if (existing is not null)
         {
@@ -75,66 +80,19 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
         {
             Id = Guid.NewGuid(),
             PostMediaId = media.Id,
-            Provider = AcrCloudProvider,
+            PostMedia = media,
+            Provider = provider,
             Status = ExternalCopyrightScanStatus.Processing,
             CreatedAt = DateTimeOffset.UtcNow
         };
         _context.ExternalCopyrightScans.Add(scan);
 
-        if (_settings.FailClosed)
-        {
-            post.Status = PostStatus.Hidden;
-            post.UpdatedAt = DateTimeOffset.UtcNow;
-        }
-
-        try
-        {
-            using var request = new HttpRequestMessage(
-                HttpMethod.Post,
-                $"api/fs-containers/{Uri.EscapeDataString(_settings.ContainerId)}/files");
-            request.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", _settings.BearerToken);
-            request.Headers.Accept.Add(
-                new MediaTypeWithQualityHeaderValue("application/json"));
-
-            await using var stream = File.OpenRead(filePath);
-            using var content = new MultipartFormDataContent();
-            using var fileContent = new StreamContent(stream);
-            fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
-            content.Add(fileContent, "file", Path.GetFileName(filePath));
-            content.Add(new StringContent("audio"), "data_type");
-            content.Add(new StringContent(media.Id.ToString()), "name");
-            request.Content = content;
-
-            var client = _httpClientFactory.CreateClient("AcrCloud");
-            using var response = await client.SendAsync(request, cancellationToken);
-            var json = await response.Content.ReadAsStringAsync(cancellationToken);
-            if (!response.IsSuccessStatusCode)
-            {
-                throw new InvalidOperationException(
-                    $"ACRCloud trả về HTTP {(int)response.StatusCode}.");
-            }
-
-            using var document = JsonDocument.Parse(json);
-            scan.ExternalJobId = ReadStringOrNumber(
-                document.RootElement.GetProperty("data"),
-                "id");
-            if (string.IsNullOrWhiteSpace(scan.ExternalJobId))
-            {
-                throw new InvalidOperationException(
-                    "ACRCloud không trả về mã công việc quét.");
-            }
-        }
-        catch (Exception exception)
-        {
-            scan.Status = ExternalCopyrightScanStatus.Failed;
-            scan.ErrorMessage = SafeError(exception.Message);
-            _logger.LogWarning(
-                exception,
-                "Could not submit media {MediaId} to ACRCloud.",
-                media.Id);
-        }
-
+        await RunProviderAsync(
+            scan,
+            filePath,
+            contentType,
+            cancellationToken);
+        await ApplyAutomatedOutcomeAsync(scan, post, cancellationToken);
         scan.UpdatedAt = DateTimeOffset.UtcNow;
         await _context.SaveChangesAsync(cancellationToken);
         return scan;
@@ -149,17 +107,17 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
         pageSize = Math.Clamp(pageSize, 1, 100);
         var query = _context.ExternalCopyrightScans
             .AsNoTracking()
-            .Include(x => x.PostMedia)
-            .ThenInclude(x => x.Post)
+            .Include(item => item.PostMedia)
+            .ThenInclude(media => media.Post)
             .AsQueryable();
         if (status.HasValue)
         {
-            query = query.Where(x => x.Status == status.Value);
+            query = query.Where(item => item.Status == status.Value);
         }
 
         var total = await query.CountAsync();
         var items = await query
-            .OrderByDescending(x => x.CreatedAt)
+            .OrderByDescending(item => item.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync();
@@ -176,48 +134,33 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
     {
         var items = await _context.ExternalCopyrightScans
             .AsNoTracking()
-            .Include(x => x.PostMedia)
-            .ThenInclude(x => x.Post)
-            .Where(x => x.PostMedia.Post.AuthorId == userId)
-            .OrderByDescending(x => x.CreatedAt)
+            .Include(item => item.PostMedia)
+            .ThenInclude(media => media.Post)
+            .Where(item => item.PostMedia.Post.AuthorId == userId)
+            .OrderByDescending(item => item.CreatedAt)
             .Take(100)
             .ToListAsync();
         return items.Select(ToDto).ToList();
     }
 
-    public async Task<(string Path, string ContentType)> GetMediaAsync(Guid scanId)
+    public async Task<(string Path, string ContentType)> GetMediaAsync(
+        Guid scanId)
     {
         var mediaUrl = await _context.ExternalCopyrightScans
             .AsNoTracking()
-            .Where(x => x.Id == scanId)
-            .Select(x => x.PostMedia.Url)
+            .Where(item => item.Id == scanId)
+            .Select(item => item.PostMedia.Url)
             .FirstOrDefaultAsync()
-            ?? throw new KeyNotFoundException("Không tìm thấy media cần review.");
-        const string prefix = "/uploads/posts/";
-        if (!mediaUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-        {
-            throw new KeyNotFoundException("Đường dẫn media không hợp lệ.");
-        }
-
-        var webRoot = _environment.WebRootPath
-            ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
-        var root = Path.GetFullPath(Path.Combine(webRoot, "uploads", "posts"));
-        var candidate = Path.GetFullPath(Path.Combine(root, Path.GetFileName(mediaUrl)));
-        if (!candidate.StartsWith(
-                $"{root}{Path.DirectorySeparatorChar}",
-                StringComparison.OrdinalIgnoreCase)
-            || !File.Exists(candidate))
-        {
-            throw new KeyNotFoundException("File media không còn khả dụng.");
-        }
-
+            ?? throw new KeyNotFoundException(
+                "Không tìm thấy media cần review.");
+        var path = ResolveMediaPath(mediaUrl);
         var provider = new FileExtensionContentTypeProvider();
-        if (!provider.TryGetContentType(candidate, out var contentType))
+        if (!provider.TryGetContentType(path, out var contentType))
         {
             contentType = "application/octet-stream";
         }
 
-        return (candidate, contentType);
+        return (path, contentType);
     }
 
     public async Task<ExternalCopyrightScanDto> RefreshAsync(
@@ -225,63 +168,34 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
         CancellationToken cancellationToken = default)
     {
         var scan = await _context.ExternalCopyrightScans
-            .Include(x => x.PostMedia)
-            .ThenInclude(x => x.Post)
-            .FirstOrDefaultAsync(x => x.Id == scanId, cancellationToken)
-            ?? throw new KeyNotFoundException("Không tìm thấy lượt quét bản quyền.");
-        if (scan.Status != ExternalCopyrightScanStatus.Processing)
+            .Include(item => item.PostMedia)
+            .ThenInclude(media => media.Post)
+            .FirstOrDefaultAsync(item => item.Id == scanId, cancellationToken)
+            ?? throw new KeyNotFoundException(
+                "Không tìm thấy lượt quét bản quyền.");
+
+        var path = ResolveMediaPath(scan.PostMedia.Url);
+        var provider = new FileExtensionContentTypeProvider();
+        if (!provider.TryGetContentType(path, out var contentType))
         {
-            return ToDto(scan);
+            contentType = "application/octet-stream";
         }
 
-        EnsureConfigured();
-        if (string.IsNullOrWhiteSpace(scan.ExternalJobId))
-        {
-            throw new InvalidOperationException("Lượt quét chưa có mã từ nhà cung cấp.");
-        }
-
-        using var request = new HttpRequestMessage(
-            HttpMethod.Get,
-            $"api/fs-containers/{Uri.EscapeDataString(_settings.ContainerId)}/files/" +
-            Uri.EscapeDataString(scan.ExternalJobId));
-        request.Headers.Authorization =
-            new AuthenticationHeaderValue("Bearer", _settings.BearerToken);
-        request.Headers.Accept.Add(
-            new MediaTypeWithQualityHeaderValue("application/json"));
-
-        var client = _httpClientFactory.CreateClient("AcrCloud");
-        using var response = await client.SendAsync(request, cancellationToken);
-        var json = await response.Content.ReadAsStringAsync(cancellationToken);
-        if (!response.IsSuccessStatusCode)
-        {
-            throw new InvalidOperationException(
-                $"ACRCloud trả về HTTP {(int)response.StatusCode}.");
-        }
-
-        var previousStatus = scan.Status;
-        ApplyProviderResult(scan, json);
+        scan.Status = ExternalCopyrightScanStatus.Processing;
+        scan.ErrorMessage = null;
+        scan.MatchSummary = null;
+        scan.ProviderResultJson = null;
+        await RunProviderAsync(
+            scan,
+            path,
+            contentType,
+            cancellationToken);
+        await ApplyAutomatedOutcomeAsync(
+            scan,
+            scan.PostMedia.Post,
+            cancellationToken);
         scan.UpdatedAt = DateTimeOffset.UtcNow;
-        if (scan.Status == ExternalCopyrightScanStatus.Clear)
-        {
-            await RestorePostWhenUnblockedAsync(scan);
-        }
-        else if (scan.Status == ExternalCopyrightScanStatus.ReviewRequired)
-        {
-            scan.PostMedia.Post.Status = PostStatus.Hidden;
-            scan.PostMedia.Post.UpdatedAt = DateTimeOffset.UtcNow;
-        }
-
         await _context.SaveChangesAsync(cancellationToken);
-        if (previousStatus != scan.Status
-            && scan.Status == ExternalCopyrightScanStatus.Clear)
-        {
-            await _notificationService.CreateAsync(
-                scan.PostMedia.Post.AuthorId,
-                null,
-                NotificationType.CopyrightScanResolved,
-                scan.Id);
-        }
-
         return ToDto(scan);
     }
 
@@ -291,21 +205,29 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
         ExternalCopyrightScanDecisionRequest request)
     {
         var scan = await _context.ExternalCopyrightScans
-            .Include(x => x.PostMedia)
-            .ThenInclude(x => x.Post)
-            .FirstOrDefaultAsync(x => x.Id == scanId)
-            ?? throw new KeyNotFoundException("Không tìm thấy lượt quét bản quyền.");
-        if (scan.Status is not (
-            ExternalCopyrightScanStatus.ReviewRequired
-            or ExternalCopyrightScanStatus.Failed))
+            .Include(item => item.PostMedia)
+            .ThenInclude(media => media.Post)
+            .FirstOrDefaultAsync(item => item.Id == scanId)
+            ?? throw new KeyNotFoundException(
+                "Không tìm thấy lượt quét bản quyền.");
+        var isAppealDecision = scan.Status ==
+            ExternalCopyrightScanStatus.Appealed;
+        if (!isAppealDecision
+            && scan.Status is not (
+                ExternalCopyrightScanStatus.ReviewRequired
+                or ExternalCopyrightScanStatus.Failed))
         {
             throw new InvalidOperationException(
-                "Chỉ kết quả cần review hoặc quét lỗi mới được Admin quyết định.");
+                "Trạng thái lượt quét không cho phép ra quyết định.");
         }
 
-        scan.Status = request.IsViolation
-            ? ExternalCopyrightScanStatus.ViolationConfirmed
-            : ExternalCopyrightScanStatus.ClearedByAdmin;
+        scan.Status = isAppealDecision
+            ? request.IsViolation
+                ? ExternalCopyrightScanStatus.AppealRejected
+                : ExternalCopyrightScanStatus.AppealAccepted
+            : request.IsViolation
+                ? ExternalCopyrightScanStatus.ViolationConfirmed
+                : ExternalCopyrightScanStatus.ClearedByAdmin;
         scan.ReviewedBy = adminId;
         scan.ReviewedAt = DateTimeOffset.UtcNow;
         scan.ReviewNotes = request.Notes.Trim();
@@ -325,73 +247,405 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
         await _notificationService.CreateAsync(
             scan.PostMedia.Post.AuthorId,
             null,
-            NotificationType.CopyrightScanResolved,
+            isAppealDecision
+                ? NotificationType.CopyrightAppealResolved
+                : NotificationType.CopyrightScanResolved,
             scan.Id);
     }
 
-    private void EnsureConfigured()
+    public async Task AppealAsync(
+        Guid userId,
+        Guid scanId,
+        CopyrightAppealRequest request)
     {
-        if (!string.Equals(
-                _settings.Provider,
-                AcrCloudProvider,
-                StringComparison.OrdinalIgnoreCase)
-            || string.IsNullOrWhiteSpace(_settings.ApiBaseUrl)
-            || string.IsNullOrWhiteSpace(_settings.BearerToken)
-            || string.IsNullOrWhiteSpace(_settings.ContainerId))
+        var scan = await _context.ExternalCopyrightScans
+            .Include(item => item.PostMedia)
+            .ThenInclude(media => media.Post)
+            .FirstOrDefaultAsync(item =>
+                item.Id == scanId
+                && item.PostMedia.Post.AuthorId == userId)
+            ?? throw new KeyNotFoundException(
+                "Không tìm thấy kết quả quét bản quyền.");
+        if (scan.Status != ExternalCopyrightScanStatus.ViolationConfirmed)
         {
             throw new InvalidOperationException(
-                "CopyrightScanning chưa được cấu hình đầy đủ cho ACRCloud.");
+                "Chỉ quyết định vi phạm đã xác nhận mới có thể kháng nghị.");
         }
+
+        var deadline = scan.ReviewedAt?.AddDays(
+            _settings.AppealWindowDays);
+        if (!deadline.HasValue || deadline.Value < DateTimeOffset.UtcNow)
+        {
+            throw new InvalidOperationException(
+                $"Thời hạn kháng nghị {_settings.AppealWindowDays} ngày đã hết.");
+        }
+
+        scan.Status = ExternalCopyrightScanStatus.Appealed;
+        scan.AppealReason = request.Reason.Trim();
+        scan.AppealedAt = DateTimeOffset.UtcNow;
+        scan.UpdatedAt = DateTimeOffset.UtcNow;
+        await _context.SaveChangesAsync();
     }
 
-    private void ApplyProviderResult(ExternalCopyrightScan scan, string json)
+    private string? ResolveProvider(MediaType mediaType)
     {
-        using var document = JsonDocument.Parse(json);
-        var data = document.RootElement.GetProperty("data");
-        if (data.ValueKind == JsonValueKind.Array)
+        if (mediaType == MediaType.Video)
         {
-            data = data.EnumerateArray().FirstOrDefault();
+            if (!_settings.AcrCloud.Enabled)
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(_settings.AcrCloud.Host)
+                || string.IsNullOrWhiteSpace(_settings.AcrCloud.AccessKey)
+                || string.IsNullOrWhiteSpace(_settings.AcrCloud.AccessSecret))
+            {
+                _logger.LogWarning(
+                    "ACRCloud is enabled but credentials are incomplete.");
+                return null;
+            }
+
+            return AcrCloudProvider;
         }
 
-        var state = data.GetProperty("state").GetInt32();
-        scan.ProviderResultJson = json;
-        scan.ErrorMessage = null;
-        if (state == 0)
+        if (mediaType == MediaType.Image)
         {
-            scan.Status = ExternalCopyrightScanStatus.Processing;
-            return;
+            if (!_settings.GoogleVision.Enabled)
+            {
+                return null;
+            }
+
+            if (string.IsNullOrWhiteSpace(_settings.GoogleVision.ApiKey))
+            {
+                _logger.LogWarning(
+                    "Google Vision is enabled but its API key is missing.");
+                return null;
+            }
+
+            return GoogleVisionProvider;
         }
 
-        if (state == -1)
-        {
-            scan.Status = ExternalCopyrightScanStatus.Clear;
-            scan.MatchSummary = null;
-            return;
-        }
+        return null;
+    }
 
-        if (state is -2 or -3)
+    private async Task RunProviderAsync(
+        ExternalCopyrightScan scan,
+        string filePath,
+        string contentType,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (scan.Provider == AcrCloudProvider)
+            {
+                await RunAcrCloudAsync(
+                    scan,
+                    filePath,
+                    contentType,
+                    cancellationToken);
+            }
+            else if (scan.Provider == GoogleVisionProvider)
+            {
+                await RunGoogleVisionAsync(
+                    scan,
+                    filePath,
+                    cancellationToken);
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    "Nhà cung cấp quét bản quyền không được hỗ trợ.");
+            }
+        }
+        catch (Exception exception)
         {
             scan.Status = ExternalCopyrightScanStatus.Failed;
-            scan.ErrorMessage = "Nhà cung cấp không thể xử lý file này.";
+            scan.ErrorMessage = SafeError(exception.Message);
+            _logger.LogWarning(
+                exception,
+                "Copyright provider {Provider} failed for media {MediaId}.",
+                scan.Provider,
+                scan.PostMediaId);
+        }
+    }
+
+    private async Task RunAcrCloudAsync(
+        ExternalCopyrightScan scan,
+        string filePath,
+        string contentType,
+        CancellationToken cancellationToken)
+    {
+        var fileInfo = new FileInfo(filePath);
+        if (fileInfo.Length > _settings.AcrCloud.MaxSampleBytes)
+        {
+            throw new InvalidOperationException(
+                "Video vượt giới hạn mẫu ACRCloud 5 MB; Admin cần kiểm tra thủ công.");
+        }
+
+        const string method = "POST";
+        const string path = "/v1/identify";
+        const string dataType = "audio";
+        const string signatureVersion = "1";
+        var timestamp = DateTimeOffset.UtcNow
+            .ToUnixTimeSeconds()
+            .ToString(CultureInfo.InvariantCulture);
+        var stringToSign = string.Join(
+            "\n",
+            method,
+            path,
+            _settings.AcrCloud.AccessKey,
+            dataType,
+            signatureVersion,
+            timestamp);
+        using var hmac = new HMACSHA1(
+            Encoding.ASCII.GetBytes(_settings.AcrCloud.AccessSecret));
+        var signature = Convert.ToBase64String(
+            hmac.ComputeHash(Encoding.ASCII.GetBytes(stringToSign)));
+
+        await using var stream = File.OpenRead(filePath);
+        using var content = new MultipartFormDataContent();
+        using var fileContent = new StreamContent(stream);
+        fileContent.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
+        content.Add(fileContent, "sample", Path.GetFileName(filePath));
+        content.Add(
+            new StringContent(_settings.AcrCloud.AccessKey),
+            "access_key");
+        content.Add(
+            new StringContent(fileInfo.Length.ToString(CultureInfo.InvariantCulture)),
+            "sample_bytes");
+        content.Add(new StringContent(timestamp), "timestamp");
+        content.Add(new StringContent(signature), "signature");
+        content.Add(new StringContent(dataType), "data_type");
+        content.Add(
+            new StringContent(signatureVersion),
+            "signature_version");
+
+        var client = _httpClientFactory.CreateClient("AcrCloud");
+        using var response = await client.PostAsync(
+            path.TrimStart('/'),
+            content,
+            cancellationToken);
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException(
+                $"ACRCloud trả về HTTP {(int)response.StatusCode}.");
+        }
+
+        ApplyAcrCloudResult(scan, json);
+    }
+
+    private async Task RunGoogleVisionAsync(
+        ExternalCopyrightScan scan,
+        string filePath,
+        CancellationToken cancellationToken)
+    {
+        var bytes = await File.ReadAllBytesAsync(filePath, cancellationToken);
+        var payload = JsonSerializer.Serialize(new
+        {
+            requests = new[]
+            {
+                new
+                {
+                    image = new
+                    {
+                        content = Convert.ToBase64String(bytes)
+                    },
+                    features = new[]
+                    {
+                        new
+                        {
+                            type = "WEB_DETECTION",
+                            maxResults = Math.Clamp(
+                                _settings.GoogleVision.MaxResults,
+                                1,
+                                50)
+                        }
+                    }
+                }
+            }
+        });
+        using var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            "v1/images:annotate");
+        request.Headers.Add(
+            "X-Goog-Api-Key",
+            _settings.GoogleVision.ApiKey);
+        request.Content = new StringContent(
+            payload,
+            Encoding.UTF8,
+            "application/json");
+
+        var client = _httpClientFactory.CreateClient("GoogleVision");
+        using var response = await client.SendAsync(request, cancellationToken);
+        var json = await response.Content.ReadAsStringAsync(cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new InvalidOperationException(
+                $"Google Vision trả về HTTP {(int)response.StatusCode}.");
+        }
+
+        ApplyGoogleVisionResult(scan, json);
+    }
+
+    private static void ApplyAcrCloudResult(
+        ExternalCopyrightScan scan,
+        string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        scan.ProviderResultJson = json;
+        var root = document.RootElement;
+        var status = root.GetProperty("status");
+        var code = status.GetProperty("code").GetInt32();
+        if (code == 1001)
+        {
+            scan.Status = ExternalCopyrightScanStatus.Clear;
+            scan.MatchSummary = "ACRCloud không tìm thấy âm thanh trùng khớp.";
             return;
         }
 
-        scan.Status = ExternalCopyrightScanStatus.ReviewRequired;
-        scan.MatchSummary = BuildMatchSummary(data);
+        if (code != 0)
+        {
+            var message = status.TryGetProperty("msg", out var messageElement)
+                ? messageElement.GetString()
+                : "Không rõ nguyên nhân";
+            throw new InvalidOperationException(
+                $"ACRCloud không thể nhận diện mẫu: {message}.");
+        }
+
+        var matches = ReadAcrCloudMatches(root);
+        scan.Status = matches.Count > 0
+            ? ExternalCopyrightScanStatus.ReviewRequired
+            : ExternalCopyrightScanStatus.Clear;
+        scan.MatchSummary = matches.Count > 0
+            ? $"ACRCloud phát hiện {matches.Count} kết quả: "
+                + string.Join("; ", matches.Take(3))
+            : "ACRCloud không tìm thấy âm thanh trùng khớp.";
     }
 
-    private async Task RestorePostWhenUnblockedAsync(ExternalCopyrightScan scan)
+    private static List<string> ReadAcrCloudMatches(JsonElement root)
+    {
+        var matches = new List<string>();
+        if (!root.TryGetProperty("metadata", out var metadata))
+        {
+            return matches;
+        }
+
+        foreach (var property in new[] { "music", "custom_files" })
+        {
+            if (!metadata.TryGetProperty(property, out var items)
+                || items.ValueKind != JsonValueKind.Array)
+            {
+                continue;
+            }
+
+            foreach (var item in items.EnumerateArray())
+            {
+                var title = ReadString(item, "title") ?? "Không rõ tiêu đề";
+                var artists = ReadArtistNames(item);
+                var score = ReadStringOrNumber(item, "score");
+                var description = string.IsNullOrWhiteSpace(artists)
+                    ? title
+                    : $"{title} - {artists}";
+                if (!string.IsNullOrWhiteSpace(score))
+                {
+                    description += $" ({score}%)";
+                }
+
+                matches.Add(description);
+            }
+        }
+
+        return matches;
+    }
+
+    private static void ApplyGoogleVisionResult(
+        ExternalCopyrightScan scan,
+        string json)
+    {
+        using var document = JsonDocument.Parse(json);
+        scan.ProviderResultJson = json;
+        var response = document.RootElement
+            .GetProperty("responses")
+            .EnumerateArray()
+            .FirstOrDefault();
+        if (response.ValueKind == JsonValueKind.Undefined)
+        {
+            throw new InvalidOperationException(
+                "Google Vision không trả về kết quả.");
+        }
+
+        if (response.TryGetProperty("error", out var error))
+        {
+            var message = ReadString(error, "message")
+                ?? "Không rõ nguyên nhân";
+            throw new InvalidOperationException(
+                $"Google Vision không thể phân tích ảnh: {message}");
+        }
+
+        if (!response.TryGetProperty("webDetection", out var detection))
+        {
+            scan.Status = ExternalCopyrightScanStatus.Clear;
+            scan.MatchSummary = "Google Vision không tìm thấy tham chiếu web.";
+            return;
+        }
+
+        var fullMatches = ArrayLength(detection, "fullMatchingImages");
+        var partialMatches = ArrayLength(detection, "partialMatchingImages");
+        var pages = ArrayLength(detection, "pagesWithMatchingImages");
+        var totalSignals = fullMatches + partialMatches + pages;
+        scan.Status = totalSignals > 0
+            ? ExternalCopyrightScanStatus.ReviewRequired
+            : ExternalCopyrightScanStatus.Clear;
+        scan.MatchSummary = totalSignals > 0
+            ? "Google Vision tìm thấy "
+                + $"{fullMatches} ảnh trùng hoàn toàn, "
+                + $"{partialMatches} ảnh trùng một phần và "
+                + $"{pages} trang web liên quan. Admin cần xác minh quyền sở hữu."
+            : "Google Vision không tìm thấy ảnh trùng trên web.";
+    }
+
+    private async Task ApplyAutomatedOutcomeAsync(
+        ExternalCopyrightScan scan,
+        Post post,
+        CancellationToken cancellationToken)
+    {
+        if (scan.Status == ExternalCopyrightScanStatus.ReviewRequired)
+        {
+            post.Status = PostStatus.Hidden;
+            post.UpdatedAt = DateTimeOffset.UtcNow;
+            await _notificationService.CreateAsync(
+                post.AuthorId,
+                null,
+                NotificationType.CopyrightReviewPending,
+                scan.Id);
+            return;
+        }
+
+        if (scan.Status == ExternalCopyrightScanStatus.Clear)
+        {
+            await RestorePostWhenUnblockedAsync(scan, cancellationToken);
+        }
+    }
+
+    private async Task RestorePostWhenUnblockedAsync(
+        ExternalCopyrightScan scan,
+        CancellationToken cancellationToken = default)
     {
         var post = scan.PostMedia.Post;
-        var hasCopyrightCase = await _context.CopyrightCases.AnyAsync(x =>
-            x.PostMedia.PostId == post.Id
-            && x.Status != CopyrightCaseStatus.Dismissed
-            && x.Status != CopyrightCaseStatus.AppealAccepted);
-        var hasOtherScan = await _context.ExternalCopyrightScans.AnyAsync(x =>
-            x.Id != scan.Id
-            && x.PostMedia.PostId == post.Id
-            && x.Status != ExternalCopyrightScanStatus.Clear
-            && x.Status != ExternalCopyrightScanStatus.ClearedByAdmin);
+        var hasCopyrightCase = await _context.CopyrightCases.AnyAsync(
+            item => item.PostMedia.PostId == post.Id
+                && item.Status != CopyrightCaseStatus.Dismissed
+                && item.Status != CopyrightCaseStatus.AppealAccepted,
+            cancellationToken);
+        var hasOtherScan = await _context.ExternalCopyrightScans.AnyAsync(
+            item => item.Id != scan.Id
+                && item.PostMedia.PostId == post.Id
+                && item.Status != ExternalCopyrightScanStatus.Clear
+                && item.Status != ExternalCopyrightScanStatus.ClearedByAdmin
+                && item.Status != ExternalCopyrightScanStatus.AppealAccepted
+                && item.Status != ExternalCopyrightScanStatus.Failed,
+            cancellationToken);
         if (!hasCopyrightCase
             && !hasOtherScan
             && post.Status == PostStatus.Hidden
@@ -404,6 +658,31 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
         }
     }
 
+    private string ResolveMediaPath(string mediaUrl)
+    {
+        const string prefix = "/uploads/posts/";
+        if (!mediaUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+        {
+            throw new KeyNotFoundException("Đường dẫn media không hợp lệ.");
+        }
+
+        var webRoot = _environment.WebRootPath
+            ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+        var root = Path.GetFullPath(
+            Path.Combine(webRoot, "uploads", "posts"));
+        var candidate = Path.GetFullPath(
+            Path.Combine(root, Path.GetFileName(mediaUrl)));
+        if (!candidate.StartsWith(
+                $"{root}{Path.DirectorySeparatorChar}",
+                StringComparison.OrdinalIgnoreCase)
+            || !File.Exists(candidate))
+        {
+            throw new KeyNotFoundException("File media không còn khả dụng.");
+        }
+
+        return candidate;
+    }
+
     private ExternalCopyrightScanDto ToDto(ExternalCopyrightScan scan)
     {
         return new ExternalCopyrightScanDto
@@ -412,38 +691,118 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
             PostId = scan.PostMedia.PostId,
             PostMediaId = scan.PostMediaId,
             UploaderId = scan.PostMedia.Post.AuthorId,
+            MediaType = scan.PostMedia.MediaType,
             MediaUrl = _mediaUrlService.CreatePostMediaUrl(scan.PostMediaId),
             Provider = scan.Provider,
             Status = scan.Status,
             MatchSummary = scan.MatchSummary,
             ErrorMessage = scan.ErrorMessage,
             ReviewNotes = scan.ReviewNotes,
+            AppealReason = scan.AppealReason,
+            EvidenceLinks = ReadEvidenceLinks(scan),
             CreatedAt = scan.CreatedAt,
-            UpdatedAt = scan.UpdatedAt
+            UpdatedAt = scan.UpdatedAt,
+            ReviewedAt = scan.ReviewedAt,
+            AppealedAt = scan.AppealedAt,
+            AppealDeadline = scan.ReviewedAt?.AddDays(
+                _settings.AppealWindowDays),
+            CanAppeal = scan.Status ==
+                    ExternalCopyrightScanStatus.ViolationConfirmed
+                && scan.ReviewedAt.HasValue
+                && scan.ReviewedAt.Value.AddDays(
+                    _settings.AppealWindowDays) >= DateTimeOffset.UtcNow
         };
     }
 
-    private static string BuildMatchSummary(JsonElement data)
+    private static List<string> ReadEvidenceLinks(
+        ExternalCopyrightScan scan)
     {
-        if (!data.TryGetProperty("results", out var results))
+        if (scan.Provider != GoogleVisionProvider
+            || string.IsNullOrWhiteSpace(scan.ProviderResultJson))
         {
-            return "ACRCloud báo có kết quả khớp; cần Admin kiểm tra.";
+            return [];
         }
 
-        foreach (var key in new[] { "music", "cover_songs", "custom_files" })
+        try
         {
-            if (results.TryGetProperty(key, out var matches)
-                && matches.ValueKind == JsonValueKind.Array
-                && matches.GetArrayLength() > 0)
+            using var document = JsonDocument.Parse(scan.ProviderResultJson);
+            var response = document.RootElement
+                .GetProperty("responses")
+                .EnumerateArray()
+                .FirstOrDefault();
+            if (response.ValueKind == JsonValueKind.Undefined
+                || !response.TryGetProperty(
+                    "webDetection",
+                    out var detection))
             {
-                return $"ACRCloud phát hiện {matches.GetArrayLength()} kết quả trong {key}.";
+                return [];
             }
-        }
 
-        return "ACRCloud báo có kết quả khớp; cần Admin kiểm tra.";
+            var links = new List<string>();
+            AddEvidenceLinks(
+                detection,
+                "pagesWithMatchingImages",
+                links);
+            AddEvidenceLinks(
+                detection,
+                "fullMatchingImages",
+                links);
+            AddEvidenceLinks(
+                detection,
+                "partialMatchingImages",
+                links);
+            return links
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Take(5)
+                .ToList();
+        }
+        catch (JsonException)
+        {
+            return [];
+        }
     }
 
-    private static string? ReadStringOrNumber(JsonElement element, string property)
+    private static void AddEvidenceLinks(
+        JsonElement detection,
+        string property,
+        List<string> links)
+    {
+        if (!detection.TryGetProperty(property, out var items)
+            || items.ValueKind != JsonValueKind.Array)
+        {
+            return;
+        }
+
+        foreach (var item in items.EnumerateArray())
+        {
+            var value = ReadString(item, "url");
+            if (Uri.TryCreate(value, UriKind.Absolute, out var uri)
+                && uri.Scheme is "http" or "https")
+            {
+                links.Add(uri.AbsoluteUri);
+            }
+        }
+    }
+
+    private static int ArrayLength(JsonElement parent, string property)
+    {
+        return parent.TryGetProperty(property, out var value)
+            && value.ValueKind == JsonValueKind.Array
+            ? value.GetArrayLength()
+            : 0;
+    }
+
+    private static string? ReadString(JsonElement element, string property)
+    {
+        return element.TryGetProperty(property, out var value)
+            && value.ValueKind == JsonValueKind.String
+            ? value.GetString()
+            : null;
+    }
+
+    private static string? ReadStringOrNumber(
+        JsonElement element,
+        string property)
     {
         if (!element.TryGetProperty(property, out var value))
         {
@@ -458,8 +817,26 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
         };
     }
 
+    private static string ReadArtistNames(JsonElement item)
+    {
+        if (!item.TryGetProperty("artists", out var artists)
+            || artists.ValueKind != JsonValueKind.Array)
+        {
+            return string.Empty;
+        }
+
+        return string.Join(
+            ", ",
+            artists
+                .EnumerateArray()
+                .Select(artist => ReadString(artist, "name"))
+                .Where(name => !string.IsNullOrWhiteSpace(name)));
+    }
+
     private static string SafeError(string message)
     {
-        return message.Length <= 2000 ? message : message[..2000];
+        return message.Length <= 2000
+            ? message
+            : message[..2000];
     }
 }

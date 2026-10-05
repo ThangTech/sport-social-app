@@ -12,6 +12,8 @@ public class ExternalCopyrightScanDto
 
     public Guid UploaderId { get; set; }
 
+    public MediaType MediaType { get; set; }
+
     public string MediaUrl { get; set; } = string.Empty;
 
     public string Provider { get; set; } = string.Empty;
@@ -24,7 +26,19 @@ public class ExternalCopyrightScanDto
 
     public string? ReviewNotes { get; set; }
 
+    public string? AppealReason { get; set; }
+
+    public List<string> EvidenceLinks { get; set; } = [];
+
     public DateTimeOffset CreatedAt { get; set; }
 
     public DateTimeOffset? UpdatedAt { get; set; }
+
+    public DateTimeOffset? ReviewedAt { get; set; }
+
+    public DateTimeOffset? AppealedAt { get; set; }
+
+    public DateTimeOffset? AppealDeadline { get; set; }
+
+    public bool CanAppeal { get; set; }
 }

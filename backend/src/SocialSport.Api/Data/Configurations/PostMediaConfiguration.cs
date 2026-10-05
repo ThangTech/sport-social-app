@@ -23,6 +23,9 @@ public class PostMediaConfiguration
         builder.Property(x => x.ContentHash).HasMaxLength(64);
         builder.HasIndex(x => x.ContentHash);
 
+        builder.Property(x => x.PerceptualHash).HasMaxLength(16);
+        builder.HasIndex(x => x.PerceptualHash);
+
         builder.HasOne(x => x.Post)
             .WithMany(x => x.Media)
             .HasForeignKey(x => x.PostId)

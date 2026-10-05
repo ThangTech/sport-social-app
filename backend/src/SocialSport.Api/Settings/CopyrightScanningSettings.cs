@@ -4,17 +4,36 @@ public class CopyrightScanningSettings
 {
     public const string SectionName = "CopyrightScanning";
 
-    public bool Enabled { get; set; }
-
-    public bool FailClosed { get; set; } = true;
-
     public int AppealWindowDays { get; set; } = 14;
 
-    public string Provider { get; set; } = "AcrCloud";
+    public int PerceptualHashDistanceThreshold { get; set; } = 10;
 
-    public string ApiBaseUrl { get; set; } = string.Empty;
+    public AcrCloudSettings AcrCloud { get; set; } = new();
 
-    public string BearerToken { get; set; } = string.Empty;
+    public GoogleVisionSettings GoogleVision { get; set; } = new();
+}
 
-    public string ContainerId { get; set; } = string.Empty;
+public class AcrCloudSettings
+{
+    public bool Enabled { get; set; }
+
+    public string Host { get; set; } = string.Empty;
+
+    public string AccessKey { get; set; } = string.Empty;
+
+    public string AccessSecret { get; set; } = string.Empty;
+
+    public int MaxSampleBytes { get; set; } = 5 * 1024 * 1024;
+}
+
+public class GoogleVisionSettings
+{
+    public bool Enabled { get; set; }
+
+    public string ApiKey { get; set; } = string.Empty;
+
+    public string Endpoint { get; set; } =
+        "https://vision.googleapis.com/";
+
+    public int MaxResults { get; set; } = 10;
 }

@@ -280,7 +280,7 @@ public class NotificationService : INotificationService
             NotificationType.CopyrightConfirmed => "Nội dung của bạn đã bị xác nhận vi phạm bản quyền.",
             NotificationType.CopyrightDismissed => "Hồ sơ bản quyền đã được bác bỏ và nội dung hợp lệ được khôi phục.",
             NotificationType.CopyrightAppealResolved => "Kháng nghị bản quyền của bạn đã có kết quả.",
-            NotificationType.CopyrightScanResolved => "Lượt quét bản quyền video của bạn đã có kết quả.",
+            NotificationType.CopyrightScanResolved => "Lượt quét bản quyền nội dung của bạn đã có kết quả.",
             NotificationType.GroupPostReviewPending => "Bài viết của bạn đã được gửi vào hàng đợi duyệt của nhóm.",
             NotificationType.GroupPostApproved => $"{name} đã duyệt bài viết của bạn trong nhóm.",
             NotificationType.GroupPostRejected => $"{name} đã từ chối bài viết của bạn trong nhóm.",

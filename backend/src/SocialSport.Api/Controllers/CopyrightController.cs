@@ -35,7 +35,11 @@ public class CopyrightController : ControllerBase
         [FromForm] IFormFile file)
     {
         var asset = await _service.CreateAssetAsync(UserId(), title, rightsOwnerName, evidenceNotes, file);
-        await Audit("copyright.asset.created", "copyright-asset", asset.Id, $"Registered rights reference: {asset.Title}.");
+        await Audit(
+            "copyright.asset.created",
+            "copyright-asset",
+            asset.Id,
+            $"Đã đăng ký nội dung tham chiếu: {asset.Title}.");
         return Ok(new
         {
             asset.Id,
@@ -74,7 +78,11 @@ public class CopyrightController : ControllerBase
     public async Task<IActionResult> Decide(Guid id, CopyrightDecisionRequest request)
     {
         await _service.DecideAsync(UserId(), id, request);
-        await Audit("copyright.case.decided", "copyright-case", id, $"Copyright decision: {request.Status}.");
+        await Audit(
+            "copyright.case.decided",
+            "copyright-case",
+            id,
+            $"Đã xử lý hồ sơ bản quyền với trạng thái {request.Status}.");
         return NoContent();
     }
 
@@ -106,6 +114,15 @@ public class CopyrightController : ControllerBase
         return Ok(await _externalScanService.GetMineAsync(UserId()));
     }
 
+    [HttpPost("external-scans/{id:guid}/appeal")]
+    public async Task<IActionResult> AppealExternalScan(
+        Guid id,
+        CopyrightAppealRequest request)
+    {
+        await _externalScanService.AppealAsync(UserId(), id, request);
+        return NoContent();
+    }
+
     [Authorize(Roles = "ADMIN"), HttpGet("external-scans/{id:guid}/media")]
     public async Task<IActionResult> ExternalScanMedia(Guid id)
     {
@@ -123,7 +140,7 @@ public class CopyrightController : ControllerBase
             "copyright.external-scan.refreshed",
             "external-copyright-scan",
             id,
-            $"External copyright scan refreshed: {result.Status}.");
+            $"Đã quét lại nội dung bằng {result.Provider}: {result.Status}.");
         return Ok(result);
     }
 
@@ -138,8 +155,8 @@ public class CopyrightController : ControllerBase
             "external-copyright-scan",
             id,
             request.IsViolation
-                ? "External scan confirmed as a violation."
-                : "External scan cleared by an administrator.");
+                ? "Admin xác nhận nội dung vi phạm."
+                : "Admin xác nhận nội dung không vi phạm.");
         return NoContent();
     }
 

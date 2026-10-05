@@ -9,6 +9,10 @@ using SocialSport.Api.Settings;
 using System.Security.Cryptography;
 using Microsoft.Extensions.Options;
 using Microsoft.AspNetCore.StaticFiles;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
+using System.Numerics;
 
 namespace SocialSport.Api.Services.Implementations;
 
@@ -41,37 +45,85 @@ public class CopyrightService : ICopyrightService
             .ToLowerInvariant();
     }
 
+    public async Task<string?> ComputePerceptualHashAsync(
+        string path,
+        MediaType mediaType)
+    {
+        if (mediaType != MediaType.Image)
+        {
+            return null;
+        }
+
+        using var image = await Image.LoadAsync<Rgba32>(path);
+        image.Mutate(context => context.Resize(9, 8));
+
+        ulong hash = 0;
+        image.ProcessPixelRows(accessor =>
+        {
+            for (var y = 0; y < accessor.Height; y++)
+            {
+                var row = accessor.GetRowSpan(y);
+                for (var x = 0; x < 8; x++)
+                {
+                    hash <<= 1;
+                    if (Luminance(row[x]) > Luminance(row[x + 1]))
+                    {
+                        hash |= 1;
+                    }
+                }
+            }
+        });
+
+        return hash.ToString("x16");
+    }
+
     public async Task<bool> EvaluateUploadAsync(
         Guid uploaderId,
         Post post,
-        PostMedia media)
+        PostMedia media,
+        bool replaceExisting = false)
     {
         if (string.IsNullOrWhiteSpace(media.ContentHash))
         {
             return false;
         }
 
+        if (replaceExisting)
+        {
+            await _context.CopyrightCases
+                .Where(item => item.PostMediaId == media.Id)
+                .ExecuteDeleteAsync();
+        }
+
         var assets = await _context.CopyrightAssets
             .Where(x =>
                 x.Status == CopyrightAssetStatus.Active
                 && x.MediaType == media.MediaType
-                && x.ContentHash == media.ContentHash
                 && x.CreatedByUserId != uploaderId
                 && !_context.CopyrightCases.Any(c =>
                     c.CopyrightAssetId == x.Id
                     && c.PostMediaId == media.Id))
             .ToListAsync();
 
+        var matches = assets
+            .Select(asset => new
+            {
+                Asset = asset,
+                Confidence = MatchConfidence(asset, media)
+            })
+            .Where(match => match.Confidence.HasValue)
+            .ToList();
+
         Guid? firstCaseId = null;
-        foreach (var asset in assets)
+        foreach (var match in matches)
         {
             var copyrightCase = new CopyrightCase
             {
                 Id = Guid.NewGuid(),
-                CopyrightAssetId = asset.Id,
+                CopyrightAssetId = match.Asset.Id,
                 PostMediaId = media.Id,
                 UploaderId = uploaderId,
-                Confidence = 1m,
+                Confidence = match.Confidence!.Value,
                 Status = CopyrightCaseStatus.Pending,
                 CreatedAt = DateTimeOffset.UtcNow
             };
@@ -79,7 +131,7 @@ public class CopyrightService : ICopyrightService
             await _context.CopyrightCases.AddAsync(copyrightCase);
         }
 
-        if (assets.Count == 0)
+        if (matches.Count == 0)
         {
             return false;
         }
@@ -133,6 +185,9 @@ public class CopyrightService : ICopyrightService
             RightsOwnerName = rightsOwnerName.Trim(),
             EvidenceNotes = evidenceNotes?.Trim(),
             ContentHash = await ComputeHashAsync(path),
+            PerceptualHash = await ComputePerceptualHashAsync(
+                path,
+                validatedFile.MediaType),
             MediaType = validatedFile.MediaType,
             ReferencePath = fileName,
             Status = CopyrightAssetStatus.Active,
@@ -305,7 +360,15 @@ public class CopyrightService : ICopyrightService
                 && x.PostMedia.PostId == item.PostMedia.PostId
                 && x.Status != CopyrightCaseStatus.Dismissed
                 && x.Status != CopyrightCaseStatus.AppealAccepted);
+            var hasBlockingExternalScan = await _context.ExternalCopyrightScans
+                .AnyAsync(scan =>
+                    scan.PostMedia.PostId == item.PostMedia.PostId
+                    && scan.Status != ExternalCopyrightScanStatus.Clear
+                    && scan.Status != ExternalCopyrightScanStatus.ClearedByAdmin
+                    && scan.Status != ExternalCopyrightScanStatus.AppealAccepted
+                    && scan.Status != ExternalCopyrightScanStatus.Failed);
             if (!hasOtherBlockingCase
+                && !hasBlockingExternalScan
                 && item.PostMedia.Post.GroupModerationStatus is
                     GroupPostModerationStatus.NotApplicable
                     or GroupPostModerationStatus.Approved)
@@ -332,6 +395,55 @@ public class CopyrightService : ICopyrightService
             null,
             notificationType,
             item.Id);
+    }
+
+    private decimal? MatchConfidence(
+        CopyrightAsset asset,
+        PostMedia media)
+    {
+        if (string.Equals(
+                asset.ContentHash,
+                media.ContentHash,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return 1m;
+        }
+
+        if (media.MediaType != MediaType.Image
+            || string.IsNullOrWhiteSpace(asset.PerceptualHash)
+            || string.IsNullOrWhiteSpace(media.PerceptualHash)
+            || !ulong.TryParse(
+                asset.PerceptualHash,
+                System.Globalization.NumberStyles.HexNumber,
+                null,
+                out var assetHash)
+            || !ulong.TryParse(
+                media.PerceptualHash,
+                System.Globalization.NumberStyles.HexNumber,
+                null,
+                out var mediaHash))
+        {
+            return null;
+        }
+
+        var distance = BitOperations.PopCount(assetHash ^ mediaHash);
+        var threshold = Math.Clamp(
+            _settings.PerceptualHashDistanceThreshold,
+            0,
+            64);
+        if (distance > threshold)
+        {
+            return null;
+        }
+
+        return decimal.Round(1m - distance / 64m, 4);
+    }
+
+    private static int Luminance(Rgba32 pixel)
+    {
+        return pixel.R * 299
+            + pixel.G * 587
+            + pixel.B * 114;
     }
 
     public async Task AppealAsync(

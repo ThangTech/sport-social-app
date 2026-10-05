@@ -630,11 +630,17 @@ namespace SocialSport.Api.Services.Implementations
                 MediaType = validatedFile.MediaType,
                 SortOrder = post.Media.Count,
                 CreatedAt = DateTimeOffset.UtcNow,
-                ContentHash = await _copyrightService.ComputeHashAsync(filePath)
+                ContentHash = await _copyrightService.ComputeHashAsync(filePath),
+                PerceptualHash = await _copyrightService.ComputePerceptualHashAsync(
+                    filePath,
+                    validatedFile.MediaType)
             };
 
             await _postRepository.AddMediaAsync(media);
-            var isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(userId, post, media);
+            var isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(
+                userId,
+                post,
+                media);
             var externalScan = await _externalCopyrightScanService.SubmitAsync(
                 post,
                 media,
@@ -650,8 +656,7 @@ namespace SocialSport.Api.Services.Implementations
                 SortOrder = media.SortOrder,
                 IsPendingCopyrightReview = isPendingCopyrightReview
                     || externalScan?.Status is ExternalCopyrightScanStatus.Processing
-                        or ExternalCopyrightScanStatus.ReviewRequired
-                        or ExternalCopyrightScanStatus.Failed,
+                        or ExternalCopyrightScanStatus.ReviewRequired,
                 ExternalCopyrightScanStatus = externalScan is null
                     ? null
                     : (int)externalScan.Status
@@ -726,8 +731,15 @@ namespace SocialSport.Api.Services.Implementations
             media.Url = $"/uploads/posts/{fileName}";
             media.MediaType = validatedFile.MediaType;
             media.ContentHash = await _copyrightService.ComputeHashAsync(newPath);
+            media.PerceptualHash = await _copyrightService.ComputePerceptualHashAsync(
+                newPath,
+                validatedFile.MediaType);
 
-            var isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(userId, post, media);
+            var isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(
+                userId,
+                post,
+                media,
+                replaceExisting: true);
             var externalScan = await _externalCopyrightScanService.SubmitAsync(
                 post,
                 media,
@@ -747,8 +759,7 @@ namespace SocialSport.Api.Services.Implementations
                 SortOrder = media.SortOrder,
                 IsPendingCopyrightReview = isPendingCopyrightReview
                     || externalScan?.Status is ExternalCopyrightScanStatus.Processing
-                        or ExternalCopyrightScanStatus.ReviewRequired
-                        or ExternalCopyrightScanStatus.Failed,
+                        or ExternalCopyrightScanStatus.ReviewRequired,
                 ExternalCopyrightScanStatus = externalScan is null
                     ? null
                     : (int)externalScan.Status

@@ -65,7 +65,11 @@ public class AdminOperationsController : ControllerBase
                 reportsPending = await _context.Reports.CountAsync(x => x.Status == ReportStatus.Pending),
                 copyrightPending = await _context.CopyrightCases.CountAsync(
                     x => x.Status == CopyrightCaseStatus.Pending ||
-                        x.Status == CopyrightCaseStatus.Appealed),
+                        x.Status == CopyrightCaseStatus.Appealed)
+                    + await _context.ExternalCopyrightScans.CountAsync(
+                        x => x.Status == ExternalCopyrightScanStatus.ReviewRequired
+                            || x.Status == ExternalCopyrightScanStatus.Failed
+                            || x.Status == ExternalCopyrightScanStatus.Appealed),
                 openTasks = await _context.OperationalTasks.CountAsync(x => x.Status != OperationalTaskStatus.Completed),
                 openIncidents = await _context.Incidents.CountAsync(x => x.Status != IncidentStatus.Resolved)
             },
@@ -600,7 +604,7 @@ public class AdminOperationsController : ControllerBase
             .ToDictionaryAsync(
                 x => x.Id,
                 x => string.IsNullOrWhiteSpace(x.PostContent)
-                    ? $"Video quét bởi {x.Provider}"
+                    ? $"Nội dung quét bởi {x.Provider}"
                     : x.PostContent!);
 
         foreach (var target in targets)
@@ -647,8 +651,8 @@ public class AdminOperationsController : ControllerBase
         "plan.updated" => "Cập nhật kế hoạch dự phòng",
         "copyright.asset.created" => "Đăng ký nội dung bản quyền",
         "copyright.case.decided" => "Ra quyết định bản quyền",
-        "copyright.external-scan.refreshed" => "Cập nhật kết quả quét video",
-        "copyright.external-scan.decided" => "Xử lý kết quả quét video",
+        "copyright.external-scan.refreshed" => "Cập nhật kết quả quét nội dung",
+        "copyright.external-scan.decided" => "Xử lý kết quả quét nội dung",
         "copyright.appeal.decided" => "Xử lý kháng nghị bản quyền",
         _ => "Thực hiện thao tác quản trị"
     };
@@ -664,7 +668,7 @@ public class AdminOperationsController : ControllerBase
             "sport" => "Môn thể thao",
             "copyright-asset" => "Nội dung bản quyền",
             "copyright-case" => "Hồ sơ bản quyền",
-            "external-copyright-scan" => "Kết quả quét video",
+            "external-copyright-scan" => "Kết quả quét nội dung",
             "operational-task" => "Tác vụ vận hành",
             "change-request" => "Yêu cầu thay đổi",
             "incident" => "Sự cố",

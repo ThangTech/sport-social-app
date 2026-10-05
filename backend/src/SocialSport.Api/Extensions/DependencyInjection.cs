@@ -114,23 +114,40 @@ public static class DependencyInjection
         services.AddScoped<IReportService, ReportService>();
         services.AddScoped<IExploreService, ExploreService>();
         services.AddScoped<ICopyrightService, CopyrightService>();
-        services.Configure<CopyrightScanningSettings>(
-            configuration.GetSection(CopyrightScanningSettings.SectionName));
+        var copyrightEnvironment = LocalEnvironmentFile.Load();
+        services
+            .AddOptions<CopyrightScanningSettings>()
+            .Bind(configuration.GetSection(CopyrightScanningSettings.SectionName))
+            .PostConfigure(settings =>
+            {
+                ApplyCopyrightEnvironment(settings, copyrightEnvironment);
+            });
         services.AddScoped<IExternalCopyrightScanService, ExternalCopyrightScanService>();
         services.AddHttpClient("AcrCloud", (provider, client) =>
         {
             var settings = provider
                 .GetRequiredService<Microsoft.Extensions.Options.IOptions<CopyrightScanningSettings>>()
-                .Value;
-            if (!string.IsNullOrWhiteSpace(settings.ApiBaseUrl))
+                .Value
+                .AcrCloud;
+            if (!string.IsNullOrWhiteSpace(settings.Host))
             {
-                var baseUrl = settings.ApiBaseUrl.EndsWith('/')
-                    ? settings.ApiBaseUrl
-                    : $"{settings.ApiBaseUrl}/";
-                client.BaseAddress = new Uri(baseUrl);
+                client.BaseAddress = new Uri($"https://{settings.Host.TrimEnd('/')}/");
             }
 
-            client.Timeout = TimeSpan.FromMinutes(5);
+            client.Timeout = TimeSpan.FromSeconds(30);
+        });
+        services.AddHttpClient("GoogleVision", (provider, client) =>
+        {
+            var settings = provider
+                .GetRequiredService<Microsoft.Extensions.Options.IOptions<CopyrightScanningSettings>>()
+                .Value
+                .GoogleVision;
+            if (!string.IsNullOrWhiteSpace(settings.Endpoint))
+            {
+                client.BaseAddress = new Uri(settings.Endpoint);
+            }
+
+            client.Timeout = TimeSpan.FromSeconds(30);
         });
         services.AddScoped<IMediaUrlService, MediaUrlService>();
         var dataProtection = services
@@ -160,5 +177,42 @@ public static class DependencyInjection
         }));
         services.AddAuthorization();
         return services;
+    }
+
+    private static void ApplyCopyrightEnvironment(
+        CopyrightScanningSettings settings,
+        IReadOnlyDictionary<string, string> environment)
+    {
+        settings.AcrCloud.Enabled = ReadBoolean(
+            environment,
+            "COPYRIGHT_ACR_CLOUD_ENABLED",
+            settings.AcrCloud.Enabled);
+        settings.AcrCloud.Host = environment.Get(
+            "COPYRIGHT_ACR_CLOUD_HOST")
+            ?? settings.AcrCloud.Host;
+        settings.AcrCloud.AccessKey = environment.Get(
+            "COPYRIGHT_ACR_CLOUD_ACCESS_KEY")
+            ?? settings.AcrCloud.AccessKey;
+        settings.AcrCloud.AccessSecret = environment.Get(
+            "COPYRIGHT_ACR_CLOUD_ACCESS_SECRET")
+            ?? settings.AcrCloud.AccessSecret;
+
+        settings.GoogleVision.Enabled = ReadBoolean(
+            environment,
+            "COPYRIGHT_GOOGLE_VISION_ENABLED",
+            settings.GoogleVision.Enabled);
+        settings.GoogleVision.ApiKey = environment.Get(
+            "COPYRIGHT_GOOGLE_VISION_API_KEY")
+            ?? settings.GoogleVision.ApiKey;
+    }
+
+    private static bool ReadBoolean(
+        IReadOnlyDictionary<string, string> environment,
+        string key,
+        bool fallback)
+    {
+        return bool.TryParse(environment.Get(key), out var value)
+            ? value
+            : fallback;
     }
 }

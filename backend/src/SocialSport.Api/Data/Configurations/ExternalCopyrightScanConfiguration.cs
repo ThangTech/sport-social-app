@@ -17,6 +17,7 @@ public class ExternalCopyrightScanConfiguration
         builder.Property(x => x.MatchSummary).HasMaxLength(2000);
         builder.Property(x => x.ErrorMessage).HasMaxLength(2000);
         builder.Property(x => x.ReviewNotes).HasMaxLength(3000);
+        builder.Property(x => x.AppealReason).HasMaxLength(3000);
         builder
             .HasOne(x => x.PostMedia)
             .WithMany()

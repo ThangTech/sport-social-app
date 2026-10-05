@@ -24,6 +24,8 @@ namespace SocialSport.Api.Models.Entities
 
         public string? ContentHash { get; set; }
 
+        public string? PerceptualHash { get; set; }
+
         public Post Post { get; set; } = null!;
     }
 }

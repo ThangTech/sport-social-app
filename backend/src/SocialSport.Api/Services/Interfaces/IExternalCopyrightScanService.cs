@@ -32,4 +32,9 @@ public interface IExternalCopyrightScanService
         Guid adminId,
         Guid scanId,
         ExternalCopyrightScanDecisionRequest request);
+
+    Task AppealAsync(
+        Guid userId,
+        Guid scanId,
+        CopyrightAppealRequest request);
 }

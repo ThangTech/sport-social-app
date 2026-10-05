@@ -26,5 +26,9 @@ public class ExternalCopyrightScan : BaseEntity
 
     public string? ReviewNotes { get; set; }
 
+    public string? AppealReason { get; set; }
+
+    public DateTimeOffset? AppealedAt { get; set; }
+
     public PostMedia PostMedia { get; set; } = null!;
 }

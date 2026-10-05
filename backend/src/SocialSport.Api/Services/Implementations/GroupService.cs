@@ -1049,7 +1049,8 @@ public class GroupService : IGroupService
         var hasBlockingScan = await _context.ExternalCopyrightScans.AnyAsync(x =>
             mediaIds.Contains(x.PostMediaId)
             && x.Status != ExternalCopyrightScanStatus.Clear
-            && x.Status != ExternalCopyrightScanStatus.ClearedByAdmin);
+            && x.Status != ExternalCopyrightScanStatus.ClearedByAdmin
+            && x.Status != ExternalCopyrightScanStatus.AppealAccepted);
 
         post.GroupModerationStatus = GroupPostModerationStatus.Approved;
         post.Status = hasBlockingCase || hasBlockingScan

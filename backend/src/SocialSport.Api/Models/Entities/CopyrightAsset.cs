@@ -9,6 +9,7 @@ public class CopyrightAsset : BaseEntity
     public string Title { get; set; } = string.Empty;
     public string RightsOwnerName { get; set; } = string.Empty;
     public string ContentHash { get; set; } = string.Empty;
+    public string? PerceptualHash { get; set; }
     public MediaType MediaType { get; set; }
     public string ReferencePath { get; set; } = string.Empty;
     public string? EvidenceNotes { get; set; }
