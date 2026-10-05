@@ -608,14 +608,13 @@ namespace SocialSport.Api.Services.Implementations
             if (file.Length > 20 * 1024 * 1024)
                 throw new InvalidOperationException("File không được vượt quá 20MB.");
 
-            var mediaType = GetMediaType(file.ContentType);
+            var validatedFile = await MediaFileValidator.ValidateAsync(file);
 
             var uploadFolder = Path.Combine(_environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot"), "uploads", "posts");
 
             Directory.CreateDirectory(uploadFolder);
 
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            var fileName = $"{Guid.NewGuid()}{extension}";
+            var fileName = $"{Guid.NewGuid()}{validatedFile.Extension}";
             var filePath = Path.Combine(uploadFolder, fileName);
 
             await using (var stream = new FileStream(filePath, FileMode.Create))
@@ -628,7 +627,7 @@ namespace SocialSport.Api.Services.Implementations
                 Id = Guid.NewGuid(),
                 PostId = postId,
                 Url = $"/uploads/posts/{fileName}",
-                MediaType = mediaType,
+                MediaType = validatedFile.MediaType,
                 SortOrder = post.Media.Count,
                 CreatedAt = DateTimeOffset.UtcNow,
                 ContentHash = await _copyrightService.ComputeHashAsync(filePath)
@@ -640,7 +639,7 @@ namespace SocialSport.Api.Services.Implementations
                 post,
                 media,
                 filePath,
-                file.ContentType);
+                validatedFile.ContentType);
             await _postRepository.SaveChangesAsync();
 
             return new PostMediaUploadResponse
@@ -684,16 +683,6 @@ namespace SocialSport.Api.Services.Implementations
             _postRepository.RemoveMedia(media);
             await _postRepository.SaveChangesAsync();
         }
-        private static MediaType GetMediaType(string contentType)
-        {
-            if (contentType.StartsWith("image/"))
-                return MediaType.Image;
-
-            if (contentType.StartsWith("video/"))
-                return MediaType.Video;
-
-            throw new InvalidOperationException("Chỉ hỗ trợ file ảnh hoặc video.");
-        }
         public async Task<PostMediaUploadResponse> UpdateMediaAsync(Guid userId, Guid postId, Guid mediaId, IFormFile file)
         {
             var post = await _postRepository.GetByIdAsync(postId);
@@ -717,14 +706,13 @@ namespace SocialSport.Api.Services.Implementations
             if (file.Length > 20 * 1024 * 1024)
                 throw new InvalidOperationException("File không được vượt quá 20MB.");
 
-            var mediaType = GetMediaType(file.ContentType);
+            var validatedFile = await MediaFileValidator.ValidateAsync(file);
             var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
             var uploadFolder = Path.Combine(webRoot, "uploads", "posts");
 
             Directory.CreateDirectory(uploadFolder);
 
-            var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-            var fileName = $"{Guid.NewGuid()}{extension}";
+            var fileName = $"{Guid.NewGuid()}{validatedFile.Extension}";
             var newPath = Path.Combine(uploadFolder, fileName);
 
             await using (var stream = new FileStream(newPath, FileMode.Create))
@@ -736,7 +724,7 @@ namespace SocialSport.Api.Services.Implementations
             var oldPath = Path.Combine(webRoot, oldRelativePath);
 
             media.Url = $"/uploads/posts/{fileName}";
-            media.MediaType = mediaType;
+            media.MediaType = validatedFile.MediaType;
             media.ContentHash = await _copyrightService.ComputeHashAsync(newPath);
 
             var isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(userId, post, media);
@@ -744,7 +732,7 @@ namespace SocialSport.Api.Services.Implementations
                 post,
                 media,
                 newPath,
-                file.ContentType,
+                validatedFile.ContentType,
                 replaceExisting: true);
             await _postRepository.SaveChangesAsync();
 

@@ -109,11 +109,7 @@ public class CopyrightService : ICopyrightService
             throw new InvalidOperationException("Thông tin hoặc file reference không hợp lệ.");
         }
 
-        var mediaType = file.ContentType.StartsWith("image/")
-            ? MediaType.Image
-            : file.ContentType.StartsWith("video/")
-                ? MediaType.Video
-                : throw new InvalidOperationException("Reference chỉ hỗ trợ ảnh hoặc video.");
+        var validatedFile = await MediaFileValidator.ValidateAsync(file);
 
         var folder = Path.Combine(
             _environment.ContentRootPath,
@@ -122,7 +118,7 @@ public class CopyrightService : ICopyrightService
         Directory.CreateDirectory(folder);
 
         var fileName =
-            $"{Guid.NewGuid():N}{Path.GetExtension(file.FileName).ToLowerInvariant()}";
+            $"{Guid.NewGuid():N}{validatedFile.Extension}";
         var path = Path.Combine(folder, fileName);
         await using (var stream = new FileStream(path, FileMode.CreateNew))
         {
@@ -137,7 +133,7 @@ public class CopyrightService : ICopyrightService
             RightsOwnerName = rightsOwnerName.Trim(),
             EvidenceNotes = evidenceNotes?.Trim(),
             ContentHash = await ComputeHashAsync(path),
-            MediaType = mediaType,
+            MediaType = validatedFile.MediaType,
             ReferencePath = fileName,
             Status = CopyrightAssetStatus.Active,
             CreatedAt = DateTimeOffset.UtcNow
