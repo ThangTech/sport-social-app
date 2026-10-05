@@ -47,6 +47,8 @@ public class GlobalExceptionHandler
                     {
                         400 => "Bad Request",
                         401 => "Unauthorized",
+                        403 => "Forbidden",
+                        404 => "Not Found",
                         _ => "Internal Server Error"
                     },
 

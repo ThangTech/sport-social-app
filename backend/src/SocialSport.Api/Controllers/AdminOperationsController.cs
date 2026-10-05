@@ -27,6 +27,33 @@ public class AdminOperationsController : ControllerBase
     public async Task<IActionResult> Dashboard()
     {
         var since = DateTimeOffset.UtcNow.AddDays(-7);
+        var recentLogs = await _context.AdminAuditLogs
+            .AsNoTracking()
+            .OrderByDescending(x => x.CreatedAt)
+            .Take(8)
+            .ToListAsync();
+        var recentLabels = await BuildAuditTargetLabelsAsync(recentLogs);
+        var recentAudit = recentLogs.Select(item =>
+        {
+            var actionLabel = AuditActionLabel(item.Action);
+            var targetLabel = recentLabels.GetValueOrDefault(item.Id)
+                ?? AuditTargetTypeLabel(item.TargetType);
+            return new
+            {
+                item.Id,
+                item.ActorId,
+                item.Action,
+                ActionLabel = actionLabel,
+                item.TargetType,
+                TargetTypeLabel = AuditTargetTypeLabel(item.TargetType),
+                item.TargetId,
+                TargetLabel = targetLabel,
+                item.Summary,
+                DisplaySummary = $"{actionLabel}: {targetLabel}",
+                item.CreatedAt
+            };
+        }).ToList();
+
         return Ok(new
         {
             totals = new
@@ -49,8 +76,7 @@ public class AdminOperationsController : ControllerBase
                 newPosts7d = await _context.Posts.CountAsync(x => x.CreatedAt >= since && x.DeletedAt == null),
                 reports7d = await _context.Reports.CountAsync(x => x.CreatedAt >= since)
             },
-            recentAudit = await _context.AdminAuditLogs.AsNoTracking().OrderByDescending(x => x.CreatedAt).Take(8)
-                .Select(x => new { x.Id, x.ActorId, x.Action, x.TargetType, x.TargetId, x.Summary, x.CreatedAt }).ToListAsync()
+            recentAudit
         });
     }
 
@@ -393,31 +419,286 @@ public class AdminOperationsController : ControllerBase
     {
         (page, pageSize) = Normalize(page, pageSize);
         var q = _context.AdminAuditLogs.AsNoTracking().OrderByDescending(x => x.CreatedAt);
-        var items = await q
+        var logs = await q
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
-            .Select(item => new
+            .ToListAsync();
+        var actorIds = logs.Select(x => x.ActorId).Distinct().ToList();
+        var actors = await _context.Users
+            .AsNoTracking()
+            .Where(x => actorIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id);
+        var targetLabels = await BuildAuditTargetLabelsAsync(logs);
+        var items = logs.Select(item =>
+        {
+            actors.TryGetValue(item.ActorId, out var actor);
+            var actionLabel = AuditActionLabel(item.Action);
+            var targetTypeLabel = AuditTargetTypeLabel(item.TargetType);
+            var targetLabel = targetLabels.GetValueOrDefault(item.Id)
+                ?? targetTypeLabel;
+
+            return new
             {
                 item.Id,
                 item.ActorId,
-                ActorDisplayName = _context.Users
-                    .Where(user => user.Id == item.ActorId)
-                    .Select(user => user.DisplayName)
-                    .FirstOrDefault(),
-                ActorEmail = _context.Users
-                    .Where(user => user.Id == item.ActorId)
-                    .Select(user => user.Email)
-                    .FirstOrDefault(),
+                ActorDisplayName = actor?.DisplayName,
+                ActorEmail = actor?.Email,
                 item.Action,
+                ActionLabel = actionLabel,
                 item.TargetType,
+                TargetTypeLabel = targetTypeLabel,
                 item.TargetId,
+                TargetLabel = targetLabel,
                 item.Summary,
+                DisplaySummary = $"{actionLabel}: {targetLabel}",
                 item.CreatedAt
-            })
-            .ToListAsync();
+            };
+        }).ToList();
         var total = await q.CountAsync();
 
         return Ok(new { items, total, page, pageSize });
+    }
+
+    private async Task<Dictionary<Guid, string>> BuildAuditTargetLabelsAsync(
+        IReadOnlyCollection<AdminAuditLog> logs)
+    {
+        var result = logs.ToDictionary(
+            log => log.Id,
+            log => Preview(log.Summary));
+        var targets = logs
+            .Select(log => new
+            {
+                Log = log,
+                Parsed = Guid.TryParse(log.TargetId, out var id)
+                    ? id
+                    : (Guid?)null
+            })
+            .Where(x => x.Parsed.HasValue)
+            .ToList();
+
+        var userIds = targets
+            .Where(x => x.Log.TargetType == "user")
+            .Select(x => x.Parsed!.Value)
+            .Distinct()
+            .ToList();
+        var users = await _context.Users
+            .AsNoTracking()
+            .Where(x => userIds.Contains(x.Id))
+            .ToDictionaryAsync(
+                x => x.Id,
+                x => string.IsNullOrWhiteSpace(x.DisplayName)
+                    ? x.Email ?? "Người dùng"
+                    : x.DisplayName);
+
+        var groupIds = targets
+            .Where(x => x.Log.TargetType == "group")
+            .Select(x => x.Parsed!.Value)
+            .Distinct()
+            .ToList();
+        var groups = await _context.Groups
+            .AsNoTracking()
+            .Where(x => groupIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.Name);
+
+        var postIds = targets
+            .Where(x => x.Log.TargetType == "post")
+            .Select(x => x.Parsed!.Value)
+            .Distinct()
+            .ToList();
+        var posts = await _context.Posts
+            .AsNoTracking()
+            .Where(x => postIds.Contains(x.Id))
+            .ToDictionaryAsync(
+                x => x.Id,
+                x => string.IsNullOrWhiteSpace(x.Content)
+                    ? "Bài viết không có nội dung chữ"
+                    : x.Content!);
+
+        var commentIds = targets
+            .Where(x => x.Log.TargetType == "comment")
+            .Select(x => x.Parsed!.Value)
+            .Distinct()
+            .ToList();
+        var comments = await _context.Comments
+            .AsNoTracking()
+            .Where(x => commentIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.Content);
+
+        var reportIds = targets
+            .Where(x => x.Log.TargetType == "report")
+            .Select(x => x.Parsed!.Value)
+            .Distinct()
+            .ToList();
+        var reportItems = await _context.Reports
+            .AsNoTracking()
+            .Where(x => reportIds.Contains(x.Id))
+            .Select(x => new
+            {
+                x.Id,
+                x.Reason,
+                x.TargetType
+            })
+            .ToListAsync();
+        var reports = reportItems.ToDictionary(
+            x => x.Id,
+            x => $"Báo cáo {ReportReasonLabel(x.Reason)} về {ReportTargetLabel(x.TargetType)}");
+
+        var sportIds = targets
+            .Where(x => x.Log.TargetType == "sport")
+            .Select(x => x.Parsed!.Value)
+            .Distinct()
+            .ToList();
+        var sports = await _context.Sports
+            .AsNoTracking()
+            .Where(x => sportIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.Name);
+
+        var copyrightAssetIds = targets
+            .Where(x => x.Log.TargetType == "copyright-asset")
+            .Select(x => x.Parsed!.Value)
+            .Distinct()
+            .ToList();
+        var copyrightAssets = await _context.CopyrightAssets
+            .AsNoTracking()
+            .Where(x => copyrightAssetIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.Title);
+
+        var copyrightCaseIds = targets
+            .Where(x => x.Log.TargetType == "copyright-case")
+            .Select(x => x.Parsed!.Value)
+            .Distinct()
+            .ToList();
+        var copyrightCases = await _context.CopyrightCases
+            .AsNoTracking()
+            .Where(x => copyrightCaseIds.Contains(x.Id))
+            .Select(x => new
+            {
+                x.Id,
+                AssetTitle = x.CopyrightAsset.Title,
+                PostContent = x.PostMedia.Post.Content
+            })
+            .ToDictionaryAsync(
+                x => x.Id,
+                x => string.IsNullOrWhiteSpace(x.PostContent)
+                    ? $"{x.AssetTitle} · Bài viết không có nội dung chữ"
+                    : $"{x.AssetTitle} · {x.PostContent}");
+
+        var externalScanIds = targets
+            .Where(x => x.Log.TargetType == "external-copyright-scan")
+            .Select(x => x.Parsed!.Value)
+            .Distinct()
+            .ToList();
+        var externalScans = await _context.ExternalCopyrightScans
+            .AsNoTracking()
+            .Where(x => externalScanIds.Contains(x.Id))
+            .Select(x => new
+            {
+                x.Id,
+                x.Provider,
+                PostContent = x.PostMedia.Post.Content
+            })
+            .ToDictionaryAsync(
+                x => x.Id,
+                x => string.IsNullOrWhiteSpace(x.PostContent)
+                    ? $"Video quét bởi {x.Provider}"
+                    : x.PostContent!);
+
+        foreach (var target in targets)
+        {
+            var id = target.Parsed!.Value;
+            var label = target.Log.TargetType switch
+            {
+                "user" => users.GetValueOrDefault(id),
+                "group" => groups.GetValueOrDefault(id),
+                "post" => posts.GetValueOrDefault(id),
+                "comment" => comments.GetValueOrDefault(id),
+                "report" => reports.GetValueOrDefault(id),
+                "sport" => sports.GetValueOrDefault(id),
+                "copyright-asset" => copyrightAssets.GetValueOrDefault(id),
+                "copyright-case" => copyrightCases.GetValueOrDefault(id),
+                "external-copyright-scan" => externalScans.GetValueOrDefault(id),
+                _ => null
+            };
+
+            result[target.Log.Id] = Preview(label ?? target.Log.Summary);
+        }
+
+        return result;
+    }
+
+    private static string AuditActionLabel(string action) => action switch
+    {
+        "user.status" => "Cập nhật trạng thái người dùng",
+        "group.status" => "Cập nhật trạng thái nhóm",
+        "post.status" => "Cập nhật trạng thái bài viết",
+        "comment.removed" => "Gỡ bình luận vi phạm",
+        "report.status" => "Xử lý báo cáo",
+        "sport.created" => "Tạo môn thể thao",
+        "sport.updated" => "Cập nhật môn thể thao",
+        "admin.granted" => "Cấp quyền System Admin",
+        "admin.revoked" => "Thu hồi quyền System Admin",
+        "task.created" => "Tạo tác vụ vận hành",
+        "task.updated" => "Cập nhật tác vụ vận hành",
+        "change.created" => "Tạo yêu cầu thay đổi",
+        "change.status" => "Cập nhật yêu cầu thay đổi",
+        "incident.created" => "Tạo sự cố",
+        "incident.updated" => "Cập nhật sự cố",
+        "plan.created" => "Tạo kế hoạch dự phòng",
+        "plan.updated" => "Cập nhật kế hoạch dự phòng",
+        "copyright.asset.created" => "Đăng ký nội dung bản quyền",
+        "copyright.case.decided" => "Ra quyết định bản quyền",
+        "copyright.external-scan.refreshed" => "Cập nhật kết quả quét video",
+        "copyright.external-scan.decided" => "Xử lý kết quả quét video",
+        "copyright.appeal.decided" => "Xử lý kháng nghị bản quyền",
+        _ => "Thực hiện thao tác quản trị"
+    };
+
+    private static string AuditTargetTypeLabel(string targetType) =>
+        targetType switch
+        {
+            "user" => "Người dùng",
+            "group" => "Nhóm",
+            "post" => "Bài viết",
+            "comment" => "Bình luận",
+            "report" => "Báo cáo",
+            "sport" => "Môn thể thao",
+            "copyright-asset" => "Nội dung bản quyền",
+            "copyright-case" => "Hồ sơ bản quyền",
+            "external-copyright-scan" => "Kết quả quét video",
+            "operational-task" => "Tác vụ vận hành",
+            "change-request" => "Yêu cầu thay đổi",
+            "incident" => "Sự cố",
+            "contingency-plan" => "Kế hoạch dự phòng",
+            _ => "Đối tượng hệ thống"
+        };
+
+    private static string ReportReasonLabel(string reason) => reason switch
+    {
+        "spam" => "spam",
+        "harassment" => "quấy rối",
+        "hate" => "thù ghét",
+        "violence" => "bạo lực",
+        "sexual" => "nội dung tình dục",
+        "impersonation" => "mạo danh",
+        _ => "nội dung khác"
+    };
+
+    private static string ReportTargetLabel(ReportTargetType type) =>
+        type switch
+        {
+            ReportTargetType.User => "người dùng",
+            ReportTargetType.Post => "bài viết",
+            ReportTargetType.Comment => "bình luận",
+            ReportTargetType.Group => "nhóm",
+            _ => "nội dung"
+        };
+
+    private static string Preview(string value)
+    {
+        var normalized = value.Trim();
+        return normalized.Length <= 140
+            ? normalized
+            : $"{normalized[..140]}…";
     }
 
     private Guid CurrentUserId()
