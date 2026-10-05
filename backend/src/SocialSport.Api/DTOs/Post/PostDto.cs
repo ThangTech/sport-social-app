@@ -20,6 +20,7 @@ namespace SocialSport.Api.DTOs.Post
 
         public PostVisibility Visibility { get; set; }
         public GroupPostModerationStatus GroupModerationStatus { get; set; }
+        public bool IsPendingCopyrightReview { get; set; }
 
         public int LikeCount { get; set; }
         public int CommentCount { get; set; }

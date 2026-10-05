@@ -83,6 +83,11 @@ public class CopyrightService : ICopyrightService
         PostMedia media,
         bool replaceExisting = false)
     {
+        if (!_settings.InternalReferenceMatchingEnabled)
+        {
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(media.ContentHash))
         {
             return false;
@@ -153,6 +158,12 @@ public class CopyrightService : ICopyrightService
         string? evidenceNotes,
         IFormFile file)
     {
+        if (!_settings.InternalReferenceMatchingEnabled)
+        {
+            throw new InvalidOperationException(
+                "Đối chiếu reference nội bộ đang được tắt.");
+        }
+
         if (string.IsNullOrWhiteSpace(title)
             || string.IsNullOrWhiteSpace(rightsOwnerName)
             || file.Length == 0

@@ -31,6 +31,13 @@ namespace SocialSport.Api.Controllers
         }
 
         [Authorize]
+        [HttpPost("{id:guid}/finalize")]
+        public async Task<ActionResult<PostPublicationResponse>> Finalize(Guid id)
+        {
+            return Ok(await _postService.FinalizeAsync(GetCurrentUserId(), id));
+        }
+
+        [Authorize]
         [HttpDelete("{postId:guid}/media/{mediaId:guid}")]
         public async Task<IActionResult> DeleteMedia(Guid postId, Guid mediaId)
         {

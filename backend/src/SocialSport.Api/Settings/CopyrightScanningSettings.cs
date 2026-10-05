@@ -8,6 +8,8 @@ public class CopyrightScanningSettings
 
     public int PerceptualHashDistanceThreshold { get; set; } = 10;
 
+    public bool InternalReferenceMatchingEnabled { get; set; }
+
     public AcrCloudSettings AcrCloud { get; set; } = new();
 
     public GoogleVisionSettings GoogleVision { get; set; } = new();

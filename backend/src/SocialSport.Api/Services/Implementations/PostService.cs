@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using SocialSport.Api.Data;
 using SocialSport.Api.DTOs.Post;
 using SocialSport.Api.Identity;
 using SocialSport.Api.Models.Entities;
@@ -9,6 +10,7 @@ using SocialSport.Api.Services.Interfaces;
 using System.Globalization;
 using System.Text;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.StaticFiles;
 
 namespace SocialSport.Api.Services.Implementations
 {
@@ -23,6 +25,7 @@ namespace SocialSport.Api.Services.Implementations
         private readonly ICopyrightService _copyrightService;
         private readonly IExternalCopyrightScanService _externalCopyrightScanService;
         private readonly IMediaUrlService _mediaUrlService;
+        private readonly ApplicationDbContext _context;
 
         public PostService(
             IPostRepository postRepository,
@@ -33,7 +36,8 @@ namespace SocialSport.Api.Services.Implementations
             INotificationService notificationService,
             ICopyrightService copyrightService,
             IExternalCopyrightScanService externalCopyrightScanService,
-            IMediaUrlService mediaUrlService)
+            IMediaUrlService mediaUrlService,
+            ApplicationDbContext context)
         {
             _postRepository = postRepository;
             _userManager = userManager;
@@ -44,6 +48,7 @@ namespace SocialSport.Api.Services.Implementations
             _copyrightService = copyrightService;
             _externalCopyrightScanService = externalCopyrightScanService;
             _mediaUrlService = mediaUrlService;
+            _context = context;
         }
         public async Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request)
         {
@@ -122,7 +127,9 @@ namespace SocialSport.Api.Services.Implementations
                 SportId = request.SportId,
                 Content = request.Content.Trim(),
                 Visibility = request.Visibility,
-                Status = PostStatus.Published,
+                Status = request.HasMedia
+                    ? PostStatus.Hidden
+                    : PostStatus.Published,
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
@@ -341,12 +348,27 @@ namespace SocialSport.Api.Services.Implementations
             if (request.SportId.HasValue && !await _postRepository.SportExistsAsync(request.SportId.Value))
                 throw new KeyNotFoundException("Không tìm thấy môn thể thao.");
 
+            var requiresVisibilityScan = post.GroupId is null
+                && post.Visibility == PostVisibility.Private
+                && request.Visibility != PostVisibility.Private
+                && post.Media.Count > 0;
+
             post.Content = request.Content.Trim();
             post.SportId = request.SportId;
             post.Visibility = request.Visibility;
             post.UpdatedAt = DateTimeOffset.UtcNow;
 
-            await _postRepository.SaveChangesAsync();
+            if (requiresVisibilityScan)
+            {
+                post.Status = PostStatus.Hidden;
+                await _postRepository.SaveChangesAsync();
+                await ScanExistingMediaAsync(userId, post);
+                await ApplyPersonalPublicationStateAsync(post);
+            }
+            else
+            {
+                await _postRepository.SaveChangesAsync();
+            }
 
             var user = await _userManager.FindByIdAsync(post.AuthorId.ToString());
 
@@ -366,6 +388,8 @@ namespace SocialSport.Api.Services.Implementations
                 CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
                 CurrentReaction = post.Reactions.FirstOrDefault(x => x.UserId == userId)?.Type,
                 IsSaved = await _savedPostRepository.GetAsync(userId, postId) is not null,
+                IsPendingCopyrightReview = post.GroupId is null
+                    && post.Status == PostStatus.Hidden,
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -384,8 +408,6 @@ namespace SocialSport.Api.Services.Implementations
 
             if (post is null || post.Status == PostStatus.Deleted)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
-
-            await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             if (post.AuthorId != userId)
                 throw new UnauthorizedAccessException("Bạn không có quyền xóa bài viết này.");
@@ -590,13 +612,18 @@ namespace SocialSport.Api.Services.Implementations
                 && post.Status == PostStatus.Hidden
                 && post.GroupModerationStatus
                     == GroupPostModerationStatus.Pending;
+            var isPersonalDraft = post is not null
+                && post.AuthorId == userId
+                && post.GroupId is null
+                && post.Status == PostStatus.Hidden;
 
             if (post is null
                 || (post.Status != PostStatus.Published
-                    && !isPendingGroupReview))
+                    && !isPendingGroupReview
+                    && !isPersonalDraft))
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
 
-            if (!isPendingGroupReview)
+            if (!isPendingGroupReview && !isPersonalDraft)
                 await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             if (post.AuthorId != userId)
@@ -609,6 +636,13 @@ namespace SocialSport.Api.Services.Implementations
                 throw new InvalidOperationException("File không được vượt quá 20MB.");
 
             var validatedFile = await MediaFileValidator.ValidateAsync(file);
+
+            if (post.GroupId is null && post.Status == PostStatus.Published)
+            {
+                post.Status = PostStatus.Hidden;
+                post.UpdatedAt = DateTimeOffset.UtcNow;
+                await _postRepository.SaveChangesAsync();
+            }
 
             var uploadFolder = Path.Combine(_environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot"), "uploads", "posts");
 
@@ -637,15 +671,22 @@ namespace SocialSport.Api.Services.Implementations
             };
 
             await _postRepository.AddMediaAsync(media);
-            var isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(
-                userId,
-                post,
-                media);
-            var externalScan = await _externalCopyrightScanService.SubmitAsync(
-                post,
-                media,
-                filePath,
-                validatedFile.ContentType);
+            var isPendingCopyrightReview = false;
+            ExternalCopyrightScan? externalScan = null;
+
+            if (ShouldScanCopyright(post))
+            {
+                isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(
+                    userId,
+                    post,
+                    media);
+                externalScan = await _externalCopyrightScanService.SubmitAsync(
+                    post,
+                    media,
+                    filePath,
+                    validatedFile.ContentType);
+            }
+
             await _postRepository.SaveChangesAsync();
 
             return new PostMediaUploadResponse
@@ -662,14 +703,48 @@ namespace SocialSport.Api.Services.Implementations
                     : (int)externalScan.Status
             };
         }
+
+        public async Task<PostPublicationResponse> FinalizeAsync(
+            Guid userId,
+            Guid postId)
+        {
+            var post = await _postRepository.GetByIdAsync(postId);
+
+            if (post is null
+                || post.GroupId.HasValue
+                || post.Status is PostStatus.Deleted or PostStatus.Removed)
+            {
+                throw new KeyNotFoundException("Không tìm thấy bài viết cá nhân.");
+            }
+
+            if (post.AuthorId != userId)
+            {
+                throw new UnauthorizedAccessException(
+                    "Bạn không có quyền xuất bản bài viết này.");
+            }
+
+            if (post.Media.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "Bài viết chưa có media để hoàn tất.");
+            }
+
+            var isBlocked = await ApplyPersonalPublicationStateAsync(post);
+
+            return new PostPublicationResponse
+            {
+                IsPublished = !isBlocked,
+                IsPendingCopyrightReview = isBlocked
+            };
+        }
+
         public async Task DeleteMediaAsync(Guid userId, Guid postId, Guid mediaId)
         {
             var post = await _postRepository.GetByIdAsync(postId);
 
-            if (post is null || post.Status != PostStatus.Published)
+            if (post is null
+                || post.Status is PostStatus.Deleted or PostStatus.Removed)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
-
-            await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             if (post.AuthorId != userId)
                 throw new UnauthorizedAccessException("Bạn không có quyền xóa media của bài viết này.");
@@ -685,6 +760,7 @@ namespace SocialSport.Api.Services.Implementations
             if (File.Exists(fullPath))
                 File.Delete(fullPath);
 
+            await ClearCopyrightReviewAsync(media.Id);
             _postRepository.RemoveMedia(media);
             await _postRepository.SaveChangesAsync();
         }
@@ -692,10 +768,9 @@ namespace SocialSport.Api.Services.Implementations
         {
             var post = await _postRepository.GetByIdAsync(postId);
 
-            if (post is null || post.Status != PostStatus.Published)
+            if (post is null
+                || post.Status is PostStatus.Deleted or PostStatus.Removed)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
-
-            await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             if (post.AuthorId != userId)
                 throw new UnauthorizedAccessException("Bạn không có quyền sửa media của bài viết này.");
@@ -712,6 +787,14 @@ namespace SocialSport.Api.Services.Implementations
                 throw new InvalidOperationException("File không được vượt quá 20MB.");
 
             var validatedFile = await MediaFileValidator.ValidateAsync(file);
+
+            if (post.GroupId is null && post.Status == PostStatus.Published)
+            {
+                post.Status = PostStatus.Hidden;
+                post.UpdatedAt = DateTimeOffset.UtcNow;
+                await _postRepository.SaveChangesAsync();
+            }
+
             var webRoot = _environment.WebRootPath ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
             var uploadFolder = Path.Combine(webRoot, "uploads", "posts");
 
@@ -735,17 +818,28 @@ namespace SocialSport.Api.Services.Implementations
                 newPath,
                 validatedFile.MediaType);
 
-            var isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(
-                userId,
-                post,
-                media,
-                replaceExisting: true);
-            var externalScan = await _externalCopyrightScanService.SubmitAsync(
-                post,
-                media,
-                newPath,
-                validatedFile.ContentType,
-                replaceExisting: true);
+            var isPendingCopyrightReview = false;
+            ExternalCopyrightScan? externalScan = null;
+
+            if (ShouldScanCopyright(post))
+            {
+                isPendingCopyrightReview = await _copyrightService.EvaluateUploadAsync(
+                    userId,
+                    post,
+                    media,
+                    replaceExisting: true);
+                externalScan = await _externalCopyrightScanService.SubmitAsync(
+                    post,
+                    media,
+                    newPath,
+                    validatedFile.ContentType,
+                    replaceExisting: true);
+            }
+            else
+            {
+                await ClearCopyrightReviewAsync(media.Id);
+            }
+
             await _postRepository.SaveChangesAsync();
 
             if (File.Exists(oldPath))
@@ -764,6 +858,102 @@ namespace SocialSport.Api.Services.Implementations
                     ? null
                     : (int)externalScan.Status
             };
+        }
+
+        private static bool ShouldScanCopyright(Post post)
+        {
+            return post.GroupId.HasValue
+                || post.Visibility != PostVisibility.Private;
+        }
+
+        private async Task ScanExistingMediaAsync(Guid userId, Post post)
+        {
+            var contentTypeProvider = new FileExtensionContentTypeProvider();
+
+            foreach (var media in post.Media)
+            {
+                var path = ResolvePostMediaPath(media.Url);
+                await _copyrightService.EvaluateUploadAsync(
+                    userId,
+                    post,
+                    media);
+
+                if (!contentTypeProvider.TryGetContentType(
+                        path,
+                        out var contentType))
+                {
+                    contentType = "application/octet-stream";
+                }
+
+                await _externalCopyrightScanService.SubmitAsync(
+                    post,
+                    media,
+                    path,
+                    contentType);
+            }
+        }
+
+        private async Task<bool> ApplyPersonalPublicationStateAsync(Post post)
+        {
+            var mediaIds = post.Media
+                .Select(media => media.Id)
+                .ToList();
+            var hasBlockingCase = await _context.CopyrightCases.AnyAsync(item =>
+                mediaIds.Contains(item.PostMediaId)
+                && item.Status != CopyrightCaseStatus.Dismissed
+                && item.Status != CopyrightCaseStatus.AppealAccepted);
+            var hasBlockingScan = await _context.ExternalCopyrightScans.AnyAsync(item =>
+                mediaIds.Contains(item.PostMediaId)
+                && item.Status != ExternalCopyrightScanStatus.Clear
+                && item.Status != ExternalCopyrightScanStatus.ClearedByAdmin
+                && item.Status != ExternalCopyrightScanStatus.AppealAccepted
+                && item.Status != ExternalCopyrightScanStatus.Failed);
+            var isBlocked = hasBlockingCase || hasBlockingScan;
+
+            post.Status = isBlocked
+                ? PostStatus.Hidden
+                : PostStatus.Published;
+            post.UpdatedAt = DateTimeOffset.UtcNow;
+            await _postRepository.SaveChangesAsync();
+
+            return isBlocked;
+        }
+
+        private async Task ClearCopyrightReviewAsync(Guid mediaId)
+        {
+            await _context.CopyrightCases
+                .Where(item => item.PostMediaId == mediaId)
+                .ExecuteDeleteAsync();
+            await _context.ExternalCopyrightScans
+                .Where(item => item.PostMediaId == mediaId)
+                .ExecuteDeleteAsync();
+        }
+
+        private string ResolvePostMediaPath(string mediaUrl)
+        {
+            const string prefix = "/uploads/posts/";
+
+            if (!mediaUrl.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new KeyNotFoundException("Đường dẫn media không hợp lệ.");
+            }
+
+            var webRoot = _environment.WebRootPath
+                ?? Path.Combine(_environment.ContentRootPath, "wwwroot");
+            var folder = Path.GetFullPath(
+                Path.Combine(webRoot, "uploads", "posts"));
+            var path = Path.GetFullPath(
+                Path.Combine(folder, Path.GetFileName(mediaUrl)));
+
+            if (!path.StartsWith(
+                    folder + Path.DirectorySeparatorChar,
+                    StringComparison.OrdinalIgnoreCase)
+                || !File.Exists(path))
+            {
+                throw new KeyNotFoundException("File media không còn khả dụng.");
+            }
+
+            return path;
         }
     }
 }

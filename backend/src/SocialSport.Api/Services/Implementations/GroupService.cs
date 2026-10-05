@@ -1050,7 +1050,8 @@ public class GroupService : IGroupService
             mediaIds.Contains(x.PostMediaId)
             && x.Status != ExternalCopyrightScanStatus.Clear
             && x.Status != ExternalCopyrightScanStatus.ClearedByAdmin
-            && x.Status != ExternalCopyrightScanStatus.AppealAccepted);
+            && x.Status != ExternalCopyrightScanStatus.AppealAccepted
+            && x.Status != ExternalCopyrightScanStatus.Failed);
 
         post.GroupModerationStatus = GroupPostModerationStatus.Approved;
         post.Status = hasBlockingCase || hasBlockingScan

@@ -12,5 +12,7 @@ namespace SocialSport.Api.DTOs.Post
         public Guid? SportId { get; set; }
 
         public PostVisibility Visibility { get; set; } = PostVisibility.Public;
+
+        public bool HasMedia { get; set; }
     }
 }
