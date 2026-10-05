@@ -1,4 +1,5 @@
 import {
+  DeleteOutlined,
   ExportOutlined,
   SafetyCertificateOutlined,
   UserOutlined,
@@ -112,6 +113,7 @@ export function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [targetLoading, setTargetLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [removingTarget, setRemovingTarget] = useState(false);
   const [error, setError] = useState("");
   const [reviewStatus, setReviewStatus] = useState(1);
   const [resolutionNote, setResolutionNote] = useState("");
@@ -197,6 +199,39 @@ export function ReportsPage() {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+  const removeReportedComment = async () => {
+    if (!selected || target?.kind !== "comment") {
+      return;
+    }
+
+    setRemovingTarget(true);
+    setError("");
+
+    try {
+      await api(`/admin/comments/${selected.targetId}/remove`, {
+        method: "PATCH",
+      });
+      setTarget((current) =>
+        current
+          ? {
+              ...current,
+              status: 3,
+              title: "Bình luận đã bị gỡ do vi phạm.",
+            }
+          : null,
+      );
+      message.success("Đã gỡ bình luận và ghi audit log.");
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "Không thể gỡ bình luận.",
+      );
+    } finally {
+      setRemovingTarget(false);
     }
   };
 
@@ -298,9 +333,11 @@ export function ReportsPage() {
                   reviewStatus={reviewStatus}
                   resolutionNote={resolutionNote}
                   saving={saving}
+                  removingTarget={removingTarget}
                   onStatusChange={setReviewStatus}
                   onNoteChange={setResolutionNote}
                   onSave={() => void update()}
+                  onRemoveComment={() => void removeReportedComment()}
                 />
               ) : null}
             </Card>
@@ -317,18 +354,22 @@ function ReportInspection({
   reviewStatus,
   resolutionNote,
   saving,
+  removingTarget,
   onStatusChange,
   onNoteChange,
   onSave,
+  onRemoveComment,
 }: {
   report: ReportItem;
   target: ReportTarget;
   reviewStatus: number;
   resolutionNote: string;
   saving: boolean;
+  removingTarget: boolean;
   onStatusChange: (status: number) => void;
   onNoteChange: (note: string) => void;
   onSave: () => void;
+  onRemoveComment: () => void;
 }) {
   const externalUrl = appUrl(target.appPath);
 
@@ -403,8 +444,34 @@ function ReportInspection({
         type="warning"
         showIcon
         title="Trạng thái report không tự gỡ nội dung"
-        description="Nếu đối tượng vi phạm, hãy chuyển sang trang Người dùng, Nhóm hoặc Bài viết để áp dụng hành động hệ thống riêng và có audit độc lập."
+        description={
+          target.kind === "comment"
+            ? "Nếu bình luận vi phạm, dùng hành động gỡ bên dưới. Hành động này có audit riêng."
+            : "Nếu đối tượng vi phạm, hãy chuyển sang trang Người dùng, Nhóm hoặc Bài viết để áp dụng hành động hệ thống riêng và có audit độc lập."
+        }
       />
+
+      {target.kind === "comment" ? (
+        <Card size="small" title="Hành động với bình luận">
+          <Space direction="vertical" size={12} className="w-full">
+            <Typography.Text type="secondary">
+              Gỡ bình luận là hành động riêng và được lưu trong audit log.
+              Sau đó bạn vẫn cần lưu kết quả xử lý báo cáo.
+            </Typography.Text>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              loading={removingTarget}
+              disabled={target.status === 3 || target.status === 4}
+              onClick={onRemoveComment}
+            >
+              {target.status === 3 || target.status === 4
+                ? "Bình luận đã bị gỡ"
+                : "Gỡ bình luận vi phạm"}
+            </Button>
+          </Space>
+        </Card>
+      ) : null}
 
       <Card size="small" title="Kết quả xử lý">
         <Space direction="vertical" size={12} className="w-full">
