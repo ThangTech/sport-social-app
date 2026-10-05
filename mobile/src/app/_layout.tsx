@@ -15,7 +15,7 @@ import {
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { ActivityIndicator, Platform, View } from "react-native";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
@@ -24,12 +24,38 @@ import { NotificationType } from "@/types/notification";
 
 SplashScreen.preventAutoHideAsync();
 
+const PENDING_PATH_KEY = "socialsport.pendingPath";
+
 function RootNavigator() {
   const { user, loading } = useAuth();
   const segments = useSegments();
   const pathname = usePathname();
   const router = useRouter();
   const pendingPath = useRef<Href | null>(null);
+
+  const rememberPendingPath = useCallback((path: Href) => {
+    pendingPath.current = path;
+
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      window.sessionStorage.setItem(PENDING_PATH_KEY, String(path));
+    }
+  }, []);
+
+  const takePendingPath = useCallback(() => {
+    const storedPath =
+      Platform.OS === "web" && typeof window !== "undefined"
+        ? window.sessionStorage.getItem(PENDING_PATH_KEY)
+        : null;
+    const destination = pendingPath.current ?? (storedPath as Href | null);
+
+    pendingPath.current = null;
+
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      window.sessionStorage.removeItem(PENDING_PATH_KEY);
+    }
+
+    return destination;
+  }, []);
 
   useEffect(() => {
     if (!user?.id || Platform.OS === "web") return;
@@ -90,18 +116,24 @@ function RootNavigator() {
     const inAuthGroup = segments[0] === "(auth)";
 
     if (!user && !inAuthGroup) {
-      pendingPath.current = pathname as Href;
+      rememberPendingPath(pathname as Href);
       router.replace("/(auth)/login");
       return;
     }
 
     if (user && inAuthGroup) {
-      const destination = pendingPath.current ?? "/(tabs)";
-
-      pendingPath.current = null;
+      const destination = takePendingPath() ?? "/(tabs)";
       router.replace(destination);
     }
-  }, [user, loading, pathname, segments, router]);
+  }, [
+    user,
+    loading,
+    pathname,
+    segments,
+    router,
+    rememberPendingPath,
+    takePendingPath,
+  ]);
 
   if (loading) {
     return (
