@@ -3,6 +3,7 @@ import {
   Alert,
   Image,
   Pressable,
+  Platform,
   Share,
   StyleSheet,
   View,
@@ -142,17 +143,44 @@ export default function PostCard({
   };
   const handleShare = async () => {
     const configuredUrl = process.env.EXPO_PUBLIC_APP_URL?.replace(/\/$/, "");
-    const url = configuredUrl
-      ? `${configuredUrl}/post/${post.id}`
+    const webOrigin =
+      Platform.OS === "web" && typeof window !== "undefined"
+        ? window.location.origin
+        : null;
+    const url = configuredUrl || webOrigin
+      ? `${configuredUrl || webOrigin}/post/${post.id}`
       : Linking.createURL(`/post/${post.id}`);
+    const message = `${post.authorName} trên SocialSport\n${url}`;
 
     try {
+      if (Platform.OS === "web" && typeof window !== "undefined") {
+        if (window.navigator.share) {
+          await window.navigator.share({
+            title: "Chia sẻ bài viết",
+            text: `${post.authorName} trên SocialSport`,
+            url,
+          });
+          return;
+        }
+
+        await window.navigator.clipboard.writeText(url);
+        Alert.alert(
+          "Đã sao chép liên kết",
+          "Bạn có thể mở liên kết trong cửa sổ ẩn danh để kiểm tra luồng đăng nhập.",
+        );
+        return;
+      }
+
       await Share.share({
-        message: `${post.authorName} trên SocialSport\n${url}`,
+        message,
         url,
         title: "Chia sẻ bài viết",
       });
     } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
       Alert.alert(
         "Không thể chia sẻ",
         error instanceof Error ? error.message : "Vui lòng thử lại.",

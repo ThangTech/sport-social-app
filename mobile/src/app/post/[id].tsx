@@ -43,7 +43,7 @@ import {
 export default function PostDetailScreen() {
   const params = useLocalSearchParams<{ id?: string | string[] }>();
 
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, signOut } = useAuth();
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -51,6 +51,7 @@ export default function PostDetailScreen() {
   const [group, setGroup] = useState<GroupDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [errorStatus, setErrorStatus] = useState<number | null>(null);
   const [comments, setComments] = useState<CommentDto[]>([]);
 
   const [commentText, setCommentText] = useState("");
@@ -64,36 +65,6 @@ export default function PostDetailScreen() {
   const [replyingTo, setReplyingTo] = useState<CommentDto | null>(null);
 
   const commentInputRef = useRef<TextInput>(null);
-  const loadPost = useCallback(async (postId: string) => {
-    try {
-      setErrorMessage("");
-
-      const item = await getPostById(postId);
-
-      const mappedPost = mapFeedPostToPost(item);
-      setPost(mappedPost);
-
-      if (mappedPost.groupId) {
-        try {
-          setGroup(await getGroupById(mappedPost.groupId));
-        } catch {
-          setGroup(null);
-        }
-      } else {
-        setGroup(null);
-      }
-    } catch (error) {
-      setErrorMessage(
-        error instanceof ApiError && error.status === 403
-          ? "Bạn không thể xem bài viết này vì quyền truy cập đã thay đổi."
-          : error instanceof Error
-            ? error.message
-            : "Không thể tải bài viết.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
   const loadComments = useCallback(async (postId: string) => {
     try {
       setCommentError("");
@@ -109,6 +80,49 @@ export default function PostDetailScreen() {
       setCommentsLoading(false);
     }
   }, []);
+  const loadPost = useCallback(
+    async (postId: string) => {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+        setErrorStatus(null);
+
+        const item = await getPostById(postId);
+
+        const mappedPost = mapFeedPostToPost(item);
+        setPost(mappedPost);
+
+        if (mappedPost.groupId) {
+          try {
+            setGroup(await getGroupById(mappedPost.groupId));
+          } catch {
+            setGroup(null);
+          }
+        } else {
+          setGroup(null);
+        }
+
+        setCommentsLoading(true);
+        await loadComments(postId);
+      } catch (error) {
+        setPost(null);
+        setComments([]);
+        setErrorStatus(error instanceof ApiError ? error.status : null);
+        setErrorMessage(
+          error instanceof ApiError && error.status === 403
+            ? "Bài viết thuộc nội dung giới hạn. Hãy dùng tài khoản là thành viên nhóm hoặc tài khoản được phép xem bài."
+            : error instanceof ApiError && error.status === 404
+              ? "Bài viết không còn tồn tại hoặc chưa được công khai."
+              : error instanceof Error
+                ? error.message
+                : "Không thể tải bài viết.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    },
+    [loadComments],
+  );
   useFocusEffect(
     useCallback(() => {
       if (!id) {
@@ -118,9 +132,8 @@ export default function PostDetailScreen() {
         return;
       }
 
-      loadPost(id);
-      loadComments(id);
-    }, [id, loadPost, loadComments]),
+      void loadPost(id);
+    }, [id, loadPost]),
   );
   const handleReply = (comment: CommentDto) => {
     setReplyingTo(comment);
@@ -277,6 +290,47 @@ export default function PostDetailScreen() {
           <AppText color={COLORS.textMuted} style={styles.message}>
             {errorMessage}
           </AppText>
+          {errorStatus === 403 ? (
+            <AppText
+              variant="caption"
+              color={COLORS.textMuted}
+              style={styles.accessHint}
+            >
+              Liên kết chia sẻ vẫn hợp lệ; hệ thống không công khai bài nhóm
+              riêng tư cho người ngoài nhóm.
+            </AppText>
+          ) : null}
+          <View style={styles.errorActions}>
+            {id ? (
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => void loadPost(id)}
+              >
+                <AppText variant="label" color={COLORS.background}>
+                  Thử lại
+                </AppText>
+              </Pressable>
+            ) : null}
+            {errorStatus === 403 ? (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => void signOut()}
+              >
+                <AppText variant="label" color={COLORS.primary}>
+                  Đổi tài khoản
+                </AppText>
+              </Pressable>
+            ) : (
+              <Pressable
+                style={styles.secondaryButton}
+                onPress={() => router.replace("/(tabs)")}
+              >
+                <AppText variant="label" color={COLORS.primary}>
+                  Về bảng tin
+                </AppText>
+              </Pressable>
+            )}
+          </View>
         </View>
       ) : post ? (
         <KeyboardAvoidingView
@@ -389,6 +443,29 @@ const styles = StyleSheet.create({
   message: {
     marginTop: SPACING.md,
     textAlign: "center",
+  },
+  accessHint: {
+    marginTop: SPACING.sm,
+    maxWidth: 420,
+    textAlign: "center",
+  },
+  errorActions: {
+    marginTop: SPACING.lg,
+    flexDirection: "row",
+    gap: SPACING.sm,
+  },
+  primaryButton: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderRadius: 20,
+    backgroundColor: COLORS.primary,
+  },
+  secondaryButton: {
+    paddingHorizontal: SPACING.lg,
+    paddingVertical: SPACING.sm,
+    borderWidth: 1,
+    borderColor: COLORS.primary,
+    borderRadius: 20,
   },
   keyboardView: {
     flex: 1,
