@@ -15,6 +15,8 @@ type Props = {
   onReply: (comment: CommentDto) => void;
   onUpdate: (id: string, content: string) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
+  canModerate: (comment: CommentDto) => boolean;
+  onReport: (comment: CommentDto) => void;
   onAuthorPress: (id: string) => void;
 };
 
@@ -55,6 +57,8 @@ export default function PostCommentsSection(props: Props) {
               onReply={props.onReply}
               onUpdate={props.onUpdate}
               onDelete={props.onDelete}
+              canModerate={props.canModerate}
+              onReport={props.onReport}
               onAuthorPress={props.onAuthorPress}
             />
           ))}

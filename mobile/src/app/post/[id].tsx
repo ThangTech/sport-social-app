@@ -190,6 +190,40 @@ export default function PostDetailScreen() {
         : current,
     );
   };
+  const canModerateComment = (comment: CommentDto) => {
+    if (
+      !group
+      || group.currentUserMemberStatus !== GroupMemberStatus.Active
+      || comment.authorId === currentUser?.id
+    ) {
+      return false;
+    }
+
+    if (currentUser?.id === group.ownerId) {
+      return true;
+    }
+
+    if (comment.authorId === group.ownerId) {
+      return false;
+    }
+
+    if (group.currentUserRole === GroupMemberRole.Admin) {
+      return comment.authorGroupRole !== "Quản trị viên";
+    }
+
+    return group.currentUserRole === GroupMemberRole.Moderator
+      && !comment.authorGroupRole;
+  };
+
+  const handleReportComment = (comment: CommentDto) => {
+    router.push({
+      pathname: "/report",
+      params: {
+        targetType: "3",
+        targetId: comment.id,
+      },
+    });
+  };
   const canRemoveFromGroup = Boolean(
     post?.groupId &&
       group &&
@@ -291,6 +325,8 @@ export default function PostDetailScreen() {
               onReply={handleReply}
               onUpdate={handleUpdateComment}
               onDelete={handleDeleteComment}
+              canModerate={canModerateComment}
+              onReport={handleReportComment}
               onAuthorPress={(userId) =>
                 router.push({
                   pathname: "/user/[id]",

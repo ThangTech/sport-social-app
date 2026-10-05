@@ -19,6 +19,10 @@ type CommentItemProps = {
 
   onDelete: (commentId: string) => Promise<void>;
 
+  canModerate: (comment: CommentDto) => boolean;
+
+  onReport: (comment: CommentDto) => void;
+
   onAuthorPress: (userId: string) => void;
 };
 
@@ -29,6 +33,8 @@ export default function CommentItem({
   onReply,
   onUpdate,
   onDelete,
+  canModerate,
+  onReport,
   onAuthorPress,
 }: CommentItemProps) {
   const [editing, setEditing] = useState(false);
@@ -38,6 +44,7 @@ export default function CommentItem({
   const [loading, setLoading] = useState(false);
   const { showActionSheetWithOptions } = useActionSheet();
   const isOwner = currentUserId === comment.authorId;
+  const canRemove = !isOwner && canModerate(comment);
   const handleSave = async () => {
     const content = editText.trim();
 
@@ -64,49 +71,79 @@ export default function CommentItem({
     }
   };
   const handleDelete = () => {
-    Alert.alert("Xóa bình luận", "Bạn có chắc muốn xóa bình luận này?", [
-      {
-        text: "Hủy",
-        style: "cancel",
-      },
-      {
-        text: "Xóa",
-        style: "destructive",
-        onPress: async () => {
-          try {
-            setLoading(true);
-
-            await onDelete(comment.id);
-          } catch (error) {
-            Alert.alert(
-              "Không thể xóa",
-              error instanceof Error ? error.message : "Vui lòng thử lại.",
-            );
-          } finally {
-            setLoading(false);
-          }
+    Alert.alert(
+      canRemove ? "Gỡ bình luận" : "Xóa bình luận",
+      canRemove
+        ? "Bình luận sẽ bị gỡ khỏi bài viết do vi phạm quy tắc nhóm."
+        : "Bạn có chắc muốn xóa bình luận này?",
+      [
+        {
+          text: "Hủy",
+          style: "cancel",
         },
-      },
-    ]);
+        {
+          text: "Xóa",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+
+              await onDelete(comment.id);
+            } catch (error) {
+              Alert.alert(
+                "Không thể xóa",
+                error instanceof Error ? error.message : "Vui lòng thử lại.",
+              );
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ],
+    );
   };
   const handleMenu = () => {
-    const options = ["Chỉnh sửa", "Xóa", "Hủy"];
+    const options: string[] = [];
+    const actions: (() => void)[] = [];
+
+    if (isOwner) {
+      options.push("Chỉnh sửa");
+      actions.push(() => {
+        setEditText(comment.content);
+        setEditing(true);
+      });
+      options.push("Xóa");
+      actions.push(handleDelete);
+    } else {
+      if (canRemove) {
+        options.push("Gỡ khỏi nhóm");
+        actions.push(handleDelete);
+      }
+
+      options.push("Báo cáo bình luận");
+      actions.push(() => onReport(comment));
+    }
+
+    options.push("Hủy");
+    const cancelButtonIndex = options.length - 1;
+    const destructiveButtonIndex = options.findIndex(
+      (option) => option === "Xóa" || option === "Gỡ khỏi nhóm",
+    );
 
     showActionSheetWithOptions(
       {
         options,
-        cancelButtonIndex: 2,
-        destructiveButtonIndex: 1,
+        cancelButtonIndex,
+        destructiveButtonIndex:
+          destructiveButtonIndex >= 0 ? destructiveButtonIndex : undefined,
         title: "Tùy chọn bình luận",
       },
       (selectedIndex) => {
-        if (selectedIndex === 0) {
-          setEditText(comment.content);
-          setEditing(true);
-        }
-
-        if (selectedIndex === 1) {
-          handleDelete();
+        if (
+          selectedIndex !== undefined
+          && selectedIndex < actions.length
+        ) {
+          actions[selectedIndex]();
         }
       },
     );
@@ -142,7 +179,7 @@ export default function CommentItem({
                 ) : null}
               </View>
 
-              {isOwner && !comment.isDeleted ? (
+              {!comment.isDeleted ? (
                 <Pressable hitSlop={10} disabled={loading} onPress={handleMenu}>
                   <Ionicons
                     name="ellipsis-horizontal"
@@ -241,6 +278,8 @@ export default function CommentItem({
           onReply={onReply}
           onUpdate={onUpdate}
           onDelete={onDelete}
+          canModerate={canModerate}
+          onReport={onReport}
           onAuthorPress={onAuthorPress}
         />
       ))}
