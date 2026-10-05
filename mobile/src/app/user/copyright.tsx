@@ -2,6 +2,7 @@ import AppText from "@/components/ui/AppText";
 import { COLORS, RADIUS, SPACING } from "@/constants/theme";
 import {
   appealCopyrightCase,
+  appealExternalCopyrightScan,
   getMyCopyrightCases,
   getMyExternalCopyrightScans,
 } from "@/services/copyright.service";
@@ -41,6 +42,14 @@ const scanStatuses: Record<number, string> = {
   4: "Admin đã cho phép nội dung",
   5: "Admin xác nhận vi phạm",
   6: "Không thể quét tự động",
+  7: "Đang xem xét kháng nghị",
+  8: "Kháng nghị được chấp nhận",
+  9: "Kháng nghị bị từ chối",
+};
+
+type AppealTarget = {
+  id: string;
+  kind: "case" | "scan";
 };
 
 export default function CopyrightScreen() {
@@ -49,7 +58,7 @@ export default function CopyrightScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [appealCase, setAppealCase] = useState<CopyrightCase | null>(null);
+  const [appealTarget, setAppealTarget] = useState<AppealTarget | null>(null);
   const [appealReason, setAppealReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -79,14 +88,25 @@ export default function CopyrightScreen() {
   }, [load]);
 
   const submitAppeal = async () => {
-    if (!appealCase || appealReason.trim().length < 10) {
+    if (!appealTarget || appealReason.trim().length < 10) {
       return;
     }
 
     setSubmitting(true);
     try {
-      await appealCopyrightCase(appealCase.id, appealReason.trim());
-      setAppealCase(null);
+      if (appealTarget.kind === "case") {
+        await appealCopyrightCase(
+          appealTarget.id,
+          appealReason.trim(),
+        );
+      } else {
+        await appealExternalCopyrightScan(
+          appealTarget.id,
+          appealReason.trim(),
+        );
+      }
+
+      setAppealTarget(null);
       setAppealReason("");
       await load();
       Alert.alert("Đã gửi", "Kháng nghị của bạn đang chờ System Admin xử lý.");
@@ -162,7 +182,12 @@ export default function CopyrightScreen() {
                 {item.canAppeal ? (
                   <Pressable
                     style={styles.secondaryButton}
-                    onPress={() => setAppealCase(item)}
+                    onPress={() => {
+                      setAppealTarget({
+                        id: item.id,
+                        kind: "case",
+                      });
+                    }}
                   >
                     <AppText variant="label" color={COLORS.primary}>
                       Gửi kháng nghị
@@ -173,9 +198,9 @@ export default function CopyrightScreen() {
             ))
           )}
 
-          <SectionTitle title="Quét âm thanh video" count={scans.length} />
+          <SectionTitle title="Quét AI ảnh và video" count={scans.length} />
           {scans.length === 0 ? (
-            <EmptyCard text="Chưa có video nào được gửi đi quét." />
+            <EmptyCard text="Chưa có nội dung nào được gửi đi quét." />
           ) : (
             scans.map((item) => (
               <View style={styles.card} key={item.id}>
@@ -192,13 +217,33 @@ export default function CopyrightScreen() {
                 {item.reviewNotes ? (
                   <AppText variant="caption">Kết luận: {item.reviewNotes}</AppText>
                 ) : null}
+                {item.appealReason ? (
+                  <AppText variant="caption">
+                    Kháng nghị: {item.appealReason}
+                  </AppText>
+                ) : null}
+                {item.canAppeal ? (
+                  <Pressable
+                    style={styles.secondaryButton}
+                    onPress={() => {
+                      setAppealTarget({
+                        id: item.id,
+                        kind: "scan",
+                      });
+                    }}
+                  >
+                    <AppText variant="label" color={COLORS.primary}>
+                      Gửi kháng nghị
+                    </AppText>
+                  </Pressable>
+                ) : null}
               </View>
             ))
           )}
         </ScrollView>
       )}
 
-      <Modal transparent visible={appealCase !== null} animationType="fade">
+      <Modal transparent visible={appealTarget !== null} animationType="fade">
         <View style={styles.modalBackdrop}>
           <View style={styles.modalCard}>
             <AppText variant="subtitle">Kháng nghị quyết định</AppText>
@@ -219,7 +264,7 @@ export default function CopyrightScreen() {
                 style={styles.modalButton}
                 disabled={submitting}
                 onPress={() => {
-                  setAppealCase(null);
+                  setAppealTarget(null);
                   setAppealReason("");
                 }}
               >

@@ -18,11 +18,17 @@ export type ExternalCopyrightScan = {
   id: string;
   postId: string;
   postMediaId: string;
+  mediaType: number;
   provider: string;
   status: number;
   matchSummary?: string | null;
   errorMessage?: string | null;
   reviewNotes?: string | null;
+  appealReason?: string | null;
   createdAt: string;
   updatedAt?: string | null;
+  reviewedAt?: string | null;
+  appealedAt?: string | null;
+  appealDeadline?: string | null;
+  canAppeal: boolean;
 };

@@ -22,3 +22,15 @@ export const appealCopyrightCase = async (caseId: string, reason: string) =>
       reason,
     }),
   });
+
+export const appealExternalCopyrightScan = async (
+  scanId: string,
+  reason: string,
+) =>
+  await api<void>(`/copyright/external-scans/${scanId}/appeal`, {
+    method: "POST",
+    auth: true,
+    body: JSON.stringify({
+      reason,
+    }),
+  });
