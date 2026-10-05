@@ -162,6 +162,29 @@ public class AdminController : ControllerBase
         return NoContent();
     }
 
+    [HttpPatch("comments/{id:guid}/remove")]
+    public async Task<IActionResult> RemoveComment(Guid id)
+    {
+        var comment = await _context.Comments.FindAsync(id)
+            ?? throw new KeyNotFoundException("Không tìm thấy bình luận.");
+        if (comment.Status is CommentStatus.Deleted or CommentStatus.Removed)
+        {
+            throw new InvalidOperationException(
+                "Bình luận đã được xóa hoặc gỡ trước đó.");
+        }
+
+        comment.Status = CommentStatus.Removed;
+        comment.DeletedAt = DateTimeOffset.UtcNow;
+        comment.UpdatedAt = DateTimeOffset.UtcNow;
+        AddAudit(
+            "comment.removed",
+            "comment",
+            id,
+            $"Removed reported comment from post {comment.PostId}.");
+        await _context.SaveChangesAsync();
+        return NoContent();
+    }
+
     [HttpGet("reports")]
     public async Task<IActionResult> Reports([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
     {

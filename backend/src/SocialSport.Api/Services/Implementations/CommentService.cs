@@ -7,6 +7,8 @@ using SocialSport.Api.Models.Entities;
 using SocialSport.Api.Models.Enums;
 using SocialSport.Api.Repositories.Interfaces;
 using SocialSport.Api.Services.Interfaces;
+using System.Globalization;
+using System.Text;
 
 namespace SocialSport.Api.Services.Implementations;
 
@@ -18,6 +20,7 @@ public class CommentService : ICommentService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly INotificationService _notificationService;
     private readonly ApplicationDbContext _context;
+    private readonly IReadOnlyList<string> _blockedTerms;
 
     public CommentService(
         ICommentRepository commentRepository,
@@ -25,7 +28,8 @@ public class CommentService : ICommentService
         UserManager<ApplicationUser> userManager,
         IPostAccessService postAccessService,
         INotificationService notificationService,
-        ApplicationDbContext context)
+        ApplicationDbContext context,
+        IConfiguration configuration)
     {
         _commentRepository = commentRepository;
         _postRepository = postRepository;
@@ -33,6 +37,14 @@ public class CommentService : ICommentService
         _postAccessService = postAccessService;
         _notificationService = notificationService;
         _context = context;
+        _blockedTerms = configuration
+            .GetSection("CommentModeration:BlockedTerms")
+            .Get<string[]>()?
+            .Select(NormalizeForModeration)
+            .Where(x => x.Length > 0)
+            .Distinct()
+            .ToList()
+            ?? [];
     }
 
     public async Task<List<CommentDto>> GetByPostIdAsync(
@@ -100,10 +112,14 @@ public class CommentService : ICommentService
                 ParentCommentId = x.ParentCommentId,
                 ReplyToUserId = parent?.AuthorId,
                 ReplyToUserName = replyUser?.DisplayName,
-                Content = x.Status == CommentStatus.Deleted
-                    ? "Bình luận đã bị xóa."
-                    : x.Content,
-                IsDeleted = x.Status == CommentStatus.Deleted,
+                Content = x.Status switch
+                {
+                    CommentStatus.Deleted => "Bình luận đã bị xóa.",
+                    CommentStatus.Removed => "Bình luận đã bị gỡ do vi phạm.",
+                    _ => x.Content
+                },
+                IsDeleted = x.Status is CommentStatus.Deleted
+                    or CommentStatus.Removed,
                 CreatedAt = x.CreatedAt,
                 UpdatedAt = x.UpdatedAt
             };
@@ -141,6 +157,17 @@ public class CommentService : ICommentService
         }
 
         await _postAccessService.EnsureCanInteractAsync(userId, post);
+        var content = ValidateContent(request.Content);
+
+        var spamWindow = DateTimeOffset.UtcNow.AddMinutes(-1);
+        var recentCommentCount = await _context.Comments.CountAsync(x =>
+            x.AuthorId == userId
+            && x.CreatedAt >= spamWindow);
+        if (recentCommentCount >= 5)
+        {
+            throw new InvalidOperationException(
+                "Bạn bình luận quá nhanh. Vui lòng chờ một phút rồi thử lại.");
+        }
 
         Comment? parent = null;
         if (request.ParentCommentId.HasValue)
@@ -162,7 +189,7 @@ public class CommentService : ICommentService
             PostId = postId,
             AuthorId = userId,
             ParentCommentId = request.ParentCommentId,
-            Content = request.Content.Trim(),
+            Content = content,
             Status = CommentStatus.Published,
             CreatedAt = DateTimeOffset.UtcNow
         };
@@ -215,7 +242,7 @@ public class CommentService : ICommentService
                 "Bạn không có quyền sửa bình luận này.");
         }
 
-        comment.Content = request.Content.Trim();
+        comment.Content = ValidateContent(request.Content);
         comment.UpdatedAt = DateTimeOffset.UtcNow;
         await _commentRepository.SaveChangesAsync();
 
@@ -241,13 +268,16 @@ public class CommentService : ICommentService
         }
 
         await _postAccessService.EnsureCanInteractAsync(userId, post);
-        if (comment.AuthorId != userId)
+        var isAuthor = comment.AuthorId == userId;
+        if (!isAuthor && !await CanModerateGroupCommentAsync(userId, post, comment))
         {
             throw new UnauthorizedAccessException(
                 "Bạn không có quyền xóa bình luận này.");
         }
 
-        comment.Status = CommentStatus.Deleted;
+        comment.Status = isAuthor
+            ? CommentStatus.Deleted
+            : CommentStatus.Removed;
         comment.DeletedAt = DateTimeOffset.UtcNow;
         await _commentRepository.SaveChangesAsync();
     }
@@ -327,5 +357,112 @@ public class CommentService : ICommentService
             GroupMemberRole.Moderator => "Kiểm duyệt viên",
             _ => null
         };
+    }
+
+    private string ValidateContent(string value)
+    {
+        var content = value.Trim();
+        if (content.Length == 0)
+        {
+            throw new InvalidOperationException(
+                "Nội dung bình luận không được để trống.");
+        }
+
+        var normalized = $" {NormalizeForModeration(content)} ";
+        var compact = normalized.Replace(" ", string.Empty);
+        if (_blockedTerms.Any(term =>
+                normalized.Contains(
+                    $" {term} ",
+                    StringComparison.Ordinal)
+                || compact.Contains(
+                    term.Replace(" ", string.Empty),
+                    StringComparison.Ordinal)))
+        {
+            throw new InvalidOperationException(
+                "Bình luận chứa ngôn từ không phù hợp. Vui lòng chỉnh sửa trước khi gửi.");
+        }
+
+        return content;
+    }
+
+    private async Task<bool> CanModerateGroupCommentAsync(
+        Guid userId,
+        Post post,
+        Comment comment)
+    {
+        if (!post.GroupId.HasValue || post.Group is null)
+        {
+            return false;
+        }
+
+        if (post.Group.OwnerId == userId)
+        {
+            return true;
+        }
+
+        var currentMember = await _context.GroupMembers
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.GroupId == post.GroupId.Value
+                && x.UserId == userId
+                && x.Status == GroupMemberStatus.Active);
+        if (currentMember?.Role is not (
+            GroupMemberRole.Admin or GroupMemberRole.Moderator))
+        {
+            return false;
+        }
+
+        if (comment.AuthorId == post.Group.OwnerId)
+        {
+            return false;
+        }
+
+        var authorRole = await _context.GroupMembers
+            .AsNoTracking()
+            .Where(x =>
+                x.GroupId == post.GroupId.Value
+                && x.UserId == comment.AuthorId
+                && x.Status == GroupMemberStatus.Active)
+            .Select(x => (GroupMemberRole?)x.Role)
+            .FirstOrDefaultAsync();
+
+        return currentMember.Role switch
+        {
+            GroupMemberRole.Admin => authorRole != GroupMemberRole.Admin,
+            GroupMemberRole.Moderator => authorRole is null
+                or GroupMemberRole.Member,
+            _ => false
+        };
+    }
+
+    private static string NormalizeForModeration(string value)
+    {
+        var decomposed = value
+            .Normalize(NormalizationForm.FormD)
+            .ToLowerInvariant();
+        var builder = new StringBuilder(decomposed.Length);
+        var previousWasSpace = true;
+
+        foreach (var character in decomposed)
+        {
+            if (CharUnicodeInfo.GetUnicodeCategory(character)
+                == UnicodeCategory.NonSpacingMark)
+            {
+                continue;
+            }
+
+            if (char.IsLetterOrDigit(character))
+            {
+                builder.Append(character);
+                previousWasSpace = false;
+            }
+            else if (!previousWasSpace)
+            {
+                builder.Append(' ');
+                previousWasSpace = true;
+            }
+        }
+
+        return builder.ToString().Trim();
     }
 }

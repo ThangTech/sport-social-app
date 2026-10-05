@@ -24,7 +24,11 @@ namespace SocialSport.Api.Repositories.Implementations
         {
             return await _context.Comments
                 .AsNoTracking()
-                .Where(x => x.PostId == postId && (x.Status == CommentStatus.Published || x.Status == CommentStatus.Deleted))
+                .Where(x =>
+                    x.PostId == postId
+                    && (x.Status == CommentStatus.Published
+                        || x.Status == CommentStatus.Removed
+                        || x.Status == CommentStatus.Deleted))
                 .OrderBy(x => x.CreatedAt)
                 .ToListAsync();
         }
