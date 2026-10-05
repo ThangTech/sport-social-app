@@ -10,13 +10,15 @@ public class MediaUrlService : IMediaUrlService
     public MediaUrlService(IDataProtectionProvider provider)
     {
         _protector = provider
-            .CreateProtector("SocialSport.PostMedia.v1")
+            .CreateProtector("SocialSport.PostMedia.v2")
             .ToTimeLimitedDataProtector();
     }
 
     public string CreatePostMediaUrl(Guid mediaId)
     {
-        var token = _protector.Protect(mediaId.ToString("D"), TimeSpan.FromHours(1));
+        var token = _protector.Protect(
+            mediaId.ToString("D"),
+            TimeSpan.FromMinutes(15));
         return $"/api/v1/media/posts/{mediaId:D}?token={Uri.EscapeDataString(token)}";
     }
 

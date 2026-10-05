@@ -110,7 +110,7 @@ Admin hiện có dashboard sức khỏe hệ thống, quản lý người dùng/
 
 - `wwwroot/uploads` phải nằm trên persistent storage hoặc object storage; container filesystem tạm sẽ làm mất file. Nếu chạy nhiều instance, mọi instance phải nhìn thấy cùng một storage.
 - Giới hạn upload được kiểm tra ở service, nhưng reverse proxy cũng cần giới hạn request body và timeout.
-- Avatar, cover và ảnh nhóm là media công khai. Media bài viết không còn được phục vụ trực tiếp từ `/uploads/posts`; API cấp signed URL hết hạn sau một giờ và kiểm tra lại trạng thái bài/nhóm khi tải.
+- Avatar, cover và ảnh nhóm là media công khai. Media bài viết không còn được phục vụ trực tiếp từ `/uploads/posts`; API cấp signed URL hết hạn sau 15 phút và kiểm tra lại trạng thái bài/nhóm khi tải.
 - Persist key ring Data Protection bên cạnh upload storage. Nếu mất key ring, các signed URL đang còn hạn và token do Data Protection tạo ra sẽ mất hiệu lực.
 - Reverse proxy phải terminate TLS; production bật HTTPS redirect.
 - Log lỗi server có `traceId`; response 500 không trả nội dung exception. Không log token, password hoặc raw secret.
