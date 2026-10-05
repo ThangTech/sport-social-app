@@ -1,7 +1,12 @@
 import AppText from "@/components/ui/AppText";
 import { useAuth } from "@/contexts/AuthContext";
 import { COLORS, SPACING } from "@/constants/theme";
-import { createPost, uploadPostMedia } from "@/services/post.service";
+import {
+  createPost,
+  deletePost,
+  finalizePost,
+  uploadPostMedia,
+} from "@/services/post.service";
 import { useState, useEffect } from "react";
 import { Alert, StyleSheet, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -46,7 +51,7 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
 
     if (!value || submitting) return;
 
-    let postCreated = false;
+    let createdPostId: string | null = null;
     let pendingCopyrightReview = false;
 
     try {
@@ -56,13 +61,17 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
         content: value,
         sportId: selectedSport?.id ?? null,
         visibility,
+        hasMedia: Boolean(selectedImage),
       });
 
-      postCreated = true;
+      createdPostId = post.id;
 
       if (selectedImage) {
         const media = await uploadPostMedia(post.id, selectedImage);
-        pendingCopyrightReview = media.isPendingCopyrightReview;
+        const publication = await finalizePost(post.id);
+
+        pendingCopyrightReview = media.isPendingCopyrightReview
+          || publication.isPendingCopyrightReview;
       }
 
       setContent("");
@@ -74,18 +83,20 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
       if (pendingCopyrightReview)
         Alert.alert(
           "Đang kiểm tra bản quyền",
-          "Bài viết tạm thời chưa hiển thị vì media trùng với nội dung đã đăng ký. Bạn sẽ nhận kết quả sau khi System Admin xem xét.",
+          "Bài viết tạm thời chưa hiển thị vì hệ thống phát hiện tín hiệu cần kiểm tra. Bạn sẽ nhận kết quả sau khi System Admin xem xét.",
         );
     } catch (error) {
-      if (postCreated) {
+      if (createdPostId) {
+        try {
+          await deletePost(createdPostId);
+        } catch (cleanupError) {
+          console.log("Không thể dọn bài viết chưa hoàn tất:", cleanupError);
+        }
+
         Alert.alert(
-          "Media chưa được tải lên",
-          "Bài viết đã được tạo nhưng ảnh hoặc video tải lên không thành công. Bạn có thể thử lại sau.",
+          "Bài viết chưa được đăng",
+          "Không thể hoàn tất tải lên và kiểm tra media. Vui lòng thử đăng lại.",
         );
-
-        onClose();
-        onCreated?.();
-
         return;
       }
 

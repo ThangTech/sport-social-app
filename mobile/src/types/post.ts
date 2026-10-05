@@ -42,6 +42,7 @@ export type CreatePostRequest = {
   content: string;
   sportId?: string | null;
   visibility: number;
+  hasMedia: boolean;
 };
 export type UpdatePostRequest = {
   content: string;
@@ -55,4 +56,9 @@ export type PostMediaUploadResponse = {
   sortOrder: number;
   isPendingCopyrightReview: boolean;
   externalCopyrightScanStatus?: number | null;
+};
+
+export type PostPublicationResponse = {
+  isPublished: boolean;
+  isPendingCopyrightReview: boolean;
 };

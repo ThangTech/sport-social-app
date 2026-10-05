@@ -5,6 +5,7 @@ import {
   getPostById,
   updatePost,
   deletePostMedia,
+  finalizePost,
   updatePostMedia,
   uploadPostMedia,
 } from "@/services/post.service";
@@ -56,6 +57,7 @@ export default function EditPostScreen() {
   const [sports, setSports] = useState<SportDto[]>([]);
 
   const [sportName, setSportName] = useState<string | null>(null);
+  const [groupId, setGroupId] = useState<string | null>(null);
 
   useEffect(() => {
     const loadPost = async () => {
@@ -79,6 +81,7 @@ export default function EditPostScreen() {
         setVisibility(post.visibility);
         setSportId(post.sportId ?? null);
         setSportName(post.sportName ?? null);
+        setGroupId(post.groupId ?? null);
         const media = post.media[0];
 
         if (media) {
@@ -121,11 +124,13 @@ export default function EditPostScreen() {
       setSubmitting(true);
       let pendingCopyrightReview = false;
 
-      await updatePost(id, {
+      const updatedPost = await updatePost(id, {
         content: value,
         sportId,
         visibility,
       });
+      pendingCopyrightReview = updatedPost.isPendingCopyrightReview;
+
       if (selectedImage) {
         if (existingMedia && !removeExistingImage) {
           const media = await updatePostMedia(
@@ -133,14 +138,22 @@ export default function EditPostScreen() {
             existingMedia.id,
             selectedImage,
           );
-          pendingCopyrightReview = media.isPendingCopyrightReview;
+          pendingCopyrightReview = pendingCopyrightReview
+            || media.isPendingCopyrightReview;
         } else {
           if (existingMedia && removeExistingImage) {
             await deletePostMedia(id, existingMedia.id);
           }
 
           const media = await uploadPostMedia(id, selectedImage);
-          pendingCopyrightReview = media.isPendingCopyrightReview;
+          pendingCopyrightReview = pendingCopyrightReview
+            || media.isPendingCopyrightReview;
+        }
+
+        if (!groupId) {
+          const publication = await finalizePost(id);
+          pendingCopyrightReview = pendingCopyrightReview
+            || publication.isPendingCopyrightReview;
         }
       } else if (existingMedia && removeExistingImage) {
         await deletePostMedia(id, existingMedia.id);

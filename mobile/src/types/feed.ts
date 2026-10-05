@@ -22,6 +22,7 @@ export type FeedPostDto = {
 
   visibility: number;
   groupModerationStatus: number;
+  isPendingCopyrightReview: boolean;
 
   likeCount: number;
   commentCount: number;

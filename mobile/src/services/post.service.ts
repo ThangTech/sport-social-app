@@ -5,6 +5,7 @@ import type {
   CreatePostRequest,
   UpdatePostRequest,
   PostMediaUploadResponse,
+  PostPublicationResponse,
   PostReactionsResponse,
 } from "@/types/post";
 import type { ImagePickerAsset } from "expo-image-picker";
@@ -101,6 +102,13 @@ export const uploadPostMedia = async (
     method: "POST",
     auth: true,
     body: createMediaFormData(asset),
+  });
+};
+
+export const finalizePost = async (postId: string) => {
+  return await api<PostPublicationResponse>(`/posts/${postId}/finalize`, {
+    method: "POST",
+    auth: true,
   });
 };
 
