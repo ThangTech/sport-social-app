@@ -15,6 +15,8 @@ namespace SocialSport.Api.Models.Entities
         public Guid? ActorId { get; set; }
 
         public NotificationType Type { get; set; }
+        [System.ComponentModel.DataAnnotations.MaxLength(1200)]
+        public string? Message { get; set; }
 
         public Guid? EntityId { get; set; }
 

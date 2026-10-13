@@ -1,8 +1,9 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppHeader from "@/components/AppHeader";
 import CreatePostPrompt from "@/components/CreatePostPrompt";
 import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { getFeed } from "@/services/feed.service";
 import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import type { Post } from "@/types/post";
@@ -22,6 +23,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFocusEffect } from "@react-navigation/native";
 export default function HomeScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -196,7 +199,11 @@ export default function HomeScreen() {
           />
           {searchInput || searchQuery ? (
             <Pressable hitSlop={8} onPress={() => void clearSearch()}>
-              <Ionicons name="close-circle" size={21} color={COLORS.textMuted} />
+              <Ionicons
+                name="close-circle"
+                size={21}
+                color={COLORS.textMuted}
+              />
             </Pressable>
           ) : null}
           <Pressable
@@ -294,59 +301,60 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
 
-  center: {
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    center: {
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
-  message: {
-    marginTop: SPACING.md,
-  },
+    message: {
+      marginTop: SPACING.md,
+    },
 
-  errorBox: {
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.md,
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: 10,
-  },
-  searchBar: {
-    marginHorizontal: SPACING.lg,
-    marginVertical: SPACING.sm,
-    minHeight: 46,
-    paddingLeft: SPACING.md,
-    paddingRight: SPACING.xs,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-    backgroundColor: COLORS.surface,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  searchInput: {
-    flex: 1,
-    color: COLORS.text,
-    fontSize: 15,
-  },
-  searchButton: {
-    minHeight: 36,
-    paddingHorizontal: SPACING.md,
-    borderRadius: 10,
-    backgroundColor: COLORS.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  listFooter: {
-    padding: SPACING.lg,
-    alignItems: "center",
-  },
-});
+    errorBox: {
+      marginHorizontal: SPACING.lg,
+      marginBottom: SPACING.md,
+      padding: SPACING.md,
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: 10,
+    },
+    searchBar: {
+      marginHorizontal: SPACING.lg,
+      marginVertical: SPACING.sm,
+      minHeight: 46,
+      paddingLeft: SPACING.md,
+      paddingRight: SPACING.xs,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 14,
+      backgroundColor: COLORS.surface,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+    },
+    searchInput: {
+      flex: 1,
+      color: COLORS.text,
+      fontSize: 15,
+    },
+    searchButton: {
+      minHeight: 36,
+      paddingHorizontal: SPACING.md,
+      borderRadius: 10,
+      backgroundColor: COLORS.primary,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    listFooter: {
+      padding: SPACING.lg,
+      alignItems: "center",
+    },
+  });

@@ -1,6 +1,7 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import GroupForm from "@/components/group/GroupForm";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { createGroup } from "@/services/group.service";
 import type { SaveGroupRequest } from "@/types/group";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -16,6 +17,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CreateGroupScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const handleSubmit = async (request: SaveGroupRequest) => {
     const group = await createGroup(request);
 
@@ -51,31 +54,32 @@ export default function CreateGroupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  content: {
-    padding: SPACING.lg,
-    paddingBottom: SPACING.xxl,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    content: {
+      padding: SPACING.lg,
+      paddingBottom: SPACING.xxl,
+    },
+  });

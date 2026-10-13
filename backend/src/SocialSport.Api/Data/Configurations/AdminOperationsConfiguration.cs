@@ -84,7 +84,7 @@ public class AdminAuditLogConfiguration : IEntityTypeConfiguration<AdminAuditLog
         b.Property(x => x.Action).HasMaxLength(100).IsRequired();
         b.Property(x => x.TargetType).HasMaxLength(100).IsRequired();
         b.Property(x => x.TargetId).HasMaxLength(100);
-        b.Property(x => x.Summary).HasMaxLength(1000).IsRequired();
+        b.Property(x => x.Summary).HasMaxLength(2000).IsRequired();
         b.HasIndex(x => x.CreatedAt);
         b.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.ActorId).OnDelete(DeleteBehavior.Restrict);
     }

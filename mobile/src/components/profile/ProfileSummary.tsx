@@ -1,8 +1,9 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Image, Pressable, StyleSheet, View } from "react-native";
 
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import type { UserProfileDto } from "@/types/user";
 
@@ -25,6 +26,8 @@ export default function ProfileSummary({
   onAvatarPress,
   onEditPress,
 }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   return (
     <>
       {profile.coverUrl ? (
@@ -67,7 +70,9 @@ export default function ProfileSummary({
         <AppText variant="subtitle">{profile.displayName}</AppText>
         <AppText style={styles.username}>@{profile.userName}</AppText>
 
-        {profile.bio ? <AppText style={styles.bio}>{profile.bio}</AppText> : null}
+        {profile.bio ? (
+          <AppText style={styles.bio}>{profile.bio}</AppText>
+        ) : null}
 
         <View style={styles.stats}>
           <View style={styles.statItem}>
@@ -90,72 +95,73 @@ export default function ProfileSummary({
   );
 }
 
-const styles = StyleSheet.create({
-  cover: {
-    width: "100%",
-    height: 150,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  profile: {
-    alignItems: "center",
-    paddingHorizontal: SPACING.xl,
-    paddingBottom: SPACING.xl,
-  },
-  profileWithoutCover: {
-    paddingTop: SPACING.xl,
-  },
-  avatarContainer: {
-    width: 96,
-    height: 96,
-    marginTop: -48,
-    marginBottom: SPACING.md,
-  },
-  avatar: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    borderWidth: 4,
-    borderColor: COLORS.background,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  avatarWithoutCover: {
-    marginTop: 0,
-  },
-  editButton: {
-    position: "absolute",
-    right: -2,
-    bottom: -2,
-    width: 32,
-    height: 32,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 16,
-    borderWidth: 3,
-    borderColor: COLORS.background,
-    backgroundColor: COLORS.primary,
-  },
-  username: {
-    marginTop: 4,
-    color: COLORS.textMuted,
-  },
-  bio: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  stats: {
-    width: "100%",
-    marginTop: 20,
-    flexDirection: "row",
-    alignItems: "flex-start",
-  },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-  },
-  statLabel: {
-    marginTop: 6,
-    color: COLORS.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    cover: {
+      width: "100%",
+      height: 150,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    profile: {
+      alignItems: "center",
+      paddingHorizontal: SPACING.xl,
+      paddingBottom: SPACING.xl,
+    },
+    profileWithoutCover: {
+      paddingTop: SPACING.xl,
+    },
+    avatarContainer: {
+      width: 96,
+      height: 96,
+      marginTop: -48,
+      marginBottom: SPACING.md,
+    },
+    avatar: {
+      width: 96,
+      height: 96,
+      borderRadius: 48,
+      borderWidth: 4,
+      borderColor: COLORS.background,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    avatarWithoutCover: {
+      marginTop: 0,
+    },
+    editButton: {
+      position: "absolute",
+      right: -2,
+      bottom: -2,
+      width: 32,
+      height: 32,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 16,
+      borderWidth: 3,
+      borderColor: COLORS.background,
+      backgroundColor: COLORS.primary,
+    },
+    username: {
+      marginTop: 4,
+      color: COLORS.textMuted,
+    },
+    bio: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    stats: {
+      width: "100%",
+      marginTop: 20,
+      flexDirection: "row",
+      alignItems: "flex-start",
+    },
+    statItem: {
+      flex: 1,
+      alignItems: "center",
+    },
+    statLabel: {
+      marginTop: 6,
+      color: COLORS.textMuted,
+      fontSize: 13,
+      textAlign: "center",
+    },
+  });

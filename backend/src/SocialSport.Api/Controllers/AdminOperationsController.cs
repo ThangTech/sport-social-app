@@ -49,7 +49,7 @@ public class AdminOperationsController : ControllerBase
                 item.TargetId,
                 TargetLabel = targetLabel,
                 item.Summary,
-                DisplaySummary = $"{actionLabel}: {targetLabel}",
+                DisplaySummary = item.Summary,
                 item.CreatedAt
             };
         }).ToList();
@@ -454,7 +454,7 @@ public class AdminOperationsController : ControllerBase
                 item.TargetId,
                 TargetLabel = targetLabel,
                 item.Summary,
-                DisplaySummary = $"{actionLabel}: {targetLabel}",
+                DisplaySummary = item.Summary,
                 item.CreatedAt
             };
         }).ToList();
@@ -635,6 +635,8 @@ public class AdminOperationsController : ControllerBase
         "user.status" => "Cập nhật trạng thái người dùng",
         "group.status" => "Cập nhật trạng thái nhóm",
         "post.status" => "Cập nhật trạng thái bài viết",
+        "post.approved" => "Đồng ý đăng bài",
+        "post.rejected" => "Từ chối / gỡ bài",
         "comment.removed" => "Gỡ bình luận vi phạm",
         "report.status" => "Xử lý báo cáo",
         "sport.created" => "Tạo môn thể thao",

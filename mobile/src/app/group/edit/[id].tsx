@@ -1,7 +1,8 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AvatarCoverImageEditor from "@/components/image/AvatarCoverImageEditor";
 import GroupForm from "@/components/group/GroupForm";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   deleteGroup,
@@ -31,6 +32,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function EditGroupScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { user: currentUser } = useAuth();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -41,43 +44,46 @@ export default function EditGroupScreen() {
   const [deleting, setDeleting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const loadGroup = useCallback(async (showLoading = true) => {
-    if (!id) {
-      setErrorMessage("Không tìm thấy nhóm.");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      if (showLoading) {
-        setLoading(true);
-        setErrorMessage("");
-      }
-
-      const result = await getGroupById(id);
-
-      if (result.ownerId !== currentUser?.id) {
-        setGroup(null);
-        setErrorMessage("Chỉ chủ nhóm mới có thể chỉnh sửa nhóm này.");
+  const loadGroup = useCallback(
+    async (showLoading = true) => {
+      if (!id) {
+        setErrorMessage("Không tìm thấy nhóm.");
+        setLoading(false);
         return;
       }
 
-      setGroup(result);
-    } catch (error) {
-      if (!showLoading) throw error;
+      try {
+        if (showLoading) {
+          setLoading(true);
+          setErrorMessage("");
+        }
 
-      setGroup(null);
-      setErrorMessage(
-        error instanceof ApiError && error.status === 404
-          ? "Không tìm thấy nhóm."
-          : error instanceof Error
-            ? error.message
-            : "Không thể tải thông tin nhóm.",
-      );
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  }, [currentUser?.id, id]);
+        const result = await getGroupById(id);
+
+        if (result.ownerId !== currentUser?.id) {
+          setGroup(null);
+          setErrorMessage("Chỉ chủ nhóm mới có thể chỉnh sửa nhóm này.");
+          return;
+        }
+
+        setGroup(result);
+      } catch (error) {
+        if (!showLoading) throw error;
+
+        setGroup(null);
+        setErrorMessage(
+          error instanceof ApiError && error.status === 404
+            ? "Không tìm thấy nhóm."
+            : error instanceof Error
+              ? error.message
+              : "Không thể tải thông tin nhóm.",
+        );
+      } finally {
+        if (showLoading) setLoading(false);
+      }
+    },
+    [currentUser?.id, id],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -219,7 +225,8 @@ export default function EditGroupScreen() {
                 disabled={deleting || imageSubmitting}
                 style={({ pressed }) => [
                   styles.deleteButton,
-                  (pressed || deleting || imageSubmitting) && styles.buttonDisabled,
+                  (pressed || deleting || imageSubmitting) &&
+                    styles.buttonDisabled,
                 ]}
                 onPress={handleDelete}
               >
@@ -239,69 +246,70 @@ export default function EditGroupScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  content: {
-    padding: SPACING.lg,
-    paddingBottom: SPACING.xxl,
-    gap: SPACING.xl,
-  },
-  center: {
-    flex: 1,
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  dangerZone: {
-    padding: SPACING.lg,
-    gap: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: RADIUS.md,
-  },
-  dangerCopy: {
-    gap: SPACING.xs,
-  },
-  deleteButton: {
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.danger,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    content: {
+      padding: SPACING.lg,
+      paddingBottom: SPACING.xxl,
+      gap: SPACING.xl,
+    },
+    center: {
+      flex: 1,
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: SPACING.lg,
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.sm,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    dangerZone: {
+      padding: SPACING.lg,
+      gap: SPACING.md,
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: RADIUS.md,
+    },
+    dangerCopy: {
+      gap: SPACING.xs,
+    },
+    deleteButton: {
+      minHeight: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.danger,
+    },
+    buttonDisabled: {
+      opacity: 0.6,
+    },
+  });

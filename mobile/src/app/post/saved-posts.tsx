@@ -1,6 +1,7 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { getSavedPosts } from "@/services/post.service";
 import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import type { Post } from "@/types/post";
@@ -19,6 +20,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function SavedPostsScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -168,52 +171,53 @@ export default function SavedPostsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
 
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
 
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
 
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
 
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
-  headerSpace: {
-    width: 40,
-  },
+    headerSpace: {
+      width: 40,
+    },
 
-  center: {
-    flex: 1,
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    center: {
+      flex: 1,
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
-  emptyList: {
-    flexGrow: 1,
-  },
+    emptyList: {
+      flexGrow: 1,
+    },
 
-  emptyTitle: {
-    marginTop: SPACING.md,
-  },
+    emptyTitle: {
+      marginTop: SPACING.md,
+    },
 
-  message: {
-    marginTop: SPACING.sm,
-    textAlign: "center",
-  },
-});
+    message: {
+      marginTop: SPACING.sm,
+      textAlign: "center",
+    },
+  });

@@ -21,6 +21,7 @@ public class GlobalExceptionHandler
         var statusCode =
             exception switch
             {
+                Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException => StatusCodes.Status409Conflict,
                 KeyNotFoundException => StatusCodes.Status404NotFound,
                 UnauthorizedAccessException =>
                     StatusCodes.Status403Forbidden,

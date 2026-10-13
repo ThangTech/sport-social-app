@@ -1,7 +1,8 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import ProfilePostList from "@/components/profile/ProfilePostList";
 import ProfileSummary from "@/components/profile/ProfileSummary";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import { getUserPosts, getUserProfile } from "@/services/user.service";
@@ -22,6 +23,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
+  const { colors: COLORS, isLight, toggleTheme } = useTheme();
+  const styles = createStyles(COLORS);
   const { user: currentUser, profileImageVersion } = useAuth();
   const [profile, setProfile] = useState<UserProfileDto | null>(null);
   const [posts, setPosts] = useState<Post[]>([]);
@@ -52,9 +55,7 @@ export default function ProfileScreen() {
     } catch (error) {
       if (currentUserIdRef.current !== userId) return;
       setErrorMessage(
-        error instanceof Error
-          ? error.message
-          : "Không thể tải trang cá nhân.",
+        error instanceof Error ? error.message : "Không thể tải trang cá nhân.",
       );
     } finally {
       if (currentUserIdRef.current === userId) {
@@ -98,6 +99,19 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <AppText variant="title">Trang cá nhân</AppText>
+        <Pressable
+          onPress={toggleTheme}
+          accessibilityLabel={
+            isLight ? "Chuyển sang chế độ tối" : "Chuyển sang chế độ sáng"
+          }
+          style={{ padding: 10 }}
+        >
+          <Ionicons
+            name={isLight ? "moon-outline" : "sunny-outline"}
+            size={24}
+            color={COLORS.text}
+          />
+        </Pressable>
       </View>
 
       {loading ? (
@@ -117,10 +131,13 @@ export default function ProfileScreen() {
           <AppText color={COLORS.textMuted} style={styles.message}>
             {errorMessage}
           </AppText>
-          <Pressable style={styles.retryButton} onPress={() => {
-            setLoading(true);
-            void loadProfile(currentUser?.id);
-          }}>
+          <Pressable
+            style={styles.retryButton}
+            onPress={() => {
+              setLoading(true);
+              void loadProfile(currentUser?.id);
+            }}
+          >
             <AppText color={COLORS.background}>Thử lại</AppText>
           </Pressable>
         </View>
@@ -171,34 +188,36 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: SPACING.xl,
-  },
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: SPACING.xl,
+    },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: SPACING.lg,
+      paddingHorizontal: SPACING.lg,
+      paddingVertical: SPACING.sm,
+      borderRadius: 20,
+      backgroundColor: COLORS.primary,
+    },
+  });

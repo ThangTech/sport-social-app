@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import { GroupMemberRole, type GroupMemberDto } from "@/types/group";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -32,10 +33,7 @@ type MemberAction =
   | { type: "remove"; label: string }
   | { type: "ban"; label: string };
 
-export const getGroupRoleLabel = (
-  role: GroupMemberRole,
-  isOwner = false,
-) => {
+export const getGroupRoleLabel = (role: GroupMemberRole, isOwner = false) => {
   if (isOwner) return "Chủ nhóm";
   if (role === GroupMemberRole.Admin) return "Quản trị viên nhóm";
   if (role === GroupMemberRole.Moderator) return "Kiểm duyệt viên";
@@ -55,6 +53,8 @@ export default function GroupMemberListItem({
   onRemove,
   onBan,
 }: GroupMemberListItemProps) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { showActionSheetWithOptions } = useActionSheet();
 
   const confirmRoleChange = (role: GroupMemberRole) => {
@@ -199,52 +199,53 @@ export default function GroupMemberListItem({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    minHeight: 88,
-    padding: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  identity: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-  },
-  avatar: {
-    width: 52,
-    height: 52,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  userInfo: {
-    flex: 1,
-    alignItems: "flex-start",
-    gap: SPACING.xs,
-  },
-  roleBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primarySoft,
-  },
-  actionButton: {
-    minHeight: 38,
-    paddingHorizontal: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.xs,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  disabledButton: {
-    opacity: 0.55,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      minHeight: 88,
+      padding: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    identity: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+    },
+    avatar: {
+      width: 52,
+      height: 52,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    userInfo: {
+      flex: 1,
+      alignItems: "flex-start",
+      gap: SPACING.xs,
+    },
+    roleBadge: {
+      paddingHorizontal: SPACING.sm,
+      paddingVertical: 2,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primarySoft,
+    },
+    actionButton: {
+      minHeight: 38,
+      paddingHorizontal: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.xs,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    disabledButton: {
+      opacity: 0.55,
+    },
+  });

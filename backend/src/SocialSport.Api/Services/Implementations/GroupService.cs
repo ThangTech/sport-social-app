@@ -26,6 +26,12 @@ public class GroupService : IGroupService
     private readonly IWebHostEnvironment _environment;
     private readonly INotificationService _notificationService;
     private readonly IMediaUrlService _mediaUrlService;
+    private string CheckedContent(string content)
+    {
+        _textModeration.EnsureAllowed(content);
+        return content.Trim();
+    }
+    private readonly TextModeration _textModeration;
     private readonly ApplicationDbContext _context;
 
     public GroupService(
@@ -37,7 +43,7 @@ public class GroupService : IGroupService
         IWebHostEnvironment environment,
         INotificationService notificationService,
         IMediaUrlService mediaUrlService,
-        ApplicationDbContext context)
+        ApplicationDbContext context, TextModeration textModeration)
     {
         _groupRepository = groupRepository;
         _userManager = userManager;
@@ -48,6 +54,7 @@ public class GroupService : IGroupService
         _notificationService = notificationService;
         _mediaUrlService = mediaUrlService;
         _context = context;
+        _textModeration = textModeration;
     }
 
     public async Task<GroupDto> CreateAsync(Guid userId, CreateGroupRequest request)
@@ -936,7 +943,7 @@ public class GroupService : IGroupService
             AuthorId = userId,
             GroupId = groupId,
             SportId = request.SportId,
-            Content = request.Content.Trim(),
+            Content = CheckedContent(request.Content),
             Visibility = PostVisibility.Public,
             Status = canPublishImmediately
                 ? PostStatus.Published
@@ -1141,6 +1148,7 @@ public class GroupService : IGroupService
                     Id = x.Id,
                     Url = _mediaUrlService.CreatePostMediaUrl(x.Id),
                     MediaType = (int)x.MediaType,
+                    LogoAnalysisJson = x.LogoAnalysisJson,
                     SortOrder = x.SortOrder
                 })
                 .ToList()

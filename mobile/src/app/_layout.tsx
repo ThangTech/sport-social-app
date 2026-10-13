@@ -5,13 +5,7 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import {
-  Href,
-  Stack,
-  usePathname,
-  useRouter,
-  useSegments,
-} from "expo-router";
+import { Href, Stack, usePathname, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import * as Notifications from "expo-notifications";
 import { StatusBar } from "expo-status-bar";
@@ -21,12 +15,14 @@ import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 import { registerForPushNotifications } from "@/services/push-notification.service";
 import { NotificationType } from "@/types/notification";
+import { ThemeProvider, useTheme } from "@/contexts/ThemeContext";
 
 SplashScreen.preventAutoHideAsync();
 
 const PENDING_PATH_KEY = "socialsport.pendingPath";
 
 function RootNavigator() {
+  const { colors } = useTheme();
   const { user, loading } = useAuth();
   const segments = useSegments();
   const pathname = usePathname();
@@ -84,6 +80,9 @@ function RootNavigator() {
         data.entityId
       )
         router.push({ pathname: "/group/[id]", params: { id: data.entityId } });
+      else if (data.type === NotificationType.SystemPostApproved ||
+               data.type === NotificationType.SystemPostRejected)
+        router.push("/user/post-reviews");
       else if (data.type === NotificationType.Follow && data.actorId)
         router.push({ pathname: "/user/[id]", params: { id: data.actorId } });
       else if (
@@ -150,7 +149,12 @@ function RootNavigator() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
+    <Stack
+      screenOptions={{
+        headerShown: false,
+        contentStyle: { backgroundColor: colors.background },
+      }}
+    >
       <Stack.Screen name="(auth)" />
       <Stack.Screen name="(tabs)" />
       <Stack.Screen
@@ -236,6 +240,17 @@ function RootNavigator() {
   );
 }
 
+function ThemedApp() {
+  const { colors, isLight } = useTheme();
+
+  return (
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar style={isLight ? "dark" : "light"} />
+      <RootNavigator />
+    </View>
+  );
+}
+
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
@@ -256,12 +271,11 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <ActionSheetProvider>
-        <View style={{ flex: 1 }}>
-          <StatusBar style="auto" />
-          <RootNavigator />
-        </View>
-      </ActionSheetProvider>
+      <ThemeProvider>
+        <ActionSheetProvider>
+          <ThemedApp />
+        </ActionSheetProvider>
+      </ThemeProvider>
     </AuthProvider>
   );
 }

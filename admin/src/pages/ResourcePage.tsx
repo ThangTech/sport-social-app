@@ -1,6 +1,7 @@
 import { ExportOutlined } from "@ant-design/icons";
 import type { TableProps } from "antd";
-import { Select, Space, Table, Tag, Typography } from "antd";
+import { Button, Select, Space, Switch, Table, Tag, Typography } from "antd";
+import { PostReview } from "../components/PostReview";
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader, PageState } from "../components/ui";
 import { api, appUrl, formatDate } from "../lib/api";
@@ -55,13 +56,19 @@ export function ResourcePage({ resource }: { resource: Resource }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [pendingOnly, setPendingOnly] = useState(false);
+  const [reviewRow, setReviewRow] = useState<AdminRow | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
-      setData(await api(`/admin/${resource}?page=${page}&pageSize=20`));
+      setData(
+        await api(
+          `/admin/${resource}?page=${page}&pageSize=20&pendingOnly=${pendingOnly}`,
+        ),
+      );
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "Không thể tải dữ liệu.",
@@ -69,7 +76,7 @@ export function ResourcePage({ resource }: { resource: Resource }) {
     } finally {
       setLoading(false);
     }
-  }, [page, resource]);
+  }, [page, resource, pendingOnly]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -83,79 +90,94 @@ export function ResourcePage({ resource }: { resource: Resource }) {
     try {
       await api(`/admin/${resource}/${row.id}/status`, {
         method: "PATCH",
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, rowVersion: row.rowVersion }),
       });
       await load();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Không thể cập nhật.");
+      setError(
+        reason instanceof Error ? reason.message : "Không thể cập nhật.",
+      );
     } finally {
       setUpdatingId(null);
     }
   };
 
   const columns: TableProps<AdminRow>["columns"] = [
-      {
-        title: "Nội dung",
-        key: "content",
-        render: (_, row) => {
-          const label = String(
-            row.name ??
-              row.content ??
-              row.displayName ??
-              row.userName ??
-              "—",
-          );
-          const publicUrl =
-            resource === "groups" || resource === "posts"
-              ? appUrl(
-                  resource === "groups"
-                    ? `/group/${row.id}`
-                    : `/post/${row.id}`,
-                )
-              : null;
+    {
+      title: "Nội dung",
+      key: "content",
+      render: (_, row) => {
+        const label = String(
+          row.name ?? row.content ?? row.displayName ?? row.userName ?? "—",
+        );
+        const publicUrl =
+          resource === "groups" || resource === "posts"
+            ? appUrl(
+                resource === "groups" ? `/group/${row.id}` : `/post/${row.id}`,
+              )
+            : null;
 
-          return (
-            <div className="max-w-xl">
-              {publicUrl ? (
-                <Typography.Link
-                  href={publicUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  strong
-                >
-                  <Space size={6}>
-                    <span className="line-clamp-2">{label}</span>
-                    <ExportOutlined />
-                  </Space>
-                </Typography.Link>
-              ) : (
-                <Typography.Text strong>{label}</Typography.Text>
-              )}
-              {row.description ? (
-                <Typography.Text
-                  type="secondary"
-                  className="mt-1 block max-w-lg truncate text-xs"
-                >
-                  {String(row.description)}
-                </Typography.Text>
-              ) : null}
-            </div>
-          );
-        },
+        return (
+          <div className="max-w-xl">
+            {publicUrl ? (
+              <Typography.Link
+                href={publicUrl}
+                target="_blank"
+                rel="noreferrer"
+                strong
+              >
+                <Space size={6}>
+                  <span className="line-clamp-2">{label}</span>
+                  <ExportOutlined />
+                </Space>
+              </Typography.Link>
+            ) : (
+              <Typography.Text strong>{label}</Typography.Text>
+            )}
+            {row.description ? (
+              <Typography.Text
+                type="secondary"
+                className="mt-1 block max-w-lg truncate text-xs"
+              >
+                {String(row.description)}
+              </Typography.Text>
+            ) : null}
+          </div>
+        );
       },
-      {
-        title: "Mã",
-        dataIndex: "id",
-        width: 130,
-        render: (value: string) => (
-          <Typography.Text code>{value.slice(0, 8)}…</Typography.Text>
-        ),
-      },
-      {
-        title: "Trạng thái",
-        dataIndex: "status",
-        width: 190,
-        render: (value: number, row) => (
+    },
+    {
+      title: "Mã",
+      dataIndex: "id",
+      width: 130,
+      render: (value: string) => (
+        <Typography.Text code>{value.slice(0, 8)}…</Typography.Text>
+      ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      width: 190,
+      render: (value: number, row) =>
+        resource === "posts" ? (
+          <Space orientation="vertical">
+            <Tag>
+              {row.systemModerationStatus === 1
+                ? "Chờ duyệt"
+                : row.systemModerationStatus === 4
+                  ? "Đang tải media"
+                  : config.states.find(([state]) => state === value)?.[1]}
+            </Tag>
+            <Typography.Text type="secondary">
+              {row.groupId
+                ? "Trong nhóm"
+                : { 1: "Công khai", 2: "Người theo dõi", 3: "Riêng tư" }[
+                    Number(row.visibility)
+                  ] || ""}
+            </Typography.Text>
+            <Button onClick={() => setReviewRow(row)}>Xem và duyệt</Button>
+          </Space>
+        ) : (
           <Select
             value={value}
             options={config.states.map(([state, label]) => ({
@@ -168,13 +190,13 @@ export function ResourcePage({ resource }: { resource: Resource }) {
             className="w-full"
           />
         ),
-      },
-      {
-        title: "Ngày tạo",
-        dataIndex: "createdAt",
-        width: 170,
-        render: (value?: string) => formatDate(value),
-      },
+    },
+    {
+      title: "Ngày tạo",
+      dataIndex: "createdAt",
+      width: 170,
+      render: (value?: string) => formatDate(value),
+    },
   ];
 
   return (
@@ -187,6 +209,18 @@ export function ResourcePage({ resource }: { resource: Resource }) {
       />
 
       <PageState loading={loading} error={error} retry={() => void load()}>
+        {resource === "posts" && (
+          <Space style={{ marginBottom: 16 }}>
+            <Switch
+              checked={pendingOnly}
+              onChange={(value) => {
+                setPendingOnly(value);
+                setPage(1);
+              }}
+            />
+            <span>Chỉ hiện bài ngoài nhóm chờ duyệt</span>
+          </Space>
+        )}
         {data ? (
           <Table
             rowKey="id"
@@ -204,6 +238,13 @@ export function ResourcePage({ resource }: { resource: Resource }) {
           />
         ) : null}
       </PageState>
+      {reviewRow && (
+        <PostReview
+          row={reviewRow}
+          onClose={() => setReviewRow(null)}
+          onUpdated={load}
+        />
+      )}
     </>
   );
 }

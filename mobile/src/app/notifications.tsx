@@ -1,6 +1,7 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import Avatar from "@/components/Avatar";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import {
   deleteAllNotifications,
@@ -8,10 +9,7 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "@/services/notification.service";
-import {
-  NotificationType,
-  type NotificationDto,
-} from "@/types/notification";
+import { NotificationType, type NotificationDto } from "@/types/notification";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
 import { router } from "expo-router";
@@ -43,6 +41,8 @@ const groupNotificationTypes = new Set([
 ]);
 
 export default function NotificationsScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const [items, setItems] = useState<NotificationDto[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -78,9 +78,7 @@ export default function NotificationsScreen() {
         }
 
         setErrorMessage(
-          error instanceof Error
-            ? error.message
-            : "Không thể tải thông báo.",
+          error instanceof Error ? error.message : "Không thể tải thông báo.",
         );
       } finally {
         setLoading(false);
@@ -116,6 +114,12 @@ export default function NotificationsScreen() {
       if (!item.isRead) {
         await markNotificationRead(item.id);
         markReadLocally(item.id);
+      }
+
+      if (item.type === NotificationType.SystemPostApproved ||
+          item.type === NotificationType.SystemPostRejected) {
+        router.push("/user/post-reviews");
+        return;
       }
 
       if (postNotificationTypes.has(item.type)) {
@@ -244,9 +248,7 @@ export default function NotificationsScreen() {
           <Pressable
             style={styles.headerButton}
             onPress={() => void markAllRead()}
-            disabled={
-              actionLoading || !items.some((item) => !item.isRead)
-            }
+            disabled={actionLoading || !items.some((item) => !item.isRead)}
           >
             <Ionicons
               name="checkmark-done"
@@ -383,76 +385,77 @@ export default function NotificationsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerActions: {
-    flexDirection: "row",
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  center: {
-    flex: 1,
-    minHeight: 240,
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.md,
-  },
-  centerText: {
-    textAlign: "center",
-  },
-  retryButton: {
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  item: {
-    minHeight: 76,
-    padding: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  unreadItem: {
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  itemContent: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
-  targetContext: {
-    borderLeftWidth: 2,
-    borderLeftColor: COLORS.primary,
-    paddingLeft: SPACING.sm,
-    gap: 2,
-  },
-  unreadDot: {
-    width: 9,
-    height: 9,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  footer: {
-    padding: SPACING.lg,
-    alignItems: "center",
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    headerActions: {
+      flexDirection: "row",
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    center: {
+      flex: 1,
+      minHeight: 240,
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.md,
+    },
+    centerText: {
+      textAlign: "center",
+    },
+    retryButton: {
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.sm,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    item: {
+      minHeight: 76,
+      padding: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    unreadItem: {
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    itemContent: {
+      flex: 1,
+      gap: SPACING.xs,
+    },
+    targetContext: {
+      borderLeftWidth: 2,
+      borderLeftColor: COLORS.primary,
+      paddingLeft: SPACING.sm,
+      gap: 2,
+    },
+    unreadDot: {
+      width: 9,
+      height: 9,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    footer: {
+      padding: SPACING.lg,
+      alignItems: "center",
+    },
+  });

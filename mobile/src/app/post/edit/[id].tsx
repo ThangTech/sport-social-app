@@ -1,6 +1,7 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
 import { useAuth } from "@/contexts/AuthContext";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import {
   getPostById,
   updatePost,
@@ -29,6 +30,8 @@ import PostImagePreview from "@/components/post/editor/PostImagePreview";
 import PostEditorHeader from "@/components/post/editor/PostEditorHeader";
 import PostEditorForm from "@/components/post/editor/PostEditorForm";
 export default function EditPostScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const params = useLocalSearchParams<{ id?: string | string[] }>();
 
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -138,28 +141,33 @@ export default function EditPostScreen() {
             existingMedia.id,
             selectedImage,
           );
-          pendingCopyrightReview = pendingCopyrightReview
-            || media.isPendingCopyrightReview;
+          pendingCopyrightReview =
+            pendingCopyrightReview || media.isPendingCopyrightReview;
         } else {
           if (existingMedia && removeExistingImage) {
             await deletePostMedia(id, existingMedia.id);
           }
 
           const media = await uploadPostMedia(id, selectedImage);
-          pendingCopyrightReview = pendingCopyrightReview
-            || media.isPendingCopyrightReview;
+          pendingCopyrightReview =
+            pendingCopyrightReview || media.isPendingCopyrightReview;
         }
 
         if (!groupId) {
           const publication = await finalizePost(id);
-          pendingCopyrightReview = pendingCopyrightReview
-            || publication.isPendingCopyrightReview;
+          pendingCopyrightReview =
+            pendingCopyrightReview || publication.isPendingCopyrightReview;
         }
       } else if (existingMedia && removeExistingImage) {
         await deletePostMedia(id, existingMedia.id);
       }
       router.back();
-      if (pendingCopyrightReview)
+      if (!groupId) {
+        Alert.alert(
+          "Đã gửi chờ duyệt lại",
+          "Nội dung mới sẽ hiển thị sau khi System Admin duyệt.",
+        );
+      } else if (pendingCopyrightReview)
         Alert.alert(
           "Đang kiểm tra bản quyền",
           "Bài viết tạm thời chưa hiển thị cho đến khi media được xem xét.",
@@ -270,32 +278,33 @@ export default function EditPostScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
 
-  center: {
-    flex: 1,
+    center: {
+      flex: 1,
 
-    alignItems: "center",
-    justifyContent: "center",
+      alignItems: "center",
+      justifyContent: "center",
 
-    padding: SPACING.xl,
-  },
+      padding: SPACING.xl,
+    },
 
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
 
-  mediaActions: {
-    marginHorizontal: SPACING.lg,
-    marginTop: SPACING.md,
+    mediaActions: {
+      marginHorizontal: SPACING.lg,
+      marginTop: SPACING.md,
 
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-});
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+  });

@@ -1,3 +1,4 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import PostEditorForm from "@/components/post/editor/PostEditorForm";
 import PostEditorHeader from "@/components/post/editor/PostEditorHeader";
 import PostImagePickerButton from "@/components/post/editor/PostImagePickerButton";
@@ -6,7 +7,7 @@ import PostSportSelector, {
   PostSportBadge,
 } from "@/components/post/editor/PostSportSelector";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { createGroupPost, getGroupById } from "@/services/group.service";
 import { uploadPostMedia } from "@/services/post.service";
@@ -27,6 +28,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function CreateGroupPostScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { user, profileImageVersion } = useAuth();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -263,53 +266,54 @@ export default function CreateGroupPostScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  center: {
-    flex: 1,
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
-  },
-  groupContext: {
-    marginTop: SPACING.xs,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-  },
-  actions: {
-    margin: SPACING.lg,
-    padding: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: SPACING.md,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-    borderRadius: 16,
-    backgroundColor: COLORS.surface,
-  },
-  actionLabel: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
-  actionIcons: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    center: {
+      flex: 1,
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: SPACING.lg,
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.sm,
+      borderRadius: 20,
+      backgroundColor: COLORS.primary,
+    },
+    groupContext: {
+      marginTop: SPACING.xs,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.xs,
+    },
+    actions: {
+      margin: SPACING.lg,
+      padding: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: SPACING.md,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: COLORS.border,
+      borderRadius: 16,
+      backgroundColor: COLORS.surface,
+    },
+    actionLabel: {
+      flex: 1,
+      gap: SPACING.xs,
+    },
+    actionIcons: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.xs,
+    },
+  });

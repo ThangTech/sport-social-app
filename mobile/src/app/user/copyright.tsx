@@ -1,15 +1,13 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import {
   appealCopyrightCase,
   appealExternalCopyrightScan,
   getMyCopyrightCases,
   getMyExternalCopyrightScans,
 } from "@/services/copyright.service";
-import type {
-  CopyrightCase,
-  ExternalCopyrightScan,
-} from "@/types/copyright";
+import type { CopyrightCase, ExternalCopyrightScan } from "@/types/copyright";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
@@ -53,6 +51,8 @@ type AppealTarget = {
 };
 
 export default function CopyrightScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const [cases, setCases] = useState<CopyrightCase[]>([]);
   const [scans, setScans] = useState<ExternalCopyrightScan[]>([]);
   const [loading, setLoading] = useState(true);
@@ -95,15 +95,9 @@ export default function CopyrightScreen() {
     setSubmitting(true);
     try {
       if (appealTarget.kind === "case") {
-        await appealCopyrightCase(
-          appealTarget.id,
-          appealReason.trim(),
-        );
+        await appealCopyrightCase(appealTarget.id, appealReason.trim());
       } else {
-        await appealExternalCopyrightScan(
-          appealTarget.id,
-          appealReason.trim(),
-        );
+        await appealExternalCopyrightScan(appealTarget.id, appealReason.trim());
       }
 
       setAppealTarget(null);
@@ -170,9 +164,14 @@ export default function CopyrightScreen() {
                 <AppText variant="caption" color={COLORS.textMuted}>
                   Chủ sở hữu: {item.rightsOwnerName}
                 </AppText>
-                <StatusText status={item.status} text={caseStatuses[item.status]} />
+                <StatusText
+                  status={item.status}
+                  text={caseStatuses[item.status]}
+                />
                 {item.decisionNotes ? (
-                  <AppText variant="caption">Kết luận: {item.decisionNotes}</AppText>
+                  <AppText variant="caption">
+                    Kết luận: {item.decisionNotes}
+                  </AppText>
                 ) : null}
                 {item.appealReason ? (
                   <AppText variant="caption">
@@ -205,7 +204,10 @@ export default function CopyrightScreen() {
             scans.map((item) => (
               <View style={styles.card} key={item.id}>
                 <AppText variant="label">{item.provider}</AppText>
-                <StatusText status={item.status} text={scanStatuses[item.status]} />
+                <StatusText
+                  status={item.status}
+                  text={scanStatuses[item.status]}
+                />
                 {item.matchSummary ? (
                   <AppText variant="caption">{item.matchSummary}</AppText>
                 ) : null}
@@ -215,7 +217,9 @@ export default function CopyrightScreen() {
                   </AppText>
                 ) : null}
                 {item.reviewNotes ? (
-                  <AppText variant="caption">Kết luận: {item.reviewNotes}</AppText>
+                  <AppText variant="caption">
+                    Kết luận: {item.reviewNotes}
+                  </AppText>
                 ) : null}
                 {item.appealReason ? (
                   <AppText variant="caption">
@@ -248,8 +252,8 @@ export default function CopyrightScreen() {
           <View style={styles.modalCard}>
             <AppText variant="subtitle">Kháng nghị quyết định</AppText>
             <AppText variant="caption" color={COLORS.textMuted}>
-              Nêu căn cứ và bằng chứng rõ ràng. Mỗi hồ sơ chỉ được kháng nghị một
-              lần trong thời hạn cho phép.
+              Nêu căn cứ và bằng chứng rõ ràng. Mỗi hồ sơ chỉ được kháng nghị
+              một lần trong thời hạn cho phép.
             </AppText>
             <TextInput
               style={styles.input}
@@ -292,6 +296,8 @@ export default function CopyrightScreen() {
 }
 
 function SectionTitle({ title, count }: { title: string; count: number }) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   return (
     <View style={styles.sectionTitle}>
       <AppText variant="subtitle">{title}</AppText>
@@ -303,20 +309,28 @@ function SectionTitle({ title, count }: { title: string; count: number }) {
 }
 
 function EmptyCard({ text }: { text: string }) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   return (
     <View style={styles.emptyCard}>
-      <Ionicons name="shield-checkmark-outline" size={36} color={COLORS.textMuted} />
+      <Ionicons
+        name="shield-checkmark-outline"
+        size={36}
+        color={COLORS.textMuted}
+      />
       <AppText color={COLORS.textMuted}>{text}</AppText>
     </View>
   );
 }
 
 function StatusText({ status, text }: { status: number; text?: string }) {
-  const color = status === 2 || status === 4 || status === 5
-    ? COLORS.primaryDark
-    : status === 3 || status === 6
-      ? COLORS.danger
-      : COLORS.primary;
+  const { colors: COLORS } = useTheme();
+  const color =
+    status === 2 || status === 4 || status === 5
+      ? COLORS.primaryDark
+      : status === 3 || status === 6
+        ? COLORS.danger
+        : COLORS.primary;
   return (
     <AppText variant="caption" color={color}>
       {text ?? "Trạng thái không xác định"}
@@ -324,112 +338,113 @@ function StatusText({ status, text }: { status: number; text?: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    padding: SPACING.lg,
-    paddingBottom: SPACING.xl,
-    gap: SPACING.md,
-  },
-  sectionTitle: {
-    marginTop: SPACING.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  card: {
-    padding: SPACING.md,
-    gap: SPACING.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.surface,
-  },
-  emptyCard: {
-    minHeight: 140,
-    padding: SPACING.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.surface,
-  },
-  errorCard: {
-    padding: SPACING.md,
-    gap: SPACING.sm,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.surface,
-  },
-  secondaryButton: {
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: RADIUS.md,
-  },
-  modalBackdrop: {
-    flex: 1,
-    padding: SPACING.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(15, 23, 42, 0.55)",
-  },
-  modalCard: {
-    width: "100%",
-    maxWidth: 520,
-    padding: SPACING.lg,
-    gap: SPACING.md,
-    borderRadius: RADIUS.xl,
-    backgroundColor: COLORS.background,
-  },
-  input: {
-    minHeight: 130,
-    padding: SPACING.md,
-    color: COLORS.text,
-    textAlignVertical: "top",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface,
-  },
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: SPACING.sm,
-  },
-  modalButton: {
-    minWidth: 110,
-    minHeight: 44,
-    paddingHorizontal: SPACING.md,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: RADIUS.md,
-  },
-  primaryButton: {
-    backgroundColor: COLORS.primary,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    content: {
+      padding: SPACING.lg,
+      paddingBottom: SPACING.xl,
+      gap: SPACING.md,
+    },
+    sectionTitle: {
+      marginTop: SPACING.sm,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    card: {
+      padding: SPACING.md,
+      gap: SPACING.sm,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.lg,
+      backgroundColor: COLORS.surface,
+    },
+    emptyCard: {
+      minHeight: 140,
+      padding: SPACING.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.sm,
+      borderRadius: RADIUS.lg,
+      backgroundColor: COLORS.surface,
+    },
+    errorCard: {
+      padding: SPACING.md,
+      gap: SPACING.sm,
+      borderRadius: RADIUS.lg,
+      backgroundColor: COLORS.surface,
+    },
+    secondaryButton: {
+      minHeight: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: COLORS.primary,
+      borderRadius: RADIUS.md,
+    },
+    modalBackdrop: {
+      flex: 1,
+      padding: SPACING.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: "rgba(15, 23, 42, 0.55)",
+    },
+    modalCard: {
+      width: "100%",
+      maxWidth: 520,
+      padding: SPACING.lg,
+      gap: SPACING.md,
+      borderRadius: RADIUS.xl,
+      backgroundColor: COLORS.background,
+    },
+    input: {
+      minHeight: 130,
+      padding: SPACING.md,
+      color: COLORS.text,
+      textAlignVertical: "top",
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surface,
+    },
+    modalActions: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: SPACING.sm,
+    },
+    modalButton: {
+      minWidth: 110,
+      minHeight: 44,
+      paddingHorizontal: SPACING.md,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: RADIUS.md,
+    },
+    primaryButton: {
+      backgroundColor: COLORS.primary,
+    },
+  });

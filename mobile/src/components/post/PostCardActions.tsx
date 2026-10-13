@@ -1,8 +1,9 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import { Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 
 type Props = {
   reactionCount: number;
@@ -19,13 +20,12 @@ type Props = {
 };
 
 export default function PostCardActions(props: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   return (
     <View style={styles.actions}>
       <View
-        style={[
-          styles.reactionGroup,
-          props.reactionLoading && styles.disabled,
-        ]}
+        style={[styles.reactionGroup, props.reactionLoading && styles.disabled]}
       >
         <Pressable
           hitSlop={8}
@@ -53,12 +53,21 @@ export default function PostCardActions(props: Props) {
         </Pressable>
       </View>
       <Pressable style={styles.actionButton} onPress={props.onComment}>
-        <Ionicons name="chatbubble-outline" size={22} color={COLORS.textMuted} />
+        <Ionicons
+          name="chatbubble-outline"
+          size={22}
+          color={COLORS.textMuted}
+        />
         <AppText variant="caption" color={COLORS.textMuted}>
           {props.commentCount}
         </AppText>
       </Pressable>
-      <Pressable style={styles.actionButton} onPress={props.onShare}>
+      <Pressable
+        style={styles.actionButton}
+        onPress={props.onShare}
+        accessibilityRole="button"
+        accessibilityLabel="Chia sẻ bài viết"
+      >
         <Ionicons
           name="share-social-outline"
           size={22}
@@ -80,28 +89,29 @@ export default function PostCardActions(props: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  actions: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.lg,
-  },
-  actionButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-  },
-  reactionGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-  },
-  saveButton: {
-    marginLeft: "auto",
-  },
-  disabled: {
-    opacity: 0.6,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    actions: {
+      paddingHorizontal: SPACING.lg,
+      paddingVertical: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.lg,
+    },
+    actionButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.xs,
+    },
+    reactionGroup: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.xs,
+    },
+    saveButton: {
+      marginLeft: "auto",
+    },
+    disabled: {
+      opacity: 0.6,
+    },
+  });

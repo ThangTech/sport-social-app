@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import { getFollowers, getFollowing } from "@/services/user.service";
 import type { UserSummaryDto } from "@/types/user";
@@ -17,6 +18,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function UserConnectionsScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const params = useLocalSearchParams<{
     id?: string | string[];
     type?: string | string[];
@@ -158,71 +161,72 @@ export default function UserConnectionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
 
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
 
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
 
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
 
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
-  headerSpace: {
-    width: 40,
-  },
+    headerSpace: {
+      width: 40,
+    },
 
-  userItem: {
-    minHeight: 72,
-    paddingHorizontal: SPACING.lg,
+    userItem: {
+      minHeight: 72,
+      paddingHorizontal: SPACING.lg,
 
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
 
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
 
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.surfaceAlt,
-  },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: COLORS.surfaceAlt,
+    },
 
-  userInfo: {
-    flex: 1,
-    gap: 3,
-  },
+    userInfo: {
+      flex: 1,
+      gap: 3,
+    },
 
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
-  emptyList: {
-    flexGrow: 1,
-  },
+    emptyList: {
+      flexGrow: 1,
+    },
 
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-});
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+  });

@@ -1,6 +1,7 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import GroupMemberListItem from "@/components/group/GroupMemberListItem";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   banGroupMember,
@@ -46,11 +47,7 @@ const getAvailableRoles = (
   if (!isOwner && member.role === GroupMemberRole.Admin) return [];
 
   const allowedRoles = isOwner
-    ? [
-        GroupMemberRole.Member,
-        GroupMemberRole.Moderator,
-        GroupMemberRole.Admin,
-      ]
+    ? [GroupMemberRole.Member, GroupMemberRole.Moderator, GroupMemberRole.Admin]
     : [GroupMemberRole.Member, GroupMemberRole.Moderator];
 
   return allowedRoles.filter((role) => role !== member.role);
@@ -80,6 +77,8 @@ const canManageMember = (
 type MemberAction = "role" | "remove" | "ban";
 
 export default function GroupMembersScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { user: currentUser } = useAuth();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -272,11 +271,7 @@ export default function GroupMembersScreen() {
             <GroupMemberListItem
               member={item}
               isOwner={item.userId === group.ownerId}
-              availableRoles={getAvailableRoles(
-                item,
-                group,
-                currentUser?.id,
-              )}
+              availableRoles={getAvailableRoles(item, group, currentUser?.id)}
               canRemove={canManageMember(item, group, currentUser?.id)}
               canBan={canManageMember(item, group, currentUser?.id)}
               actionLoading={processingUserId === item.userId}
@@ -307,68 +302,69 @@ export default function GroupMembersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  listHeader: {
-    padding: SPACING.lg,
-    gap: SPACING.md,
-    backgroundColor: COLORS.surface,
-  },
-  groupInfo: {
-    gap: SPACING.xs,
-  },
-  bannedMembersButton: {
-    minHeight: 48,
-    paddingHorizontal: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  bannedMembersLabel: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  center: {
-    flex: 1,
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    listHeader: {
+      padding: SPACING.lg,
+      gap: SPACING.md,
+      backgroundColor: COLORS.surface,
+    },
+    groupInfo: {
+      gap: SPACING.xs,
+    },
+    bannedMembersButton: {
+      minHeight: 48,
+      paddingHorizontal: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    bannedMembersLabel: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+    },
+    center: {
+      flex: 1,
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: SPACING.lg,
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.sm,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+  });

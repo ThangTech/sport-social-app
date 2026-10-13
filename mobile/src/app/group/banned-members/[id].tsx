@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import {
   getBannedGroupMembers,
@@ -24,6 +25,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function BannedGroupMembersScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -239,85 +242,86 @@ export default function BannedGroupMembersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  listHeader: {
-    padding: SPACING.lg,
-    backgroundColor: COLORS.surface,
-  },
-  memberItem: {
-    minHeight: 84,
-    padding: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  identity: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-  },
-  avatar: {
-    width: 50,
-    height: 50,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  userInfo: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
-  unbanButton: {
-    minWidth: 84,
-    minHeight: 38,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: RADIUS.full,
-  },
-  center: {
-    flex: 1,
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  disabledButton: {
-    opacity: 0.55,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    listHeader: {
+      padding: SPACING.lg,
+      backgroundColor: COLORS.surface,
+    },
+    memberItem: {
+      minHeight: 84,
+      padding: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    identity: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+    },
+    avatar: {
+      width: 50,
+      height: 50,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    userInfo: {
+      flex: 1,
+      gap: SPACING.xs,
+    },
+    unbanButton: {
+      minWidth: 84,
+      minHeight: 38,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: COLORS.primary,
+      borderRadius: RADIUS.full,
+    },
+    center: {
+      flex: 1,
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: SPACING.lg,
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.sm,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    disabledButton: {
+      opacity: 0.55,
+    },
+  });

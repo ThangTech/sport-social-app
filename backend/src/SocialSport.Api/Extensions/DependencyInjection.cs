@@ -121,6 +121,9 @@ public static class DependencyInjection
             .PostConfigure(settings =>
             {
                 ApplyCopyrightEnvironment(settings, copyrightEnvironment);
+                // Paid scanning is disabled: moderation runs locally.
+                settings.AcrCloud.Enabled = false;
+                settings.GoogleVision.Enabled = false;
             });
         services.AddScoped<IExternalCopyrightScanService, ExternalCopyrightScanService>();
         services.AddHttpClient("AcrCloud", (provider, client) =>
@@ -170,11 +173,17 @@ public static class DependencyInjection
             ?? [];
         services.AddCors(options => options.AddPolicy("AppClients", policy =>
         {
-            if (allowedOrigins.Length > 0)
+            if (configuration.GetValue<bool>("Cors:AllowAnyOrigin"))
+            {
+                policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+            }
+            else if (allowedOrigins.Length > 0)
             {
                 policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod();
             }
         }));
+        services.AddSingleton<TextModeration>();
+        services.AddSingleton<LocalLogoDetector>();
         services.AddAuthorization();
         return services;
     }

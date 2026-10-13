@@ -1,12 +1,15 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import Avatar from "@/components/Avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCreatePost } from "@/contexts/CreatePostContext";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 export default function CreatePostPrompt() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { user, profileImageVersion } = useAuth();
 
   const { openCreatePost } = useCreatePost();
@@ -36,41 +39,42 @@ export default function CreatePostPrompt() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: SPACING.lg,
-    marginBottom: SPACING.md,
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      padding: SPACING.lg,
+      marginBottom: SPACING.md,
 
-    backgroundColor: COLORS.surface,
+      backgroundColor: COLORS.surface,
 
-    flexDirection: "row",
-    alignItems: "center",
+      flexDirection: "row",
+      alignItems: "center",
 
-    gap: SPACING.sm,
-  },
+      gap: SPACING.sm,
+    },
 
-  input: {
-    flex: 1,
-    minHeight: 42,
+    input: {
+      flex: 1,
+      minHeight: 42,
 
-    paddingHorizontal: SPACING.md,
+      paddingHorizontal: SPACING.md,
 
-    borderRadius: RADIUS.full,
+      borderRadius: RADIUS.full,
 
-    backgroundColor: COLORS.surfaceAlt,
+      backgroundColor: COLORS.surfaceAlt,
 
-    justifyContent: "center",
-  },
+      justifyContent: "center",
+    },
 
-  placeholder: {
-    color: COLORS.textMuted,
-  },
+    placeholder: {
+      color: COLORS.textMuted,
+    },
 
-  imageButton: {
-    width: 40,
-    height: 40,
+    imageButton: {
+      width: 40,
+      height: 40,
 
-    alignItems: "center",
-    justifyContent: "center",
-  },
-});
+      alignItems: "center",
+      justifyContent: "center",
+    },
+  });

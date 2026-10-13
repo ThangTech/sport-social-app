@@ -1,10 +1,13 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router } from "expo-router";
 import { Pressable, StyleSheet, View } from "react-native";
 
 export default function UserNotFound() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   return (
     <View style={styles.container}>
       <View style={styles.iconBox}>
@@ -42,76 +45,77 @@ export default function UserNotFound() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingHorizontal: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.background,
-  },
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      paddingHorizontal: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: COLORS.background,
+    },
 
-  iconBox: {
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    marginBottom: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.surfaceAlt,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
+    iconBox: {
+      width: 112,
+      height: 112,
+      borderRadius: 56,
+      marginBottom: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: COLORS.surfaceAlt,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
 
-  title: {
-    textAlign: "center",
-  },
+    title: {
+      textAlign: "center",
+    },
 
-  description: {
-    marginTop: SPACING.md,
-    maxWidth: 320,
-    textAlign: "center",
-    lineHeight: 22,
-  },
+    description: {
+      marginTop: SPACING.md,
+      maxWidth: 320,
+      textAlign: "center",
+      lineHeight: 22,
+    },
 
-  primaryButton: {
-    width: "100%",
-    maxWidth: 320,
-    marginTop: SPACING.xl,
-    paddingVertical: 13,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
+    primaryButton: {
+      width: "100%",
+      maxWidth: 320,
+      marginTop: SPACING.xl,
+      paddingVertical: 13,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
 
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-  },
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.sm,
+    },
 
-  primaryText: {
-    color: COLORS.background,
-    fontWeight: "600",
-  },
+    primaryText: {
+      color: COLORS.background,
+      fontWeight: "600",
+    },
 
-  secondaryButton: {
-    width: "100%",
-    maxWidth: 320,
-    marginTop: SPACING.md,
-    paddingVertical: 13,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surface,
+    secondaryButton: {
+      width: "100%",
+      maxWidth: 320,
+      marginTop: SPACING.md,
+      paddingVertical: 13,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surface,
 
-    borderWidth: 1,
-    borderColor: COLORS.border,
+      borderWidth: 1,
+      borderColor: COLORS.border,
 
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-  },
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.sm,
+    },
 
-  secondaryText: {
-    color: COLORS.text,
-    fontWeight: "600",
-  },
-});
+    secondaryText: {
+      color: COLORS.text,
+      fontWeight: "600",
+    },
+  });

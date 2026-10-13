@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ImageSourcePropType } from "react-native";
 import {
@@ -39,6 +40,8 @@ export default function ImageUploadField({
   onUpload,
   onDelete,
 }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeader}>
@@ -121,75 +124,76 @@ export default function ImageUploadField({
   );
 }
 
-const styles = StyleSheet.create({
-  section: {
-    padding: SPACING.md,
-    gap: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 14,
-    backgroundColor: COLORS.surface,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  avatar: {
-    alignSelf: "center",
-    width: 112,
-    height: 112,
-    borderRadius: 56,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  cover: {
-    width: "100%",
-    height: 150,
-    borderRadius: 12,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  placeholder: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-  },
-  actions: {
-    minHeight: 40,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "flex-end",
-    gap: SPACING.sm,
-  },
-  secondaryButton: {
-    marginRight: "auto",
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 20,
-  },
-  textButton: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.sm,
-  },
-  primaryButton: {
-    minWidth: 76,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    alignItems: "center",
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
-  },
-  deleteButton: {
-    minWidth: 58,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: 20,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    section: {
+      padding: SPACING.md,
+      gap: SPACING.md,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 14,
+      backgroundColor: COLORS.surface,
+    },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    avatar: {
+      alignSelf: "center",
+      width: 112,
+      height: 112,
+      borderRadius: 56,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    cover: {
+      width: "100%",
+      height: 150,
+      borderRadius: 12,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    placeholder: {
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.sm,
+    },
+    actions: {
+      minHeight: 40,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "flex-end",
+      gap: SPACING.sm,
+    },
+    secondaryButton: {
+      marginRight: "auto",
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.xs,
+      borderWidth: 1,
+      borderColor: COLORS.primary,
+      borderRadius: 20,
+    },
+    textButton: {
+      paddingHorizontal: SPACING.sm,
+      paddingVertical: SPACING.sm,
+    },
+    primaryButton: {
+      minWidth: 76,
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+      alignItems: "center",
+      borderRadius: 20,
+      backgroundColor: COLORS.primary,
+    },
+    deleteButton: {
+      minWidth: 58,
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+      alignItems: "center",
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: 20,
+    },
+  });

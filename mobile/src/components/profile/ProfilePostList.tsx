@@ -1,8 +1,9 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import { StyleSheet, View } from "react-native";
 
 import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import type { Post } from "@/types/post";
 
 type Props = {
@@ -18,6 +19,8 @@ export default function ProfilePostList({
   onPostPress,
   onPostDeleted,
 }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   return (
     <>
       <View style={styles.header}>
@@ -45,15 +48,16 @@ export default function ProfilePostList({
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    padding: SPACING.lg,
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: COLORS.border,
-    gap: SPACING.xs,
-  },
-  empty: {
-    padding: SPACING.xl,
-    alignItems: "center",
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    header: {
+      padding: SPACING.lg,
+      borderTopWidth: StyleSheet.hairlineWidth,
+      borderTopColor: COLORS.border,
+      gap: SPACING.xs,
+    },
+    empty: {
+      padding: SPACING.xl,
+      alignItems: "center",
+    },
+  });

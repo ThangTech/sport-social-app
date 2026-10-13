@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { getMyReports, type ReportDto } from "@/services/report.service";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect } from "@react-navigation/native";
@@ -20,11 +21,12 @@ const statusLabel = (status: number) =>
   ] ?? "Không xác định";
 
 const targetLabel = (targetType: number) =>
-  ({ 1: "Người dùng", 2: "Bài viết", 3: "Bình luận", 4: "Nhóm" })[
-    targetType
-  ] ?? "Đối tượng";
+  ({ 1: "Người dùng", 2: "Bài viết", 3: "Bình luận", 4: "Nhóm" })[targetType] ??
+  "Đối tượng";
 
 export default function MyReportsScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const [items, setItems] = useState<ReportDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -116,53 +118,54 @@ export default function MyReportsScreen() {
     </SafeAreaView>
   );
 }
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  center: {
-    flex: 1,
-    minHeight: 200,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.md,
-    padding: SPACING.xl,
-  },
-  item: {
-    padding: SPACING.lg,
-    gap: SPACING.sm,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  itemHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: SPACING.md,
-  },
-  statusBadge: {
-    borderRadius: 999,
-    backgroundColor: COLORS.surface,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-  },
-  resultBox: {
-    gap: SPACING.xs,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    padding: SPACING.md,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: COLORS.background },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    center: {
+      flex: 1,
+      minHeight: 200,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.md,
+      padding: SPACING.xl,
+    },
+    item: {
+      padding: SPACING.lg,
+      gap: SPACING.sm,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    itemHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: SPACING.md,
+    },
+    statusBadge: {
+      borderRadius: 999,
+      backgroundColor: COLORS.surface,
+      paddingHorizontal: SPACING.sm,
+      paddingVertical: SPACING.xs,
+    },
+    resultBox: {
+      gap: SPACING.xs,
+      borderRadius: 12,
+      backgroundColor: COLORS.surface,
+      padding: SPACING.md,
+    },
+  });

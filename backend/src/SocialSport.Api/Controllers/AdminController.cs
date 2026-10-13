@@ -7,6 +7,7 @@ using SocialSport.Api.Models.Enums;
 using SocialSport.Api.Models.Entities;
 using System.Security.Claims;
 using Microsoft.AspNetCore.StaticFiles;
+using SocialSport.Api.Services.Interfaces;
 
 namespace SocialSport.Api.Controllers;
 
@@ -15,13 +16,19 @@ public class AdminController : ControllerBase
 {
     private readonly ApplicationDbContext _context;
     private readonly IWebHostEnvironment _environment;
+    private readonly IPushNotificationSender _pushSender;
+    private readonly ILogger<AdminController> _logger;
 
     public AdminController(
         ApplicationDbContext context,
-        IWebHostEnvironment environment)
+        IWebHostEnvironment environment,
+        IPushNotificationSender pushSender,
+        ILogger<AdminController> logger)
     {
         _context = context;
         _environment = environment;
+        _pushSender = pushSender;
+        _logger = logger;
     }
 
     [HttpGet("users")]
@@ -117,10 +124,12 @@ public class AdminController : ControllerBase
     }
 
     [HttpGet("posts")]
-    public async Task<IActionResult> Posts([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> Posts([FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] bool pendingOnly = false)
     {
         (page, pageSize) = Normalize(page, pageSize);
-        var query = _context.Posts.AsNoTracking().OrderByDescending(x => x.CreatedAt);
+        var query = _context.Posts.AsNoTracking()
+            .Where(x => !pendingOnly || (x.GroupId == null && x.SystemModerationStatus == SystemPostModerationStatus.Pending))
+            .OrderByDescending(x => x.CreatedAt);
         var items = await query
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
@@ -131,6 +140,10 @@ public class AdminController : ControllerBase
                 x.GroupId,
                 x.Content,
                 x.Status,
+                x.Visibility,
+                x.SystemModerationStatus,
+                x.RowVersion,
+                x.UpdatedAt,
                 x.CreatedAt
             })
             .ToListAsync();
@@ -150,17 +163,82 @@ public class AdminController : ControllerBase
         {
             throw new InvalidOperationException("Trạng thái bài viết không hợp lệ.");
         }
+        var reason = request.Reason?.Trim();
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            throw new InvalidOperationException("Vui lòng nhập lý do duyệt hoặc từ chối bài viết.");
+        }
         var post = await _context.Posts.FindAsync(id) ?? throw new KeyNotFoundException("Không tìm thấy bài viết.");
+        if (request.RowVersion is null || !request.RowVersion.SequenceEqual(post.RowVersion))
+            return Conflict(new { detail = "Bài viết đã thay đổi. Vui lòng tải lại và xem nội dung mới trước khi duyệt." });
+        if (post.Status == Models.Enums.PostStatus.Deleted)
+            throw new InvalidOperationException("Không thể khôi phục bài viết đã xóa.");
+        if (request.Status == (int)Models.Enums.PostStatus.Published)
+        {
+            if (post.GroupId != null && post.GroupModerationStatus != GroupPostModerationStatus.Approved)
+                throw new InvalidOperationException("Bài viết cần được quản trị viên nhóm duyệt trước.");
+            if (post.GroupId == null && post.SystemModerationStatus == SystemPostModerationStatus.Draft)
+                throw new InvalidOperationException("Tác giả chưa hoàn tất tải media.");
+            var hasBlockingCase = await _context.CopyrightCases.AnyAsync(x =>
+                x.PostMedia.PostId == id
+                && x.Status != CopyrightCaseStatus.Dismissed
+                && x.Status != CopyrightCaseStatus.AppealAccepted);
+            var hasBlockingScan = await _context.ExternalCopyrightScans.AnyAsync(x =>
+                x.PostMedia.PostId == id
+                && x.Status != ExternalCopyrightScanStatus.Clear
+                && x.Status != ExternalCopyrightScanStatus.ClearedByAdmin
+                && x.Status != ExternalCopyrightScanStatus.AppealAccepted
+                && x.Status != ExternalCopyrightScanStatus.Failed);
+            if (hasBlockingCase || hasBlockingScan)
+            {
+                throw new InvalidOperationException("Cần xử lý hồ sơ bản quyền trước khi duyệt.");
+            }
+        }
+        if (post.GroupId == null)
+            post.SystemModerationStatus = request.Status == (int)Models.Enums.PostStatus.Published
+                ? SystemPostModerationStatus.Approved : SystemPostModerationStatus.Rejected;
+        var previousStatus = post.Status;
         post.Status = (PostStatus)request.Status;
+        post.SystemModerationReason = reason;
         post.UpdatedAt = DateTimeOffset.UtcNow;
         if (post.Status == Models.Enums.PostStatus.Deleted)
         {
             post.DeletedAt ??= DateTimeOffset.UtcNow;
         }
-        AddAudit("post.status", "post", id, $"Set post status to {post.Status}.");
+        var approved = post.Status == Models.Enums.PostStatus.Published;
+        var decision = approved ? "Đồng ý đăng bài" : "Từ chối / gỡ bài";
+        AddAudit(
+            approved ? "post.approved" : "post.rejected",
+            "post",
+            id,
+            $"{decision}. Trạng thái: {previousStatus} → {post.Status}. Lý do: {reason}");
+        var notificationType = approved
+            ? NotificationType.SystemPostApproved
+            : NotificationType.SystemPostRejected;
+        var message = $"System Admin {(approved ? "đã duyệt" : "đã từ chối / gỡ")} bài viết của bạn. Lý do: {reason}";
+        _context.Notifications.Add(new Notification
+        {
+            UserId = post.AuthorId,
+            ActorId = CurrentUserId(),
+            Type = notificationType,
+            EntityId = post.Id,
+            Message = message
+        });
+        // Decision, audit and in-app notification are committed together.
         await _context.SaveChangesAsync();
+        try
+        {
+            await _pushSender.SendAsync(post.AuthorId, message, notificationType, post.Id, CurrentUserId());
+        }
+        catch (Exception exception)
+        {
+            _logger.LogWarning(exception, "Push delivery failed for post decision {PostId}", post.Id);
+        }
         return NoContent();
     }
+
+    [HttpGet("posts/{id:guid}/review")]
+    public async Task<IActionResult> ReviewPost(Guid id) => Ok(await PostReportTarget(id));
 
     [HttpPatch("comments/{id:guid}/remove")]
     public async Task<IActionResult> RemoveComment(Guid id)
@@ -314,7 +392,7 @@ public class AdminController : ControllerBase
             "report.status",
             "report",
             id,
-            $"Set {report.TargetType} report for {report.TargetId} to {report.Status}.");
+            $"Xử lý báo cáo về {report.TargetType} ({report.TargetId}): {report.Status}. Lý do / kết quả: {resolutionNote ?? "Chưa có ghi chú"}");
         await _context.SaveChangesAsync();
         return NoContent();
     }
@@ -435,12 +513,14 @@ public class AdminController : ControllerBase
                     : $"Trong nhóm {x.Group.Name}",
                 x.Status,
                 AppPath = $"/post/{x.Id}",
+                x.RowVersion,
                 Media = x.Media
                     .OrderBy(media => media.SortOrder)
                     .Select(media => new
                     {
                         media.Id,
                         media.MediaType,
+                        media.LogoAnalysisJson,
                         Url = $"/admin/post-media/{media.Id}"
                     })
                     .ToList()

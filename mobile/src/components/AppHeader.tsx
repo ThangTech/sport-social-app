@@ -1,7 +1,8 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import Avatar from "@/components/Avatar";
 import AppText from "@/components/ui/AppText";
 import { useAuth } from "@/contexts/AuthContext";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import { getUnreadNotificationCount } from "@/services/notification.service";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -16,6 +17,8 @@ type Props = {
 };
 
 export default function AppHeader({ searchActive, onSearchPress }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { user, profileImageVersion } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -100,73 +103,74 @@ export default function AppHeader({ searchActive, onSearchPress }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    height: 64,
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      height: 64,
 
-    paddingHorizontal: SPACING.lg,
+      paddingHorizontal: SPACING.lg,
 
-    backgroundColor: COLORS.background,
+      backgroundColor: COLORS.background,
 
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
 
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
 
-  brand: {
-    flexDirection: "row",
-    alignItems: "center",
+    brand: {
+      flexDirection: "row",
+      alignItems: "center",
 
-    gap: SPACING.sm,
-  },
+      gap: SPACING.sm,
+    },
 
-  logo: {
-    width: 38,
-    height: 38,
+    logo: {
+      width: 38,
+      height: 38,
 
-    borderRadius: RADIUS.md,
-  },
+      borderRadius: RADIUS.md,
+    },
 
-  brandName: {
-    fontWeight: "700",
-  },
+    brandName: {
+      fontWeight: "700",
+    },
 
-  actions: {
-    flexDirection: "row",
-    alignItems: "center",
+    actions: {
+      flexDirection: "row",
+      alignItems: "center",
 
-    gap: SPACING.xs,
-  },
+      gap: SPACING.xs,
+    },
 
-  iconButton: {
-    width: 40,
-    height: 40,
+    iconButton: {
+      width: 40,
+      height: 40,
 
-    borderRadius: RADIUS.full,
+      borderRadius: RADIUS.full,
 
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  activeIconButton: {
-    backgroundColor: COLORS.primarySoft,
-  },
-  badge: {
-    position: "absolute",
-    top: 1,
-    right: 0,
-    minWidth: 17,
-    height: 17,
-    paddingHorizontal: 3,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.danger,
-  },
-  badgeText: {
-    fontSize: 10,
-    lineHeight: 12,
-  },
-});
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    activeIconButton: {
+      backgroundColor: COLORS.primarySoft,
+    },
+    badge: {
+      position: "absolute",
+      top: 1,
+      right: 0,
+      minWidth: 17,
+      height: 17,
+      paddingHorizontal: 3,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.danger,
+    },
+    badgeText: {
+      fontSize: 10,
+      lineHeight: 12,
+    },
+  });

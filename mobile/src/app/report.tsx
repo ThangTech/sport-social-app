@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { createReport } from "@/services/report.service";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -25,6 +26,8 @@ const reasons = [
 ];
 
 export default function ReportScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const params = useLocalSearchParams<{
     targetType?: string;
     targetId?: string;
@@ -125,52 +128,53 @@ export default function ReportScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: { padding: SPACING.lg, gap: SPACING.lg },
-  reasons: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
-  reason: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.full,
-  },
-  selected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
-  input: {
-    minHeight: 120,
-    padding: SPACING.md,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    textAlignVertical: "top",
-  },
-  submit: {
-    minHeight: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  disabled: { opacity: 0.5 },
-  counter: {
-    marginTop: -SPACING.md,
-    textAlign: "right",
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: COLORS.background },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    content: { padding: SPACING.lg, gap: SPACING.lg },
+    reasons: { flexDirection: "row", flexWrap: "wrap", gap: SPACING.sm },
+    reason: {
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.full,
+    },
+    selected: { backgroundColor: COLORS.primary, borderColor: COLORS.primary },
+    input: {
+      minHeight: 120,
+      padding: SPACING.md,
+      color: COLORS.text,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.md,
+      textAlignVertical: "top",
+    },
+    submit: {
+      minHeight: 48,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    disabled: { opacity: 0.5 },
+    counter: {
+      marginTop: -SPACING.md,
+      textAlign: "right",
+    },
+  });

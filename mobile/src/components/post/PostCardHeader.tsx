@@ -1,10 +1,11 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import { Pressable, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import Avatar from "@/components/Avatar";
 import SportBadge from "@/components/SportBadge";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import type { Post } from "@/types/post";
 
 type Props = {
@@ -22,6 +23,8 @@ export default function PostCardHeader({
   onGroupPress,
   onMenuPress,
 }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const visibilityIcon = post.groupId
     ? "people-outline"
     : post.visibility === 1
@@ -81,42 +84,43 @@ export default function PostCardHeader({
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    padding: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  userInfo: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  author: {
-    flex: 1,
-  },
-  groupName: {
-    marginLeft: 2,
-    marginTop: 5,
-  },
-  headerActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  postMeta: {
-    marginLeft: 2,
-    marginTop: 5,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  metaDot: {
-    width: 3,
-    height: 3,
-    borderRadius: 2,
-    backgroundColor: COLORS.textMuted,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    header: {
+      padding: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+    },
+    userInfo: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+    },
+    author: {
+      flex: 1,
+    },
+    groupName: {
+      marginLeft: 2,
+      marginTop: 5,
+    },
+    headerActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+    },
+    postMeta: {
+      marginLeft: 2,
+      marginTop: 5,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    metaDot: {
+      width: 3,
+      height: 3,
+      borderRadius: 2,
+      backgroundColor: COLORS.textMuted,
+    },
+  });

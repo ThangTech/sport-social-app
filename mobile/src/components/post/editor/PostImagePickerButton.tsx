@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import * as ImagePicker from "expo-image-picker";
 import { Alert, Pressable, StyleSheet } from "react-native";
@@ -19,6 +20,8 @@ export default function PostImagePickerButton({
   variant = "icon",
   label = "Thêm ảnh/video",
 }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const handlePress = async () => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -92,18 +95,19 @@ export default function PostImagePickerButton({
   );
 }
 
-const styles = StyleSheet.create({
-  iconButton: {
-    width: 42,
-    height: 42,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 21,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  labelButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    iconButton: {
+      width: 42,
+      height: 42,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 21,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    labelButton: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.xs,
+    },
+  });

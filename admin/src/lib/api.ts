@@ -1,5 +1,14 @@
-const API_URL = import.meta.env.VITE_API_URL as string | undefined;
-const APP_URL = import.meta.env.VITE_APP_URL as string | undefined;
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV
+    ? `${window.location.protocol}//${window.location.hostname}:5016/api/v1`
+    : "")
+).replace(/\/$/, "");
+const APP_URL =
+  import.meta.env.VITE_APP_URL ||
+  (import.meta.env.DEV
+    ? `${window.location.protocol}//${window.location.hostname}:8081`
+    : "");
 export const tokenKey = "adminAccessToken";
 
 export function apiFileUrl(path: string): string {

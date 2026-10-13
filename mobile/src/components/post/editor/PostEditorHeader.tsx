@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { ActivityIndicator, Pressable, StyleSheet, View } from "react-native";
 
@@ -24,6 +25,8 @@ export default function PostEditorHeader({
   submitting = false,
   variant = "edit",
 }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   return (
     <View style={styles.header}>
       <Pressable
@@ -33,7 +36,9 @@ export default function PostEditorHeader({
       >
         <Ionicons
           name={closeIcon}
-          size={closeIcon === "arrow-back" ? 24 : variant === "create" ? 28 : 27}
+          size={
+            closeIcon === "arrow-back" ? 24 : variant === "create" ? 28 : 27
+          }
           color={COLORS.text}
         />
       </Pressable>
@@ -67,50 +72,51 @@ export default function PostEditorHeader({
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    position: "absolute",
-    left: 88,
-    right: 88,
-    textAlign: "center",
-  },
-  headerSpace: {
-    width: 40,
-  },
-  submitButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
-  },
-  createSubmitButton: {
-    minWidth: 68,
-  },
-  editSubmitButton: {
-    minWidth: 64,
-  },
-  submitButtonDisabled: {
-    opacity: 0.4,
-  },
-  submitButtonText: {
-    color: COLORS.background,
-    fontWeight: "600",
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      position: "absolute",
+      left: 88,
+      right: 88,
+      textAlign: "center",
+    },
+    headerSpace: {
+      width: 40,
+    },
+    submitButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 20,
+      backgroundColor: COLORS.primary,
+    },
+    createSubmitButton: {
+      minWidth: 68,
+    },
+    editSubmitButton: {
+      minWidth: 64,
+    },
+    submitButtonDisabled: {
+      opacity: 0.4,
+    },
+    submitButtonText: {
+      color: COLORS.background,
+      fontWeight: "600",
+    },
+  });

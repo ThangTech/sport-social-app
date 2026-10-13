@@ -1,7 +1,8 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import PostCard from "@/components/PostCard";
 import GroupSummary from "@/components/group/GroupSummary";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import {
@@ -37,6 +38,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const PAGE_SIZE = 20;
 
 export default function GroupDetailScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { user: currentUser } = useAuth();
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -55,11 +58,7 @@ export default function GroupDetailScreen() {
   const membershipLoadingRef = useRef(false);
 
   const loadPosts = useCallback(
-    async (
-      groupId: string,
-      cursor: string | null = null,
-      append = false,
-    ) => {
+    async (groupId: string, cursor: string | null = null, append = false) => {
       try {
         if (!append) setPostsErrorMessage("");
 
@@ -159,13 +158,7 @@ export default function GroupDetailScreen() {
   };
 
   const handleLoadMore = () => {
-    if (
-      !id ||
-      !nextCursor ||
-      loading ||
-      refreshing ||
-      loadingMoreRef.current
-    ) {
+    if (!id || !nextCursor || loading || refreshing || loadingMoreRef.current) {
       return;
     }
 
@@ -190,9 +183,7 @@ export default function GroupDetailScreen() {
       await loadGroup(id);
     } catch (error) {
       Alert.alert(
-        action === "join"
-          ? "Không thể tham gia nhóm"
-          : "Không thể rời nhóm",
+        action === "join" ? "Không thể tham gia nhóm" : "Không thể rời nhóm",
         error instanceof Error ? error.message : "Vui lòng thử lại.",
       );
     } finally {
@@ -225,18 +216,18 @@ export default function GroupDetailScreen() {
 
   const canManageJoinRequests = Boolean(
     group &&
-      group.privacy === GroupPrivacy.Private &&
-      (currentUser?.id === group.ownerId ||
-        group.currentUserRole === GroupMemberRole.Admin),
+    group.privacy === GroupPrivacy.Private &&
+    (currentUser?.id === group.ownerId ||
+      group.currentUserRole === GroupMemberRole.Admin),
   );
   const canCreatePost =
     group?.currentUserMemberStatus === GroupMemberStatus.Active;
   const canModeratePosts = Boolean(
     group &&
-      group.currentUserMemberStatus === GroupMemberStatus.Active &&
-      (currentUser?.id === group.ownerId ||
-        group.currentUserRole === GroupMemberRole.Admin ||
-        group.currentUserRole === GroupMemberRole.Moderator),
+    group.currentUserMemberStatus === GroupMemberStatus.Active &&
+    (currentUser?.id === group.ownerId ||
+      group.currentUserRole === GroupMemberRole.Admin ||
+      group.currentUserRole === GroupMemberRole.Moderator),
   );
 
   const handleRemoveGroupPost = async (postId: string) => {
@@ -464,104 +455,105 @@ export default function GroupDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  center: {
-    flex: 1,
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  sectionHeader: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: SPACING.md,
-  },
-  postHeaderActions: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  reviewQueueButton: {
-    minHeight: 38,
-    paddingHorizontal: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.xs,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: RADIUS.full,
-  },
-  createPostButton: {
-    minHeight: 38,
-    paddingHorizontal: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.xs,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  postsError: {
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.lg,
-    padding: SPACING.lg,
-    alignItems: "center",
-    gap: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface,
-  },
-  errorText: {
-    textAlign: "center",
-  },
-  postsRetryButton: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  emptyPosts: {
-    padding: SPACING.xl,
-    alignItems: "center",
-  },
-  footer: {
-    padding: SPACING.lg,
-    alignItems: "center",
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    center: {
+      flex: 1,
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: SPACING.lg,
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.sm,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    sectionHeader: {
+      paddingHorizontal: SPACING.lg,
+      paddingTop: SPACING.xl,
+      paddingBottom: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: SPACING.md,
+    },
+    postHeaderActions: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+    },
+    reviewQueueButton: {
+      minHeight: 38,
+      paddingHorizontal: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.xs,
+      borderWidth: 1,
+      borderColor: COLORS.primary,
+      borderRadius: RADIUS.full,
+    },
+    createPostButton: {
+      minHeight: 38,
+      paddingHorizontal: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.xs,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    postsError: {
+      marginHorizontal: SPACING.lg,
+      marginBottom: SPACING.lg,
+      padding: SPACING.lg,
+      alignItems: "center",
+      gap: SPACING.sm,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surface,
+    },
+    errorText: {
+      textAlign: "center",
+    },
+    postsRetryButton: {
+      paddingHorizontal: SPACING.lg,
+      paddingVertical: SPACING.sm,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    emptyPosts: {
+      padding: SPACING.xl,
+      alignItems: "center",
+    },
+    footer: {
+      padding: SPACING.lg,
+      alignItems: "center",
+    },
+  });

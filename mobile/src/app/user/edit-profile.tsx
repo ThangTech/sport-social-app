@@ -1,8 +1,9 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
 import AvatarCoverImageEditor, {
   type ImageUpdateResult,
 } from "@/components/image/AvatarCoverImageEditor";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   deleteMyAvatar,
@@ -28,12 +29,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function EditProfileScreen() {
-  const {
-    user,
-    updateDisplayName,
-    updateProfileImages,
-    profileImageVersion,
-  } = useAuth();
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
+  const { user, updateDisplayName, updateProfileImages, profileImageVersion } =
+    useAuth();
 
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
@@ -270,86 +269,87 @@ export default function EditProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: {
-    position: "absolute",
-    left: 88,
-    right: 88,
-    textAlign: "center",
-  },
-  saveButton: {
-    minWidth: 64,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
-  },
-  saveButtonText: {
-    color: COLORS.background,
-    fontWeight: "600",
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: SPACING.xl,
-  },
-  message: {
-    marginTop: SPACING.md,
-  },
-  keyboardView: {
-    flex: 1,
-  },
-  form: {
-    padding: SPACING.lg,
-    gap: SPACING.lg,
-  },
-  errorBox: {
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: 10,
-  },
-  field: {
-    gap: SPACING.sm,
-  },
-  input: {
-    minHeight: 48,
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 12,
-    backgroundColor: COLORS.surface,
-    color: COLORS.text,
-    fontSize: 16,
-  },
-  bioInput: {
-    minHeight: 120,
-    textAlignVertical: "top",
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerTitle: {
+      position: "absolute",
+      left: 88,
+      right: 88,
+      textAlign: "center",
+    },
+    saveButton: {
+      minWidth: 64,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 20,
+      backgroundColor: COLORS.primary,
+    },
+    saveButtonText: {
+      color: COLORS.background,
+      fontWeight: "600",
+    },
+    disabledButton: {
+      opacity: 0.5,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: SPACING.xl,
+    },
+    message: {
+      marginTop: SPACING.md,
+    },
+    keyboardView: {
+      flex: 1,
+    },
+    form: {
+      padding: SPACING.lg,
+      gap: SPACING.lg,
+    },
+    errorBox: {
+      padding: SPACING.md,
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: 10,
+    },
+    field: {
+      gap: SPACING.sm,
+    },
+    input: {
+      minHeight: 48,
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 12,
+      backgroundColor: COLORS.surface,
+      color: COLORS.text,
+      fontSize: 16,
+    },
+    bioInput: {
+      minHeight: 120,
+      textAlignVertical: "top",
+    },
+  });

@@ -1,6 +1,7 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import Avatar from "@/components/Avatar";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import type { CommentDto } from "@/types/comment";
 import { formatRelativeTime } from "@/utils/date";
@@ -37,6 +38,8 @@ export default function CommentItem({
   onReport,
   onAuthorPress,
 }: CommentItemProps) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const [editing, setEditing] = useState(false);
 
   const [editText, setEditText] = useState(comment.content);
@@ -139,10 +142,7 @@ export default function CommentItem({
         title: "Tùy chọn bình luận",
       },
       (selectedIndex) => {
-        if (
-          selectedIndex !== undefined
-          && selectedIndex < actions.length
-        ) {
+        if (selectedIndex !== undefined && selectedIndex < actions.length) {
           actions[selectedIndex]();
         }
       },
@@ -287,94 +287,95 @@ export default function CommentItem({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: SPACING.sm,
-    marginBottom: SPACING.md,
-    marginTop: SPACING.sm,
-  },
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: SPACING.sm,
+      marginBottom: SPACING.md,
+      marginTop: SPACING.sm,
+    },
 
-  body: {
-    flex: 1,
-  },
+    body: {
+      flex: 1,
+    },
 
-  bubble: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: 10,
+    bubble: {
+      paddingHorizontal: SPACING.md,
+      paddingVertical: 10,
 
-    borderRadius: 16,
-    backgroundColor: COLORS.surfaceAlt,
+      borderRadius: 16,
+      backgroundColor: COLORS.surfaceAlt,
 
-    gap: 4,
-  },
+      gap: 4,
+    },
 
-  actions: {
-    marginTop: 5,
-    paddingHorizontal: SPACING.sm,
+    actions: {
+      marginTop: 5,
+      paddingHorizontal: SPACING.sm,
 
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-  },
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+    },
 
-  replyText: {
-    fontWeight: "600",
-  },
-  commentHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: SPACING.sm,
-  },
-  authorIdentity: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: SPACING.xs,
-  },
-  roleBadge: {
-    borderRadius: 999,
-    backgroundColor: COLORS.primarySoft,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 2,
-  },
+    replyText: {
+      fontWeight: "600",
+    },
+    commentHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: SPACING.sm,
+    },
+    authorIdentity: {
+      flex: 1,
+      flexDirection: "row",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: SPACING.xs,
+    },
+    roleBadge: {
+      borderRadius: 999,
+      backgroundColor: COLORS.primarySoft,
+      paddingHorizontal: SPACING.sm,
+      paddingVertical: 2,
+    },
 
-  editBox: {
-    marginTop: SPACING.xs,
-  },
+    editBox: {
+      marginTop: SPACING.xs,
+    },
 
-  editInput: {
-    minHeight: 40,
-    maxHeight: 120,
+    editInput: {
+      minHeight: 40,
+      maxHeight: 120,
 
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.sm,
+      paddingHorizontal: SPACING.sm,
+      paddingVertical: SPACING.sm,
 
-    borderRadius: 10,
+      borderRadius: 10,
 
-    backgroundColor: COLORS.surface,
+      backgroundColor: COLORS.surface,
 
-    color: COLORS.text,
-    fontSize: 15,
-  },
+      color: COLORS.text,
+      fontSize: 15,
+    },
 
-  editActions: {
-    marginTop: SPACING.sm,
+    editActions: {
+      marginTop: SPACING.sm,
 
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    alignItems: "center",
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      alignItems: "center",
 
-    gap: SPACING.lg,
-  },
+      gap: SPACING.lg,
+    },
 
-  saveText: {
-    fontWeight: "600",
-  },
-  replyContainer: {
-    marginLeft: 28,
-  },
-});
+    saveText: {
+      fontWeight: "600",
+    },
+    replyContainer: {
+      marginLeft: 28,
+    },
+  });

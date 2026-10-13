@@ -11,6 +11,12 @@ namespace SocialSport.Api.Models.Entities
 {
     public class Post : BaseEntity
     {
+        public SystemPostModerationStatus SystemModerationStatus { get; set; }
+        [System.ComponentModel.DataAnnotations.MaxLength(1000)]
+        public string? SystemModerationReason { get; set; }
+        [System.ComponentModel.DataAnnotations.Timestamp]
+        public byte[] RowVersion { get; set; } = [];
+
         public Guid AuthorId { get; set; }
 
         public Guid? GroupId { get; set; }

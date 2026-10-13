@@ -1,3 +1,4 @@
+import { ensureContentAllowed } from "@/utils/moderation";
 import { api } from "@/services/api";
 import { createImageFormData } from "@/services/image-upload";
 import type { FeedPostDto } from "@/types/feed";
@@ -17,6 +18,7 @@ export const createGroupPost = async (
   id: string,
   request: CreateGroupPostRequest,
 ) => {
+  ensureContentAllowed(request.content);
   return await api<FeedPostDto>(`/groups/${id}/posts`, {
     method: "POST",
     auth: true,
@@ -32,39 +34,24 @@ export const removeGroupPost = async (groupId: string, postId: string) => {
 };
 
 export const getGroupPostReviewQueue = async (groupId: string) => {
-  return await api<FeedPostDto[]>(
-    `/groups/${groupId}/post-review-queue`,
-    {
-      method: "GET",
-      auth: true,
-    },
-  );
+  return await api<FeedPostDto[]>(`/groups/${groupId}/post-review-queue`, {
+    method: "GET",
+    auth: true,
+  });
 };
 
-export const approveGroupPost = async (
-  groupId: string,
-  postId: string,
-) => {
-  await api<void>(
-    `/groups/${groupId}/post-review-queue/${postId}/approve`,
-    {
-      method: "POST",
-      auth: true,
-    },
-  );
+export const approveGroupPost = async (groupId: string, postId: string) => {
+  await api<void>(`/groups/${groupId}/post-review-queue/${postId}/approve`, {
+    method: "POST",
+    auth: true,
+  });
 };
 
-export const rejectGroupPost = async (
-  groupId: string,
-  postId: string,
-) => {
-  await api<void>(
-    `/groups/${groupId}/post-review-queue/${postId}/reject`,
-    {
-      method: "POST",
-      auth: true,
-    },
-  );
+export const rejectGroupPost = async (groupId: string, postId: string) => {
+  await api<void>(`/groups/${groupId}/post-review-queue/${postId}/reject`, {
+    method: "POST",
+    auth: true,
+  });
 };
 
 export const createGroup = async (request: SaveGroupRequest) => {
@@ -108,10 +95,7 @@ export const deleteGroupAvatar = async (id: string) => {
   });
 };
 
-export const updateGroupCover = async (
-  id: string,
-  asset: ImagePickerAsset,
-) => {
+export const updateGroupCover = async (id: string, asset: ImagePickerAsset) => {
   return await api<GroupDto>(`/groups/${id}/cover`, {
     method: "PUT",
     auth: true,
@@ -147,20 +131,14 @@ export const getGroupJoinRequests = async (id: string) => {
   });
 };
 
-export const approveGroupJoinRequest = async (
-  id: string,
-  userId: string,
-) => {
+export const approveGroupJoinRequest = async (id: string, userId: string) => {
   await api<void>(`/groups/${id}/join-requests/${userId}/approve`, {
     method: "POST",
     auth: true,
   });
 };
 
-export const rejectGroupJoinRequest = async (
-  id: string,
-  userId: string,
-) => {
+export const rejectGroupJoinRequest = async (id: string, userId: string) => {
   await api<void>(`/groups/${id}/join-requests/${userId}`, {
     method: "DELETE",
     auth: true,

@@ -1,0 +1,36 @@
+{
+  "source": "https://github.com/dvdimitrov13/Logo_Detection",
+  "sourceRevision": "2e20b8aaae6440ad1cefd56cf5c017c49fa03e88",
+  "yoloRevision": "8efe97719c9b3b77c9db9b5c8592e051b7f0c9a7",
+  "checkpointSha256": "5288078818038f3e973332c585738e4bf5dd4d50cee95c5d85705395656f292a",
+  "onnxSha256": "72ee7fd68d0378be26be40c349798bb0fbf3fd82651cf319b2eabf43c3bb56ee",
+  "inputShape": [
+    1,
+    3,
+    640,
+    640
+  ],
+  "outputShape": [
+    1,
+    25200,
+    20
+  ],
+  "labels": [
+    "Adidas",
+    "Apple Inc-",
+    "Chanel",
+    "Coca-Cola",
+    "Emirates",
+    "Hard Rock Cafe",
+    "Mercedes-Benz",
+    "NFL",
+    "Nike",
+    "Pepsi",
+    "Puma",
+    "Starbucks",
+    "The North Face",
+    "Toyota",
+    "Under Armour"
+  ],
+  "maxExportDifference": 0.000732421875
+}

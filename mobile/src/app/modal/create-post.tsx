@@ -1,6 +1,7 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
 import { useAuth } from "@/contexts/AuthContext";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import {
   createPost,
   deletePost,
@@ -26,6 +27,8 @@ type Props = {
 };
 
 export default function CreatePostScreen({ onClose, onCreated }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { user, profileImageVersion } = useAuth();
   const [content, setContent] = useState("");
   const [visibility, setVisibility] = useState(1);
@@ -52,7 +55,6 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
     if (!value || submitting) return;
 
     let createdPostId: string | null = null;
-    let pendingCopyrightReview = false;
 
     try {
       setSubmitting(true);
@@ -67,11 +69,8 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
       createdPostId = post.id;
 
       if (selectedImage) {
-        const media = await uploadPostMedia(post.id, selectedImage);
-        const publication = await finalizePost(post.id);
-
-        pendingCopyrightReview = media.isPendingCopyrightReview
-          || publication.isPendingCopyrightReview;
+        await uploadPostMedia(post.id, selectedImage);
+        await finalizePost(post.id);
       }
 
       setContent("");
@@ -80,11 +79,10 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
 
       onClose();
       onCreated?.();
-      if (pendingCopyrightReview)
-        Alert.alert(
-          "Đang kiểm tra bản quyền",
-          "Bài viết tạm thời chưa hiển thị vì hệ thống phát hiện tín hiệu cần kiểm tra. Bạn sẽ nhận kết quả sau khi System Admin xem xét.",
-        );
+      Alert.alert(
+        "Đã gửi chờ duyệt",
+        "Bài viết sẽ hiển thị theo đối tượng bạn chọn sau khi System Admin duyệt.",
+      );
     } catch (error) {
       if (createdPostId) {
         try {
@@ -113,7 +111,7 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
       <PostEditorHeader
         title="Tạo bài viết"
         onClose={onClose}
-        submitLabel="Đăng"
+        submitLabel="Gửi duyệt"
         onSubmit={handleCreatePost}
         submitDisabled={!content.trim() || submitting}
         submitting={submitting}
@@ -176,35 +174,36 @@ export default function CreatePostScreen({ onClose, onCreated }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
 
-  actions: {
-    margin: SPACING.lg,
-    padding: SPACING.lg,
+    actions: {
+      margin: SPACING.lg,
+      padding: SPACING.lg,
 
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: COLORS.border,
-    borderRadius: 16,
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: COLORS.border,
+      borderRadius: 16,
 
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
 
-    backgroundColor: COLORS.surface,
-  },
+      backgroundColor: COLORS.surface,
+    },
 
-  actionsDescription: {
-    marginTop: 4,
-  },
+    actionsDescription: {
+      marginTop: 4,
+    },
 
-  actionIcons: {
-    flexDirection: "row",
-    alignItems: "center",
+    actionIcons: {
+      flexDirection: "row",
+      alignItems: "center",
 
-    gap: SPACING.xs,
-  },
-});
+      gap: SPACING.xs,
+    },
+  });

@@ -1,6 +1,8 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import Avatar from "@/components/Avatar";
+import LogoReviewImage from "@/components/post/LogoReviewImage";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import {
   approveGroupPost,
@@ -17,7 +19,6 @@ import {
   ActivityIndicator,
   Alert,
   FlatList,
-  Image,
   Pressable,
   RefreshControl,
   StyleSheet,
@@ -26,6 +27,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function GroupPostReviewQueueScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const groupId = Array.isArray(params.id) ? params.id[0] : params.id;
   const [posts, setPosts] = useState<FeedPostDto[]>([]);
@@ -76,9 +79,7 @@ export default function GroupPostReviewQueueScreen() {
         await rejectGroupPost(groupId, post.id);
       }
 
-      setPosts((current) =>
-        current.filter((item) => item.id !== post.id),
-      );
+      setPosts((current) => current.filter((item) => item.id !== post.id));
     } catch (error) {
       Alert.alert(
         action === "approve" ? "Không thể duyệt bài" : "Không thể từ chối bài",
@@ -210,19 +211,11 @@ export default function GroupPostReviewQueueScreen() {
 
                 <AppText>{item.content}</AppText>
                 {image ? (
-                  <Image
-                    source={{
-                      uri: getFileUrl(image.url)!,
-                    }}
-                    resizeMode="cover"
-                    style={styles.image}
-                  />
+                  <LogoReviewImage media={image} />
                 ) : video ? (
                   <Pressable
                     style={styles.videoPlaceholder}
-                    onPress={() =>
-                      void Linking.openURL(getFileUrl(video.url)!)
-                    }
+                    onPress={() => void Linking.openURL(getFileUrl(video.url)!)}
                   >
                     <Ionicons
                       name="videocam-outline"
@@ -282,109 +275,110 @@ export default function GroupPostReviewQueueScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  list: {
-    padding: SPACING.lg,
-    gap: SPACING.md,
-  },
-  center: {
-    flex: 1,
-    minHeight: 260,
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.md,
-  },
-  centerText: {
-    textAlign: "center",
-  },
-  retryButton: {
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  notice: {
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceAlt,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: SPACING.sm,
-  },
-  card: {
-    padding: SPACING.lg,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface,
-    gap: SPACING.md,
-  },
-  authorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  authorText: {
-    flex: 1,
-  },
-  sportBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: SPACING.xs,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primarySoft,
-  },
-  image: {
-    width: "100%",
-    height: 220,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  videoPlaceholder: {
-    height: 120,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceAlt,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-  },
-  actions: {
-    flexDirection: "row",
-    gap: SPACING.sm,
-  },
-  actionButton: {
-    flex: 1,
-    minHeight: 42,
-    borderRadius: RADIUS.full,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  rejectButton: {
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-  },
-  approveButton: {
-    backgroundColor: COLORS.primary,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    list: {
+      padding: SPACING.lg,
+      gap: SPACING.md,
+    },
+    center: {
+      flex: 1,
+      minHeight: 260,
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.md,
+    },
+    centerText: {
+      textAlign: "center",
+    },
+    retryButton: {
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.sm,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    notice: {
+      padding: SPACING.md,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surfaceAlt,
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: SPACING.sm,
+    },
+    card: {
+      padding: SPACING.lg,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surface,
+      gap: SPACING.md,
+    },
+    authorRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+    },
+    authorText: {
+      flex: 1,
+    },
+    sportBadge: {
+      paddingHorizontal: SPACING.sm,
+      paddingVertical: SPACING.xs,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primarySoft,
+    },
+    image: {
+      width: "100%",
+      height: 220,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    videoPlaceholder: {
+      height: 120,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surfaceAlt,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.sm,
+    },
+    actions: {
+      flexDirection: "row",
+      gap: SPACING.sm,
+    },
+    actionButton: {
+      flex: 1,
+      minHeight: 42,
+      borderRadius: RADIUS.full,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    rejectButton: {
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+    },
+    approveButton: {
+      backgroundColor: COLORS.primary,
+    },
+  });

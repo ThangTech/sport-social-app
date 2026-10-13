@@ -14,6 +14,8 @@ export enum NotificationType {
   GroupPostReviewPending = 13,
   GroupPostApproved = 14,
   GroupPostRejected = 15,
+  SystemPostApproved = 16,
+  SystemPostRejected = 17,
 }
 
 export type NotificationDto = {

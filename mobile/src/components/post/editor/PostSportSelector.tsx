@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import type { SportDto } from "@/types/sport";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -20,6 +21,8 @@ export default function PostSportSelector({
   disabled = false,
   variant = "field",
 }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { showActionSheetWithOptions } = useActionSheet();
 
   const handlePress = () => {
@@ -94,6 +97,8 @@ export function PostSportBadge({
   onClear,
   disabled = false,
 }: BadgeProps) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   if (!sport) return null;
 
   return (
@@ -111,36 +116,37 @@ export function PostSportBadge({
   );
 }
 
-const styles = StyleSheet.create({
-  field: {
-    alignSelf: "flex-start",
-    marginTop: 8,
-    paddingHorizontal: 9,
-    paddingVertical: 6,
-    borderRadius: 8,
-    backgroundColor: COLORS.surfaceAlt,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-  },
-  iconButton: {
-    width: 42,
-    height: 42,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: 21,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  badge: {
-    alignSelf: "flex-start",
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.sm,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 16,
-    backgroundColor: COLORS.primarySoft,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    field: {
+      alignSelf: "flex-start",
+      marginTop: 8,
+      paddingHorizontal: 9,
+      paddingVertical: 6,
+      borderRadius: 8,
+      backgroundColor: COLORS.surfaceAlt,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 5,
+    },
+    iconButton: {
+      width: 42,
+      height: 42,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: 21,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    badge: {
+      alignSelf: "flex-start",
+      marginHorizontal: SPACING.lg,
+      marginBottom: SPACING.sm,
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      borderRadius: 16,
+      backgroundColor: COLORS.primarySoft,
+    },
+  });

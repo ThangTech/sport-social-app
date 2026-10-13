@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { GroupPrivacy, type SaveGroupRequest } from "@/types/group";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useRef, useState } from "react";
@@ -28,6 +29,8 @@ export default function GroupForm({
   disabled = false,
   onSubmit,
 }: GroupFormProps) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const [name, setName] = useState(initialName);
   const [description, setDescription] = useState(initialDescription ?? "");
   const [privacy, setPrivacy] = useState(initialPrivacy);
@@ -189,63 +192,64 @@ export default function GroupForm({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    gap: SPACING.xl,
-  },
-  field: {
-    gap: SPACING.sm,
-  },
-  input: {
-    minHeight: 48,
-    paddingHorizontal: SPACING.md,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface,
-  },
-  descriptionInput: {
-    minHeight: 120,
-    paddingTop: SPACING.md,
-  },
-  privacyOptions: {
-    gap: SPACING.sm,
-  },
-  privacyOption: {
-    minHeight: 72,
-    padding: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface,
-  },
-  selectedOption: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.primarySoft,
-  },
-  privacyText: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
-  errorBox: {
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface,
-  },
-  submitButton: {
-    minHeight: 48,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      gap: SPACING.xl,
+    },
+    field: {
+      gap: SPACING.sm,
+    },
+    input: {
+      minHeight: 48,
+      paddingHorizontal: SPACING.md,
+      color: COLORS.text,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surface,
+    },
+    descriptionInput: {
+      minHeight: 120,
+      paddingTop: SPACING.md,
+    },
+    privacyOptions: {
+      gap: SPACING.sm,
+    },
+    privacyOption: {
+      minHeight: 72,
+      padding: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surface,
+    },
+    selectedOption: {
+      borderColor: COLORS.primary,
+      backgroundColor: COLORS.primarySoft,
+    },
+    privacyText: {
+      flex: 1,
+      gap: SPACING.xs,
+    },
+    errorBox: {
+      padding: SPACING.md,
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surface,
+    },
+    submitButton: {
+      minHeight: 48,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    disabledButton: {
+      opacity: 0.6,
+    },
+  });

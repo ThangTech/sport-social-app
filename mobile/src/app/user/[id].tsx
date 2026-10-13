@@ -1,7 +1,8 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
 import ProfilePostList from "@/components/profile/ProfilePostList";
 import ProfileSummary from "@/components/profile/ProfileSummary";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import {
   blockUser,
@@ -32,6 +33,8 @@ import UserNotFound from "@/components/UserNotFound";
 import { ApiError } from "@/types/api";
 
 export default function UserProfileScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { user: currentUser } = useAuth();
   const { showActionSheetWithOptions } = useActionSheet();
 
@@ -401,97 +404,98 @@ export default function UserProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
 
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
 
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
-  headerSpace: {
-    width: 40,
-  },
+    headerSpace: {
+      width: 40,
+    },
 
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: SPACING.xl,
-  },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: SPACING.xl,
+    },
 
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
 
-  followButton: {
-    alignSelf: "center",
-    marginTop: 22,
-    minWidth: 180,
-    paddingHorizontal: 28,
-    paddingVertical: 11,
-    borderRadius: 24,
-    backgroundColor: COLORS.primary,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
+    followButton: {
+      alignSelf: "center",
+      marginTop: 22,
+      minWidth: 180,
+      paddingHorizontal: 28,
+      paddingVertical: 11,
+      borderRadius: 24,
+      backgroundColor: COLORS.primary,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
 
-  followText: {
-    color: COLORS.background,
-    fontWeight: "600",
-  },
+    followText: {
+      color: COLORS.background,
+      fontWeight: "600",
+    },
 
-  followingButton: {
-    backgroundColor: COLORS.surfaceAlt,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
+    followingButton: {
+      backgroundColor: COLORS.surfaceAlt,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+    },
 
-  followingText: {
-    color: COLORS.text,
-  },
+    followingText: {
+      color: COLORS.text,
+    },
 
-  disabledButton: {
-    opacity: 0.6,
-  },
+    disabledButton: {
+      opacity: 0.6,
+    },
 
-  blockedButton: {
-    alignSelf: "center",
-    marginTop: 22,
-    minWidth: 180,
-    paddingHorizontal: 24,
-    paddingVertical: 11,
-    borderRadius: 24,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.surfaceAlt,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-  },
+    blockedButton: {
+      alignSelf: "center",
+      marginTop: 22,
+      minWidth: 180,
+      paddingHorizontal: 24,
+      paddingVertical: 11,
+      borderRadius: 24,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      backgroundColor: COLORS.surfaceAlt,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
 
-  postsError: {
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.lg,
-    textAlign: "center",
-  },
-});
+    postsError: {
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.lg,
+      textAlign: "center",
+    },
+  });

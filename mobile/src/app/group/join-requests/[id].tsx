@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import {
   approveGroupJoinRequest,
@@ -25,6 +26,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 type RequestAction = "approve" | "reject";
 
 export default function GroupJoinRequestsScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -243,85 +246,86 @@ export default function GroupJoinRequestsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  requestItem: {
-    padding: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  userInfo: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
-  actions: {
-    gap: SPACING.sm,
-  },
-  approveButton: {
-    minWidth: 82,
-    minHeight: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  rejectButton: {
-    minWidth: 82,
-    minHeight: 36,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: RADIUS.full,
-  },
-  disabledButton: {
-    opacity: 0.55,
-  },
-  center: {
-    flex: 1,
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    requestItem: {
+      padding: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    userInfo: {
+      flex: 1,
+      gap: SPACING.xs,
+    },
+    actions: {
+      gap: SPACING.sm,
+    },
+    approveButton: {
+      minWidth: 82,
+      minHeight: 36,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    rejectButton: {
+      minWidth: 82,
+      minHeight: 36,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: RADIUS.full,
+    },
+    disabledButton: {
+      opacity: 0.55,
+    },
+    center: {
+      flex: 1,
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: SPACING.lg,
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.sm,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+  });

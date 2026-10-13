@@ -1,6 +1,7 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import ImageUploadField from "@/components/image/ImageUploadField";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import * as ImagePicker from "expo-image-picker";
 import { useRef, useState } from "react";
@@ -25,8 +26,12 @@ type Props = {
   onBusyChange: (busy: boolean) => void;
   onUpdated: (result: ImageUpdateResult) => void;
   onReload?: () => Promise<void>;
-  uploadAvatar: (asset: ImagePicker.ImagePickerAsset) => Promise<ImageUpdateResult>;
-  uploadCover: (asset: ImagePicker.ImagePickerAsset) => Promise<ImageUpdateResult>;
+  uploadAvatar: (
+    asset: ImagePicker.ImagePickerAsset,
+  ) => Promise<ImageUpdateResult>;
+  uploadCover: (
+    asset: ImagePicker.ImagePickerAsset,
+  ) => Promise<ImageUpdateResult>;
   deleteAvatar: () => Promise<ImageUpdateResult>;
   deleteCover: () => Promise<ImageUpdateResult>;
 };
@@ -36,12 +41,7 @@ const MAX_SIZE = {
   cover: 10 * 1024 * 1024,
 };
 
-const SUPPORTED_TYPES = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-];
+const SUPPORTED_TYPES = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 export default function AvatarCoverImageEditor({
   title,
@@ -58,6 +58,8 @@ export default function AvatarCoverImageEditor({
   deleteAvatar,
   deleteCover,
 }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const [selectedAvatar, setSelectedAvatar] =
     useState<ImagePicker.ImagePickerAsset | null>(null);
   const [selectedCover, setSelectedCover] =
@@ -188,18 +190,14 @@ export default function AvatarCoverImageEditor({
   const confirmDelete = (imageType: ImageType) => {
     const label = imageType === "avatar" ? "avatar" : "ảnh bìa";
 
-    Alert.alert(
-      `Xóa ${label}`,
-      `Bạn có chắc muốn xóa ${label} hiện tại?`,
-      [
-        { text: "Hủy", style: "cancel" },
-        {
-          text: "Xóa",
-          style: "destructive",
-          onPress: () => removeImage(imageType),
-        },
-      ],
-    );
+    Alert.alert(`Xóa ${label}`, `Bạn có chắc muốn xóa ${label} hiện tại?`, [
+      { text: "Hủy", style: "cancel" },
+      {
+        text: "Xóa",
+        style: "destructive",
+        onPress: () => removeImage(imageType),
+      },
+    ]);
   };
 
   const avatarSource = selectedAvatar
@@ -257,14 +255,15 @@ export default function AvatarCoverImageEditor({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    gap: SPACING.lg,
-  },
-  errorBox: {
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: 10,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      gap: SPACING.lg,
+    },
+    errorBox: {
+      padding: SPACING.md,
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: 10,
+    },
+  });

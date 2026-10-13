@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import { getPostReactions } from "@/services/post.service";
 import type { PostReactionDto } from "@/types/post";
@@ -20,6 +21,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const PAGE_SIZE = 20;
 
 export default function PostReactionsScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const params = useLocalSearchParams<{ id?: string | string[] }>();
   const postId = Array.isArray(params.id) ? params.id[0] : params.id;
 
@@ -228,78 +231,79 @@ export default function PostReactionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerSpace: {
-    width: 40,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: SPACING.xl,
-  },
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  userRow: {
-    minHeight: 68,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  displayName: {
-    flex: 1,
-  },
-  retryButton: {
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
-  },
-  inlineError: {
-    padding: SPACING.md,
-    alignItems: "center",
-  },
-  inlineRetryButton: {
-    marginTop: SPACING.sm,
-  },
-  footerLoading: {
-    padding: SPACING.lg,
-    alignItems: "center",
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    headerSpace: {
+      width: 40,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: SPACING.xl,
+    },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    userRow: {
+      minHeight: 68,
+      paddingHorizontal: SPACING.lg,
+      paddingVertical: SPACING.sm,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+      backgroundColor: COLORS.surface,
+    },
+    avatar: {
+      width: 44,
+      height: 44,
+      borderRadius: 22,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    displayName: {
+      flex: 1,
+    },
+    retryButton: {
+      marginTop: SPACING.lg,
+      paddingHorizontal: SPACING.lg,
+      paddingVertical: SPACING.sm,
+      borderRadius: 20,
+      backgroundColor: COLORS.primary,
+    },
+    inlineError: {
+      padding: SPACING.md,
+      alignItems: "center",
+    },
+    inlineRetryButton: {
+      marginTop: SPACING.sm,
+    },
+    footerLoading: {
+      padding: SPACING.lg,
+      alignItems: "center",
+    },
+  });

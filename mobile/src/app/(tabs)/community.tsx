@@ -1,6 +1,7 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import GroupListItem from "@/components/group/GroupListItem";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { getGroups } from "@/services/group.service";
 import { GroupListScope, type GroupDto } from "@/types/group";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -38,6 +39,8 @@ const scopes = [
 ];
 
 export default function CommunityScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const [groups, setGroups] = useState<GroupDto[]>([]);
   const [searchText, setSearchText] = useState("");
   const [activeSearch, setActiveSearch] = useState("");
@@ -64,8 +67,8 @@ export default function CommunityScreen() {
         const response = await getGroups(search, scope, PAGE_SIZE, cursor);
 
         if (
-          activeSearchRef.current !== search
-          || activeScopeRef.current !== scope
+          activeSearchRef.current !== search ||
+          activeScopeRef.current !== scope
         ) {
           return;
         }
@@ -82,8 +85,8 @@ export default function CommunityScreen() {
         setNextCursor(response.nextCursor ?? null);
       } catch (error) {
         if (
-          activeSearchRef.current !== search
-          || activeScopeRef.current !== scope
+          activeSearchRef.current !== search ||
+          activeScopeRef.current !== scope
         ) {
           return;
         }
@@ -93,8 +96,8 @@ export default function CommunityScreen() {
         );
       } finally {
         if (
-          activeSearchRef.current === search
-          && activeScopeRef.current === scope
+          activeSearchRef.current === search &&
+          activeScopeRef.current === scope
         ) {
           setLoading(false);
           setRefreshing(false);
@@ -153,12 +156,7 @@ export default function CommunityScreen() {
   };
 
   const handleLoadMore = () => {
-    if (
-      !nextCursor ||
-      loading ||
-      refreshing ||
-      loadingMoreRef.current
-    ) {
+    if (!nextCursor || loading || refreshing || loadingMoreRef.current) {
       return;
     }
 
@@ -334,100 +332,101 @@ export default function CommunityScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  searchBox: {
-    margin: SPACING.lg,
-    marginBottom: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    minHeight: 46,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surface,
-  },
-  searchInput: {
-    flex: 1,
-    color: COLORS.text,
-    fontSize: 15,
-  },
-  scopeTabs: {
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.md,
-    padding: 4,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
-    flexDirection: "row",
-  },
-  scopeTab: {
-    flex: 1,
-    minHeight: 38,
-    paddingHorizontal: SPACING.xs,
-    borderRadius: RADIUS.full,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  activeScopeTab: {
-    backgroundColor: COLORS.primary,
-  },
-  scopeLabel: {
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  list: {
-    padding: SPACING.lg,
-    paddingTop: SPACING.sm,
-    gap: SPACING.md,
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  center: {
-    flex: 1,
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  errorBox: {
-    padding: SPACING.md,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: RADIUS.md,
-  },
-  footer: {
-    padding: SPACING.lg,
-    alignItems: "center",
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    searchBox: {
+      margin: SPACING.lg,
+      marginBottom: SPACING.sm,
+      paddingHorizontal: SPACING.md,
+      minHeight: 46,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surface,
+    },
+    searchInput: {
+      flex: 1,
+      color: COLORS.text,
+      fontSize: 15,
+    },
+    scopeTabs: {
+      marginHorizontal: SPACING.lg,
+      marginBottom: SPACING.md,
+      padding: 4,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surfaceAlt,
+      flexDirection: "row",
+    },
+    scopeTab: {
+      flex: 1,
+      minHeight: 38,
+      paddingHorizontal: SPACING.xs,
+      borderRadius: RADIUS.full,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    activeScopeTab: {
+      backgroundColor: COLORS.primary,
+    },
+    scopeLabel: {
+      fontWeight: "600",
+      textAlign: "center",
+    },
+    list: {
+      padding: SPACING.lg,
+      paddingTop: SPACING.sm,
+      gap: SPACING.md,
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    center: {
+      flex: 1,
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: SPACING.lg,
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.sm,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    errorBox: {
+      padding: SPACING.md,
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: RADIUS.md,
+    },
+    footer: {
+      padding: SPACING.lg,
+      alignItems: "center",
+    },
+  });

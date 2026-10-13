@@ -2,6 +2,12 @@
 
 Monorepo gồm ASP.NET Core API (`backend/`), Expo React Native (`mobile/`) và Vite React System Admin (`admin/`).
 
+## Tài liệu tra cứu đồ án
+
+- [Nghiệp vụ hiện tại và nơi xử lý trong code](docs/BAO-CAO-NGHIEP-VU-VA-KIEN-TRUC-HE-THONG.md) — cập nhật 12/10/2026.
+- [Bản đồ giao diện và cách tìm code](docs/BAN-DO-GIAO-DIEN-VA-TRA-CUU-CODE.md) — màn hình, component dùng chung và các vị trí sửa UI.
+- [Chạy local và dữ liệu test](docs/LOCAL-SETUP.md).
+
 ## Yêu cầu
 
 - .NET SDK theo `backend/global.json`

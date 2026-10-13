@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using SocialSport.Api.Data;
 using SocialSport.Api.DTOs.Post;
@@ -25,7 +25,14 @@ namespace SocialSport.Api.Services.Implementations
         private readonly ICopyrightService _copyrightService;
         private readonly IExternalCopyrightScanService _externalCopyrightScanService;
         private readonly IMediaUrlService _mediaUrlService;
+        private string CheckedContent(string content)
+        {
+            _textModeration.EnsureAllowed(content);
+            return content.Trim();
+        }
+        private readonly TextModeration _textModeration;
         private readonly ApplicationDbContext _context;
+        private readonly LocalLogoDetector _logoDetector;
 
         public PostService(
             IPostRepository postRepository,
@@ -37,7 +44,9 @@ namespace SocialSport.Api.Services.Implementations
             ICopyrightService copyrightService,
             IExternalCopyrightScanService externalCopyrightScanService,
             IMediaUrlService mediaUrlService,
-            ApplicationDbContext context)
+            ApplicationDbContext context,
+            TextModeration textModeration,
+            LocalLogoDetector logoDetector)
         {
             _postRepository = postRepository;
             _userManager = userManager;
@@ -49,6 +58,8 @@ namespace SocialSport.Api.Services.Implementations
             _externalCopyrightScanService = externalCopyrightScanService;
             _mediaUrlService = mediaUrlService;
             _context = context;
+            _textModeration = textModeration;
+            _logoDetector = logoDetector;
         }
         public async Task<ReactionResponse> ReactAsync(Guid userId, Guid postId, ReactionRequest request)
         {
@@ -125,11 +136,12 @@ namespace SocialSport.Api.Services.Implementations
                 Id = Guid.NewGuid(),
                 AuthorId = userId,
                 SportId = request.SportId,
-                Content = request.Content.Trim(),
+                Content = CheckedContent(request.Content),
                 Visibility = request.Visibility,
-                Status = request.HasMedia
-                    ? PostStatus.Hidden
-                    : PostStatus.Published,
+                Status = PostStatus.Hidden,
+                SystemModerationStatus = request.HasMedia
+                    ? SystemPostModerationStatus.Draft
+                    : SystemPostModerationStatus.Pending,
                 CreatedAt = DateTimeOffset.UtcNow
             };
 
@@ -155,6 +167,7 @@ namespace SocialSport.Api.Services.Implementations
                 CommentCount = createdPost.Comments.Count(x => x.Status == CommentStatus.Published),
                 IsSaved = false,
                 CurrentReaction = null,
+                IsPendingSystemReview = true,
                 CreatedAt = createdPost.CreatedAt,
                 UpdatedAt = createdPost.UpdatedAt,
                 Media = createdPost.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -340,10 +353,14 @@ namespace SocialSport.Api.Services.Implementations
             if (post is null || post.Status == PostStatus.Deleted)
                 throw new KeyNotFoundException("Không tìm thấy bài viết.");
 
-            await _postAccessService.EnsureCanInteractAsync(userId, post);
-
             if (post.AuthorId != userId)
                 throw new UnauthorizedAccessException("Bạn không có quyền sửa bài viết này.");
+
+            if (post.Status == PostStatus.Removed)
+                throw new InvalidOperationException("Bài viết đã bị gỡ.");
+
+            if (post.GroupId.HasValue)
+                await _postAccessService.EnsureCanInteractAsync(userId, post);
 
             if (request.SportId.HasValue && !await _postRepository.SportExistsAsync(request.SportId.Value))
                 throw new KeyNotFoundException("Không tìm thấy môn thể thao.");
@@ -353,7 +370,13 @@ namespace SocialSport.Api.Services.Implementations
                 && request.Visibility != PostVisibility.Private
                 && post.Media.Count > 0;
 
-            post.Content = request.Content.Trim();
+            post.Content = CheckedContent(request.Content);
+            if (post.GroupId is null)
+            {
+                post.SystemModerationStatus = SystemPostModerationStatus.Pending;
+                post.SystemModerationReason = null;
+                post.Status = PostStatus.Hidden;
+            }
             post.SportId = request.SportId;
             post.Visibility = request.Visibility;
             post.UpdatedAt = DateTimeOffset.UtcNow;
@@ -388,8 +411,8 @@ namespace SocialSport.Api.Services.Implementations
                 CommentCount = post.Comments.Count(x => x.Status == CommentStatus.Published),
                 CurrentReaction = post.Reactions.FirstOrDefault(x => x.UserId == userId)?.Type,
                 IsSaved = await _savedPostRepository.GetAsync(userId, postId) is not null,
-                IsPendingCopyrightReview = post.GroupId is null
-                    && post.Status == PostStatus.Hidden,
+                IsPendingSystemReview = post.GroupId is null
+                    && post.SystemModerationStatus != SystemPostModerationStatus.Approved,
                 CreatedAt = post.CreatedAt,
                 UpdatedAt = post.UpdatedAt,
                 Media = post.Media.OrderBy(x => x.SortOrder).Select(x => new PostMediaDto
@@ -637,9 +660,11 @@ namespace SocialSport.Api.Services.Implementations
 
             var validatedFile = await MediaFileValidator.ValidateAsync(file);
 
-            if (post.GroupId is null && post.Status == PostStatus.Published)
+            if (post.GroupId is null)
             {
                 post.Status = PostStatus.Hidden;
+                post.SystemModerationStatus = SystemPostModerationStatus.Draft;
+                post.SystemModerationReason = null;
                 post.UpdatedAt = DateTimeOffset.UtcNow;
                 await _postRepository.SaveChangesAsync();
             }
@@ -670,6 +695,7 @@ namespace SocialSport.Api.Services.Implementations
                     validatedFile.MediaType)
             };
 
+            media.LogoAnalysisJson = await AnalyzeMediaAsync(filePath, media.MediaType);
             await _postRepository.AddMediaAsync(media);
             var isPendingCopyrightReview = false;
             ExternalCopyrightScan? externalScan = null;
@@ -734,7 +760,8 @@ namespace SocialSport.Api.Services.Implementations
             return new PostPublicationResponse
             {
                 IsPublished = !isBlocked,
-                IsPendingCopyrightReview = isBlocked
+                IsPendingSystemReview = post.SystemModerationStatus != SystemPostModerationStatus.Approved,
+                IsPendingCopyrightReview = false
             };
         }
 
@@ -761,6 +788,13 @@ namespace SocialSport.Api.Services.Implementations
                 File.Delete(fullPath);
 
             await ClearCopyrightReviewAsync(media.Id);
+            if (post.GroupId is null)
+            {
+                post.SystemModerationStatus = SystemPostModerationStatus.Pending;
+                post.SystemModerationReason = null;
+                post.Status = PostStatus.Hidden;
+                post.UpdatedAt = DateTimeOffset.UtcNow;
+            }
             _postRepository.RemoveMedia(media);
             await _postRepository.SaveChangesAsync();
         }
@@ -788,9 +822,11 @@ namespace SocialSport.Api.Services.Implementations
 
             var validatedFile = await MediaFileValidator.ValidateAsync(file);
 
-            if (post.GroupId is null && post.Status == PostStatus.Published)
+            if (post.GroupId is null)
             {
                 post.Status = PostStatus.Hidden;
+                post.SystemModerationStatus = SystemPostModerationStatus.Draft;
+                post.SystemModerationReason = null;
                 post.UpdatedAt = DateTimeOffset.UtcNow;
                 await _postRepository.SaveChangesAsync();
             }
@@ -813,6 +849,7 @@ namespace SocialSport.Api.Services.Implementations
 
             media.Url = $"/uploads/posts/{fileName}";
             media.MediaType = validatedFile.MediaType;
+            media.LogoAnalysisJson = await AnalyzeMediaAsync(newPath, media.MediaType);
             media.ContentHash = await _copyrightService.ComputeHashAsync(newPath);
             media.PerceptualHash = await _copyrightService.ComputePerceptualHashAsync(
                 newPath,
@@ -893,6 +930,14 @@ namespace SocialSport.Api.Services.Implementations
             }
         }
 
+        private async Task<string> AnalyzeMediaAsync(string path, MediaType mediaType)
+        {
+            var analysis = await _logoDetector.AnalyzeAsync(path, mediaType == MediaType.Image);
+            return System.Text.Json.JsonSerializer.Serialize(
+                analysis,
+                new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web));
+        }
+
         private async Task<bool> ApplyPersonalPublicationStateAsync(Post post)
         {
             var mediaIds = post.Media
@@ -908,7 +953,12 @@ namespace SocialSport.Api.Services.Implementations
                 && item.Status != ExternalCopyrightScanStatus.ClearedByAdmin
                 && item.Status != ExternalCopyrightScanStatus.AppealAccepted
                 && item.Status != ExternalCopyrightScanStatus.Failed);
-            var isBlocked = hasBlockingCase || hasBlockingScan;
+            if (post.SystemModerationStatus == SystemPostModerationStatus.Draft)
+            {
+                post.SystemModerationStatus = SystemPostModerationStatus.Pending;
+                post.SystemModerationReason = null;
+            }
+            var isBlocked = hasBlockingCase || hasBlockingScan || post.SystemModerationStatus != SystemPostModerationStatus.Approved;
 
             post.Status = isBlocked
                 ? PostStatus.Hidden

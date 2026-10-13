@@ -92,7 +92,7 @@ public class NotificationService : INotificationService
                 ActorId = actor?.Id,
                 ActorName = actor?.DisplayName,
                 ActorAvatarUrl = actor?.AvatarUrl,
-                Message = GetMessage(notification.Type, actor?.DisplayName),
+                Message = notification.Message ?? GetMessage(notification.Type, actor?.DisplayName),
                 IsRead = notification.IsRead,
                 CreatedAt = notification.CreatedAt
             };
@@ -284,6 +284,8 @@ public class NotificationService : INotificationService
             NotificationType.GroupPostReviewPending => "Bài viết của bạn đã được gửi vào hàng đợi duyệt của nhóm.",
             NotificationType.GroupPostApproved => $"{name} đã duyệt bài viết của bạn trong nhóm.",
             NotificationType.GroupPostRejected => $"{name} đã từ chối bài viết của bạn trong nhóm.",
+            NotificationType.SystemPostApproved => "System Admin đã duyệt bài viết của bạn.",
+            NotificationType.SystemPostRejected => "System Admin đã từ chối hoặc gỡ bài viết của bạn.",
             _ => "Bạn có thông báo mới."
         };
     }

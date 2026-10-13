@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import { GroupPrivacy, type GroupDto } from "@/types/group";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -10,10 +11,9 @@ type GroupListItemProps = {
   onPress: () => void;
 };
 
-export default function GroupListItem({
-  group,
-  onPress,
-}: GroupListItemProps) {
+export default function GroupListItem({ group, onPress }: GroupListItemProps) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const isPrivate = group.privacy === GroupPrivacy.Private;
 
   return (
@@ -53,11 +53,7 @@ export default function GroupListItem({
         </View>
 
         {group.description ? (
-          <AppText
-            variant="caption"
-            color={COLORS.textMuted}
-            numberOfLines={2}
-          >
+          <AppText variant="caption" color={COLORS.textMuted} numberOfLines={2}>
             {group.description}
           </AppText>
         ) : null}
@@ -72,48 +68,49 @@ export default function GroupListItem({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    padding: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.surface,
-  },
-  avatar: {
-    width: 64,
-    height: 64,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  placeholder: {
-    width: 64,
-    height: 64,
-    borderRadius: RADIUS.md,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  content: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
-  titleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  name: {
-    flex: 1,
-  },
-  privacyBadge: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 3,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.xs,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      padding: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+      borderRadius: RADIUS.lg,
+      backgroundColor: COLORS.surface,
+    },
+    avatar: {
+      width: 64,
+      height: 64,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    placeholder: {
+      width: 64,
+      height: 64,
+      borderRadius: RADIUS.md,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    content: {
+      flex: 1,
+      gap: SPACING.xs,
+    },
+    titleRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+    },
+    name: {
+      flex: 1,
+    },
+    privacyBadge: {
+      paddingHorizontal: SPACING.sm,
+      paddingVertical: 3,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.xs,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+  });

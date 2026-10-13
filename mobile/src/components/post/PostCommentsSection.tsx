@@ -1,9 +1,10 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import { ActivityIndicator, StyleSheet, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 
 import CommentItem from "@/components/CommentItem";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import type { CommentDto } from "@/types/comment";
 
 type Props = {
@@ -21,6 +22,8 @@ type Props = {
 };
 
 export default function PostCommentsSection(props: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   return (
     <>
       <View style={styles.header}>
@@ -39,7 +42,11 @@ export default function PostCommentsSection(props: Props) {
         </View>
       ) : props.comments.length === 0 ? (
         <View style={styles.message}>
-          <Ionicons name="chatbubbles-outline" size={42} color={COLORS.textMuted} />
+          <Ionicons
+            name="chatbubbles-outline"
+            size={42}
+            color={COLORS.textMuted}
+          />
           <AppText color={COLORS.textMuted} style={styles.messageText}>
             Chưa có bình luận nào.
           </AppText>
@@ -75,34 +82,35 @@ export default function PostCommentsSection(props: Props) {
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  list: {
-    padding: SPACING.lg,
-  },
-  loading: {
-    padding: SPACING.xl,
-    alignItems: "center",
-  },
-  message: {
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  messageText: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  inlineError: {
-    marginHorizontal: SPACING.lg,
-    marginBottom: SPACING.md,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    header: {
+      paddingHorizontal: SPACING.lg,
+      paddingVertical: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    list: {
+      padding: SPACING.lg,
+    },
+    loading: {
+      padding: SPACING.xl,
+      alignItems: "center",
+    },
+    message: {
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    messageText: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    inlineError: {
+      marginHorizontal: SPACING.lg,
+      marginBottom: SPACING.md,
+    },
+  });

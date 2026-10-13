@@ -1,3 +1,5 @@
+import { ensureContentAllowed } from "@/utils/moderation";
+import { Platform } from "react-native";
 import { api } from "@/services/api";
 import type { FeedPostDto } from "@/types/feed";
 import type {
@@ -74,6 +76,7 @@ export const getSavedPosts = async () => {
   });
 };
 export const createPost = async (request: CreatePostRequest) => {
+  ensureContentAllowed(request.content);
   return await api<FeedPostDto>("/posts", {
     method: "POST",
     auth: true,
@@ -81,6 +84,7 @@ export const createPost = async (request: CreatePostRequest) => {
   });
 };
 export const updatePost = async (id: string, request: UpdatePostRequest) => {
+  ensureContentAllowed(request.content);
   return await api<FeedPostDto>(`/posts/${id}`, {
     method: "PATCH",
     auth: true,
@@ -101,7 +105,7 @@ export const uploadPostMedia = async (
   return await api<PostMediaUploadResponse>(`/posts/${postId}/media`, {
     method: "POST",
     auth: true,
-    body: createMediaFormData(asset),
+    body: await createMediaFormData(asset),
   });
 };
 
@@ -112,7 +116,7 @@ export const finalizePost = async (postId: string) => {
   });
 };
 
-function createMediaFormData(asset: ImagePickerAsset) {
+async function createMediaFormData(asset: ImagePickerAsset) {
   const formData = new FormData();
 
   const isVideo =
@@ -122,9 +126,17 @@ function createMediaFormData(asset: ImagePickerAsset) {
     asset.fileName?.split(".").pop() ??
     (isVideo ? "mp4" : "jpg");
 
+  const fileName = asset.fileName ?? `post-${Date.now()}.${extension}`;
+  if (Platform.OS === "web") {
+    const response = await fetch(asset.uri);
+    const blob = await response.blob();
+    formData.append("file", blob, fileName);
+    return formData;
+  }
+
   formData.append("file", {
     uri: asset.uri,
-    name: asset.fileName ?? `post-${Date.now()}.${extension}`,
+    name: fileName,
     type: asset.mimeType ?? (isVideo ? "video/mp4" : "image/jpeg"),
   } as any);
 
@@ -140,7 +152,7 @@ export const updatePostMedia = async (
     {
       method: "PUT",
       auth: true,
-      body: createMediaFormData(asset),
+      body: await createMediaFormData(asset),
     },
   );
 };

@@ -20,7 +20,7 @@ public class CommentService : ICommentService
     private readonly UserManager<ApplicationUser> _userManager;
     private readonly INotificationService _notificationService;
     private readonly ApplicationDbContext _context;
-    private readonly IReadOnlyList<string> _blockedTerms;
+    private readonly TextModeration _textModeration;
 
     public CommentService(
         ICommentRepository commentRepository,
@@ -29,7 +29,7 @@ public class CommentService : ICommentService
         IPostAccessService postAccessService,
         INotificationService notificationService,
         ApplicationDbContext context,
-        IConfiguration configuration)
+        IConfiguration configuration, TextModeration textModeration)
     {
         _commentRepository = commentRepository;
         _postRepository = postRepository;
@@ -37,14 +37,7 @@ public class CommentService : ICommentService
         _postAccessService = postAccessService;
         _notificationService = notificationService;
         _context = context;
-        _blockedTerms = configuration
-            .GetSection("CommentModeration:BlockedTerms")
-            .Get<string[]>()?
-            .Select(NormalizeForModeration)
-            .Where(x => x.Length > 0)
-            .Distinct()
-            .ToList()
-            ?? [];
+        _textModeration = textModeration;
     }
 
     public async Task<List<CommentDto>> GetByPostIdAsync(
@@ -368,20 +361,7 @@ public class CommentService : ICommentService
                 "Nội dung bình luận không được để trống.");
         }
 
-        var normalized = $" {NormalizeForModeration(content)} ";
-        var compact = normalized.Replace(" ", string.Empty);
-        if (_blockedTerms.Any(term =>
-                normalized.Contains(
-                    $" {term} ",
-                    StringComparison.Ordinal)
-                || compact.Contains(
-                    term.Replace(" ", string.Empty),
-                    StringComparison.Ordinal)))
-        {
-            throw new InvalidOperationException(
-                "Bình luận chứa ngôn từ không phù hợp. Vui lòng chỉnh sửa trước khi gửi.");
-        }
-
+        _textModeration.EnsureAllowed(content);
         return content;
     }
 

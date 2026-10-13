@@ -22,6 +22,8 @@ namespace SocialSport.Api.Models.Enums
         CopyrightScanResolved = 12,
         GroupPostReviewPending = 13,
         GroupPostApproved = 14,
-        GroupPostRejected = 15
+        GroupPostRejected = 15,
+        SystemPostApproved = 16,
+        SystemPostRejected = 17
     }
 }

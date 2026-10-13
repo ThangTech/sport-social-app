@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import { getBlockedUsers, unblockUser } from "@/services/user.service";
 import type { UserSummaryDto } from "@/types/user";
@@ -19,6 +20,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function BlockedUsersScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const [users, setUsers] = useState<UserSummaryDto[]>([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -124,11 +127,7 @@ export default function BlockedUsersScreen() {
           }
           ListEmptyComponent={
             <View style={styles.center}>
-              <Ionicons
-                name="ban-outline"
-                size={50}
-                color={COLORS.textMuted}
-              />
+              <Ionicons name="ban-outline" size={50} color={COLORS.textMuted} />
               <AppText color={COLORS.textMuted} style={styles.message}>
                 Bạn chưa chặn tài khoản nào.
               </AppText>
@@ -190,77 +189,78 @@ export default function BlockedUsersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  headerButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  userItem: {
-    minHeight: 76,
-    paddingHorizontal: SPACING.lg,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  avatar: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  userInfo: {
-    flex: 1,
-    gap: 3,
-  },
-  unblockButton: {
-    minWidth: 88,
-    minHeight: 38,
-    paddingHorizontal: SPACING.md,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: 20,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: SPACING.xl,
-  },
-  emptyList: {
-    flexGrow: 1,
-  },
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  retryButton: {
-    marginTop: SPACING.lg,
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    headerButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    userItem: {
+      minHeight: 76,
+      paddingHorizontal: SPACING.lg,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    avatar: {
+      width: 48,
+      height: 48,
+      borderRadius: 24,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    userInfo: {
+      flex: 1,
+      gap: 3,
+    },
+    unblockButton: {
+      minWidth: 88,
+      minHeight: 38,
+      paddingHorizontal: SPACING.md,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: 20,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    disabledButton: {
+      opacity: 0.6,
+    },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: SPACING.xl,
+    },
+    emptyList: {
+      flexGrow: 1,
+    },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    retryButton: {
+      marginTop: SPACING.lg,
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.sm,
+      borderRadius: 20,
+      backgroundColor: COLORS.primary,
+    },
+  });

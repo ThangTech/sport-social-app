@@ -1,3 +1,5 @@
+import Constants from "expo-constants";
+import { Platform } from "react-native";
 import {
   clearTokens,
   getAccessToken,
@@ -8,7 +10,19 @@ import {
 import { ApiError } from "@/types/api";
 import { AuthResponse } from "@/types/auth";
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL;
+function getDevelopmentHost() {
+  if (Platform.OS === "web") {
+    return typeof window === "undefined" ? "localhost" : window.location.hostname;
+  }
+
+  return Constants.expoConfig?.hostUri?.split(":")[0];
+}
+
+const developmentHost = getDevelopmentHost();
+const API_URL = (
+  process.env.EXPO_PUBLIC_API_URL ||
+  (__DEV__ && developmentHost ? `http://${developmentHost}:5016/api/v1` : "")
+).replace(/\/$/, "");
 
 if (!API_URL) {
   throw new Error("EXPO_PUBLIC_API_URL chưa được cấu hình.");

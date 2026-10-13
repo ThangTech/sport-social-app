@@ -1,4 +1,5 @@
-import { COLORS, SPACING } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
+import { SPACING } from "@/constants/theme";
 import {
   Alert,
   Image,
@@ -27,6 +28,7 @@ import { router } from "expo-router";
 import PostCardHeader from "@/components/post/PostCardHeader";
 import PostCardActions from "@/components/post/PostCardActions";
 import { getFileUrl } from "@/services/api";
+import { shareWebPost } from "@/utils/share-web";
 type PostCardProps = {
   post: Post;
   onPress?: () => void;
@@ -48,9 +50,10 @@ const getDevelopmentWebOrigin = () => {
     const normalizedUri = hostUri.includes("://")
       ? hostUri
       : `http://${hostUri}`;
-    const hostname = new URL(normalizedUri).hostname;
+    const parsed = new URL(normalizedUri);
+    const hostname = parsed.hostname;
 
-    return hostname ? `http://${hostname}:8082` : null;
+    return hostname ? `http://${hostname}:${parsed.port || "8081"}` : null;
   } catch {
     return null;
   }
@@ -64,6 +67,8 @@ export default function PostCard({
   onDeleted,
   onRemoveFromGroup,
 }: PostCardProps) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { user: currentUser, profileImageVersion } = useAuth();
 
   const { showActionSheetWithOptions } = useActionSheet();
@@ -176,20 +181,7 @@ export default function PostCard({
 
     try {
       if (Platform.OS === "web" && typeof window !== "undefined") {
-        if (window.navigator.share) {
-          await window.navigator.share({
-            title: "Chia sẻ bài viết",
-            text: `${post.authorName} trên SocialSport`,
-            url,
-          });
-          return;
-        }
-
-        await window.navigator.clipboard.writeText(url);
-        Alert.alert(
-          "Đã sao chép liên kết",
-          "Bạn có thể mở liên kết trong cửa sổ ẩn danh để kiểm tra luồng đăng nhập.",
-        );
+        await shareWebPost(url, post.authorName);
         return;
       }
 
@@ -374,36 +366,37 @@ export default function PostCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: COLORS.surface,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-    marginBottom: SPACING.md,
-  },
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    card: {
+      backgroundColor: COLORS.surface,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+      marginBottom: SPACING.md,
+    },
 
-  content: {
-    paddingHorizontal: SPACING.lg,
-    paddingBottom: SPACING.md,
-  },
-  imageContainer: {
-    width: "100%",
-    height: 280,
-    backgroundColor: COLORS.surfaceAlt,
-    alignItems: "center",
-    justifyContent: "center",
-    overflow: "hidden",
-  },
-  postImage: {
-    width: "100%",
-    height: "100%",
-  },
-  videoContainer: {
-    width: "100%",
-    height: 240,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.xs,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-});
+    content: {
+      paddingHorizontal: SPACING.lg,
+      paddingBottom: SPACING.md,
+    },
+    imageContainer: {
+      width: "100%",
+      height: 280,
+      backgroundColor: COLORS.surfaceAlt,
+      alignItems: "center",
+      justifyContent: "center",
+      overflow: "hidden",
+    },
+    postImage: {
+      width: "100%",
+      height: "100%",
+    },
+    videoContainer: {
+      width: "100%",
+      height: 240,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.xs,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+  });

@@ -214,7 +214,15 @@ export function AdminLayout({ logout }: { logout: () => void }) {
         trigger={null}
         onCollapse={setCollapsed}
         width={260}
-        className="fixed inset-y-0 left-0 z-30 overflow-auto"
+        style={{
+          position: "fixed",
+          inset: "0 auto 0 0",
+          height: "100dvh",
+          overflowY: "auto",
+          overflowX: "hidden",
+          zIndex: 30,
+          background: "#17212b",
+        }}
       >
         <div className="flex h-16 items-center gap-3 border-b border-white/10 px-5">
           <div className="grid size-9 shrink-0 place-items-center rounded-lg bg-[#16794f] text-base font-bold text-white">
@@ -222,10 +230,10 @@ export function AdminLayout({ logout }: { logout: () => void }) {
           </div>
           {!collapsed ? (
             <div className="min-w-0">
-              <Typography.Text className="block font-semibold text-white">
+              <Typography.Text className="block font-semibold" style={{ color: "#ffffff" }}>
                 SocialSport
               </Typography.Text>
-              <Typography.Text className="block text-xs text-slate-400">
+              <Typography.Text className="block text-xs" style={{ color: "#94a3b8" }}>
                 System Administration
               </Typography.Text>
             </div>
@@ -246,6 +254,8 @@ export function AdminLayout({ logout }: { logout: () => void }) {
         className="transition-[margin] duration-200"
         style={{
           marginLeft: isMobile ? 0 : collapsed ? 80 : 260,
+          minWidth: 0,
+          minHeight: "100dvh",
         }}
       >
         <Header className="sticky top-0 z-20 flex h-16 items-center gap-4 border-b border-slate-200 px-5 shadow-sm">
@@ -311,7 +321,7 @@ export function AdminLayout({ logout }: { logout: () => void }) {
           </Dropdown>
         </Header>
 
-        <Content className="min-w-0 p-4 md:p-6 xl:p-8">
+        <Content className="min-w-0 p-4 md:p-6 xl:p-8" style={{ overflowWrap: "anywhere" }}>
           <div className="mx-auto max-w-[1600px]">
             <Outlet />
           </div>

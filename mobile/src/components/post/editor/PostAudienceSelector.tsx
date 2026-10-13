@@ -1,4 +1,4 @@
-import { COLORS } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useActionSheet } from "@expo/react-native-action-sheet";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { Pressable, StyleSheet } from "react-native";
@@ -22,6 +22,8 @@ export default function PostAudienceSelector({
   onChange,
   disabled = false,
 }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { showActionSheetWithOptions } = useActionSheet();
   const audience = AUDIENCES[value - 1] ?? AUDIENCES[0];
 
@@ -41,7 +43,11 @@ export default function PostAudienceSelector({
   };
 
   return (
-    <Pressable style={styles.container} onPress={handlePress} disabled={disabled}>
+    <Pressable
+      style={styles.container}
+      onPress={handlePress}
+      disabled={disabled}
+    >
       <Ionicons name={audience.icon} size={14} color={COLORS.textMuted} />
 
       <AppText style={styles.label}>{audience.label}</AppText>
@@ -51,20 +57,21 @@ export default function PostAudienceSelector({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    alignSelf: "flex-start",
-    marginTop: 6,
-    paddingHorizontal: 9,
-    paddingVertical: 5,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    borderRadius: 8,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  label: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      alignSelf: "flex-start",
+      marginTop: 6,
+      paddingHorizontal: 9,
+      paddingVertical: 5,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      borderRadius: 8,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    label: {
+      fontSize: 12,
+      color: COLORS.textMuted,
+    },
+  });

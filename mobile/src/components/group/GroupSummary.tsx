@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import {
   GroupMemberRole,
@@ -45,6 +46,8 @@ export default function GroupSummary({
   onViewMembers,
   onManageJoinRequests,
 }: GroupSummaryProps) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const isPrivate = group.privacy === GroupPrivacy.Private;
   const membershipStatus = group.currentUserMemberStatus ?? null;
   const isPending = membershipStatus === GroupMemberStatus.Pending;
@@ -125,11 +128,7 @@ export default function GroupSummary({
             <Ionicons name="people-outline" size={20} color={COLORS.primary} />
             <AppText variant="label">Thành viên</AppText>
           </View>
-          <Ionicons
-            name="chevron-forward"
-            size={20}
-            color={COLORS.textMuted}
-          />
+          <Ionicons name="chevron-forward" size={20} color={COLORS.textMuted} />
         </Pressable>
 
         {isOwner ? (
@@ -182,7 +181,11 @@ export default function GroupSummary({
 
         {isOwner ? (
           <View style={styles.memberBadge}>
-            <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} />
+            <Ionicons
+              name="checkmark-circle"
+              size={18}
+              color={COLORS.primary}
+            />
             <AppText variant="label" color={COLORS.primary}>
               Chủ nhóm
             </AppText>
@@ -197,7 +200,11 @@ export default function GroupSummary({
         ) : isPending ? (
           <View style={styles.membershipActions}>
             <View style={styles.pendingButton}>
-              <Ionicons name="time-outline" size={18} color={COLORS.textMuted} />
+              <Ionicons
+                name="time-outline"
+                size={18}
+                color={COLORS.textMuted}
+              />
               <AppText variant="label" color={COLORS.textMuted}>
                 Đã gửi yêu cầu
               </AppText>
@@ -222,7 +229,11 @@ export default function GroupSummary({
         ) : isActive ? (
           <View style={styles.membershipActions}>
             <View style={styles.memberBadge}>
-              <Ionicons name="checkmark-circle" size={18} color={COLORS.primary} />
+              <Ionicons
+                name="checkmark-circle"
+                size={18}
+                color={COLORS.primary}
+              />
               <AppText variant="label" color={COLORS.primary}>
                 {getRoleLabel(group.currentUserRole)}
               </AppText>
@@ -274,134 +285,135 @@ export default function GroupSummary({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-    backgroundColor: COLORS.surface,
-  },
-  cover: {
-    height: 170,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  coverImage: {
-    width: "100%",
-    height: "100%",
-  },
-  content: {
-    padding: SPACING.lg,
-    gap: SPACING.md,
-  },
-  identityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-  },
-  avatar: {
-    width: 72,
-    height: 72,
-    borderRadius: RADIUS.lg,
-    borderWidth: 2,
-    borderColor: COLORS.background,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  avatarPlaceholder: {
-    width: 72,
-    height: 72,
-    borderRadius: RADIUS.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  identity: {
-    flex: 1,
-    gap: SPACING.xs,
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    flexWrap: "wrap",
-    gap: SPACING.xs,
-  },
-  memberBadge: {
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primarySoft,
-  },
-  joinButton: {
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  membershipActions: {
-    gap: SPACING.sm,
-  },
-  pendingButton: {
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  cancelButton: {
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: RADIUS.full,
-  },
-  leaveButton: {
-    minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: RADIUS.full,
-  },
-  bannedBadge: {
-    minHeight: 44,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.danger,
-    borderRadius: RADIUS.full,
-  },
-  requestMenu: {
-    minHeight: 52,
-    paddingHorizontal: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  requestMenuLabel: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-  },
-  disabledButton: {
-    opacity: 0.6,
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+      backgroundColor: COLORS.surface,
+    },
+    cover: {
+      height: 170,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    coverImage: {
+      width: "100%",
+      height: "100%",
+    },
+    content: {
+      padding: SPACING.lg,
+      gap: SPACING.md,
+    },
+    identityRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+    },
+    avatar: {
+      width: 72,
+      height: 72,
+      borderRadius: RADIUS.lg,
+      borderWidth: 2,
+      borderColor: COLORS.background,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    avatarPlaceholder: {
+      width: 72,
+      height: 72,
+      borderRadius: RADIUS.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    identity: {
+      flex: 1,
+      gap: SPACING.xs,
+    },
+    metaRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: SPACING.xs,
+    },
+    memberBadge: {
+      minHeight: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.sm,
+      borderWidth: 1,
+      borderColor: COLORS.primary,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primarySoft,
+    },
+    joinButton: {
+      minHeight: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.sm,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    membershipActions: {
+      gap: SPACING.sm,
+    },
+    pendingButton: {
+      minHeight: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.sm,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    cancelButton: {
+      minHeight: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: RADIUS.full,
+    },
+    leaveButton: {
+      minHeight: 44,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: RADIUS.full,
+    },
+    bannedBadge: {
+      minHeight: 44,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.sm,
+      borderWidth: 1,
+      borderColor: COLORS.danger,
+      borderRadius: RADIUS.full,
+    },
+    requestMenu: {
+      minHeight: 52,
+      paddingHorizontal: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    requestMenuLabel: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+    },
+    disabledButton: {
+      opacity: 0.6,
+    },
+  });

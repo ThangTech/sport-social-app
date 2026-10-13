@@ -378,7 +378,9 @@ public class CopyrightService : ICopyrightService
                     && scan.Status != ExternalCopyrightScanStatus.ClearedByAdmin
                     && scan.Status != ExternalCopyrightScanStatus.AppealAccepted
                     && scan.Status != ExternalCopyrightScanStatus.Failed);
-            if (!hasOtherBlockingCase
+            if ((item.PostMedia.Post.GroupId != null || item.PostMedia.Post.SystemModerationStatus == SystemPostModerationStatus.Approved)
+                && item.PostMedia.Post.Status == PostStatus.Hidden
+                && !hasOtherBlockingCase
                 && !hasBlockingExternalScan
                 && item.PostMedia.Post.GroupModerationStatus is
                     GroupPostModerationStatus.NotApplicable

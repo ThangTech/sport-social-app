@@ -3,6 +3,7 @@ export type PostMediaDto = {
   url: string;
   mediaType: number;
   sortOrder: number;
+  logoAnalysisJson?: string | null;
 };
 
 export type FeedPostDto = {
@@ -23,6 +24,7 @@ export type FeedPostDto = {
   visibility: number;
   groupModerationStatus: number;
   isPendingCopyrightReview: boolean;
+  isPendingSystemReview?: boolean;
 
   likeCount: number;
   commentCount: number;

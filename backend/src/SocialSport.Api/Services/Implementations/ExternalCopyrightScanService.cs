@@ -648,6 +648,7 @@ public class ExternalCopyrightScanService : IExternalCopyrightScanService
             cancellationToken);
         if (!hasCopyrightCase
             && !hasOtherScan
+            && (post.GroupId != null || post.SystemModerationStatus == SystemPostModerationStatus.Approved)
             && post.Status == PostStatus.Hidden
             && post.GroupModerationStatus is
                 GroupPostModerationStatus.NotApplicable

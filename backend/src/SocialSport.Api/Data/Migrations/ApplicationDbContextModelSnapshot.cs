@@ -274,8 +274,8 @@ namespace SocialSport.Api.Data.Migrations
 
                     b.Property<string>("Summary")
                         .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
 
                     b.Property<string>("TargetId")
                         .HasMaxLength(100)
@@ -885,6 +885,10 @@ namespace SocialSport.Api.Data.Migrations
                     b.Property<bool>("IsRead")
                         .HasColumnType("bit");
 
+                    b.Property<string>("Message")
+                        .HasMaxLength(1200)
+                        .HasColumnType("nvarchar(1200)");
+
                     b.Property<DateTimeOffset?>("ReadAt")
                         .HasColumnType("datetimeoffset");
 
@@ -988,10 +992,23 @@ namespace SocialSport.Api.Data.Migrations
                     b.Property<int>("GroupModerationStatus")
                         .HasColumnType("int");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<Guid?>("SportId")
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SystemModerationReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("SystemModerationStatus")
                         .HasColumnType("int");
 
                     b.Property<DateTimeOffset?>("UpdatedAt")
@@ -1031,6 +1048,9 @@ namespace SocialSport.Api.Data.Migrations
 
                     b.Property<int?>("Height")
                         .HasColumnType("int");
+
+                    b.Property<string>("LogoAnalysisJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("MediaType")
                         .HasColumnType("int");

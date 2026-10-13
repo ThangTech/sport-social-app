@@ -1,3 +1,4 @@
+import { ensureContentAllowed } from "@/utils/moderation";
 import { api } from "@/services/api";
 import type { CommentDto, CreateCommentRequest } from "@/types/comment";
 
@@ -12,6 +13,7 @@ export const createComment = async (
   postId: string,
   request: CreateCommentRequest,
 ) => {
+  ensureContentAllowed(request.content);
   return await api<CommentDto>(`/posts/${postId}/comments`, {
     method: "POST",
     auth: true,
@@ -19,6 +21,7 @@ export const createComment = async (
   });
 };
 export const updateComment = async (commentId: string, content: string) => {
+  ensureContentAllowed(content);
   return await api<CommentDto>(`/comments/${commentId}`, {
     method: "PATCH",
     auth: true,

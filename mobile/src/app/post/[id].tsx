@@ -1,11 +1,9 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import PostCard from "@/components/PostCard";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { getPostById } from "@/services/post.service";
-import {
-  getGroupById,
-  removeGroupPost,
-} from "@/services/group.service";
+import { getGroupById, removeGroupPost } from "@/services/group.service";
 import type { Post } from "@/types/post";
 import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import Ionicons from "@expo/vector-icons/Ionicons";
@@ -41,6 +39,8 @@ import {
 } from "@/types/group";
 
 export default function PostDetailScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const params = useLocalSearchParams<{ id?: string | string[] }>();
 
   const { user: currentUser, signOut } = useAuth();
@@ -205,9 +205,9 @@ export default function PostDetailScreen() {
   };
   const canModerateComment = (comment: CommentDto) => {
     if (
-      !group
-      || group.currentUserMemberStatus !== GroupMemberStatus.Active
-      || comment.authorId === currentUser?.id
+      !group ||
+      group.currentUserMemberStatus !== GroupMemberStatus.Active ||
+      comment.authorId === currentUser?.id
     ) {
       return false;
     }
@@ -224,8 +224,10 @@ export default function PostDetailScreen() {
       return comment.authorGroupRole !== "Quản trị viên";
     }
 
-    return group.currentUserRole === GroupMemberRole.Moderator
-      && !comment.authorGroupRole;
+    return (
+      group.currentUserRole === GroupMemberRole.Moderator &&
+      !comment.authorGroupRole
+    );
   };
 
   const handleReportComment = (comment: CommentDto) => {
@@ -239,13 +241,13 @@ export default function PostDetailScreen() {
   };
   const canRemoveFromGroup = Boolean(
     post?.groupId &&
-      group &&
-      post.authorId !== currentUser?.id &&
-      group.currentUserMemberStatus === GroupMemberStatus.Active &&
-      (currentUser?.id === group.ownerId ||
-        (post.authorId !== group.ownerId &&
-          (group.currentUserRole === GroupMemberRole.Admin ||
-            group.currentUserRole === GroupMemberRole.Moderator))),
+    group &&
+    post.authorId !== currentUser?.id &&
+    group.currentUserMemberStatus === GroupMemberStatus.Active &&
+    (currentUser?.id === group.ownerId ||
+      (post.authorId !== group.ownerId &&
+        (group.currentUserRole === GroupMemberRole.Admin ||
+          group.currentUserRole === GroupMemberRole.Moderator))),
   );
 
   const handleRemoveFromGroup = async (postId: string) => {
@@ -405,74 +407,74 @@ export default function PostDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+      backgroundColor: COLORS.background,
+    },
 
-  header: {
-    height: 64,
-    paddingHorizontal: SPACING.lg,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
+    header: {
+      height: 64,
+      paddingHorizontal: SPACING.lg,
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
 
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-  },
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
 
-  backButton: {
-    width: 40,
-    height: 40,
-    alignItems: "center",
-    justifyContent: "center",
-  },
+    backButton: {
+      width: 40,
+      height: 40,
+      alignItems: "center",
+      justifyContent: "center",
+    },
 
-  headerSpace: {
-    width: 40,
-  },
+    headerSpace: {
+      width: 40,
+    },
 
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: SPACING.xl,
-  },
+    center: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      padding: SPACING.xl,
+    },
 
-  message: {
-    marginTop: SPACING.md,
-    textAlign: "center",
-  },
-  accessHint: {
-    marginTop: SPACING.sm,
-    maxWidth: 420,
-    textAlign: "center",
-  },
-  errorActions: {
-    marginTop: SPACING.lg,
-    flexDirection: "row",
-    gap: SPACING.sm,
-  },
-  primaryButton: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    borderRadius: 20,
-    backgroundColor: COLORS.primary,
-  },
-  secondaryButton: {
-    paddingHorizontal: SPACING.lg,
-    paddingVertical: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.primary,
-    borderRadius: 20,
-  },
-  keyboardView: {
-    flex: 1,
-  },
+    message: {
+      marginTop: SPACING.md,
+      textAlign: "center",
+    },
+    accessHint: {
+      marginTop: SPACING.sm,
+      maxWidth: 420,
+      textAlign: "center",
+    },
+    errorActions: {
+      marginTop: SPACING.lg,
+      flexDirection: "row",
+      gap: SPACING.sm,
+    },
+    primaryButton: {
+      paddingHorizontal: SPACING.lg,
+      paddingVertical: SPACING.sm,
+      borderRadius: 20,
+      backgroundColor: COLORS.primary,
+    },
+    secondaryButton: {
+      paddingHorizontal: SPACING.lg,
+      paddingVertical: SPACING.sm,
+      borderWidth: 1,
+      borderColor: COLORS.primary,
+      borderRadius: 20,
+    },
+    keyboardView: {
+      flex: 1,
+    },
 
-  scrollContent: {
-    paddingBottom: SPACING.lg,
-  },
-
-});
+    scrollContent: {
+      paddingBottom: SPACING.lg,
+    },
+  });

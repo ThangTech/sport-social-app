@@ -1,4 +1,4 @@
-import { COLORS } from "@/constants/theme";
+import { useTheme } from "@/contexts/ThemeContext";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { router, Tabs } from "expo-router";
 import { useState } from "react";
@@ -7,6 +7,8 @@ import CreatePostScreen from "../modal/create-post";
 import { CreatePostProvider } from "@/contexts/CreatePostContext";
 import { ActionSheetProvider } from "@expo/react-native-action-sheet";
 export default function TabsLayout() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const [showCreate, setShowCreate] = useState(false);
 
   return (
@@ -116,49 +118,50 @@ export default function TabsLayout() {
     </CreatePostProvider>
   );
 }
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      flex: 1,
+    },
 
-  createButton: {
-    position: "absolute",
+    createButton: {
+      position: "absolute",
 
-    bottom: "1%",
-    left: "50%",
-    marginLeft: -28,
+      bottom: "1%",
+      left: "50%",
+      marginLeft: -28,
 
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+      width: 56,
+      height: 56,
+      borderRadius: 28,
 
-    backgroundColor: COLORS.primary,
+      backgroundColor: COLORS.primary,
 
-    borderWidth: 4,
-    borderColor: COLORS.surface,
+      borderWidth: 4,
+      borderColor: COLORS.surface,
 
-    alignItems: "center",
-    justifyContent: "center",
+      alignItems: "center",
+      justifyContent: "center",
 
-    elevation: 6,
-  },
+      elevation: 6,
+    },
 
-  modalOverlay: {
-    flex: 1,
+    modalOverlay: {
+      flex: 1,
 
-    backgroundColor: "rgba(0,0,0,0.5)",
+      backgroundColor: "rgba(0,0,0,0.5)",
 
-    justifyContent: "center",
-  },
+      justifyContent: "center",
+    },
 
-  modalContent: {
-    height: "100%",
+    modalContent: {
+      height: "100%",
 
-    backgroundColor: COLORS.background,
+      backgroundColor: COLORS.background,
 
-    borderTopLeftRadius: 10,
-    borderTopRightRadius: 10,
+      borderTopLeftRadius: 10,
+      borderTopRightRadius: 10,
 
-    padding: 10,
-  },
-});
+      padding: 10,
+    },
+  });

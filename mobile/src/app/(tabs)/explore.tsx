@@ -1,8 +1,9 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import Avatar from "@/components/Avatar";
 import PostCard from "@/components/PostCard";
 import GroupListItem from "@/components/group/GroupListItem";
 import AppText from "@/components/ui/AppText";
-import { COLORS, RADIUS, SPACING } from "@/constants/theme";
+import { RADIUS, SPACING } from "@/constants/theme";
 import { useAuth } from "@/contexts/AuthContext";
 import { mapFeedPostToPost } from "@/mappers/post.mapper";
 import { getFileUrl } from "@/services/api";
@@ -45,6 +46,8 @@ const tabs: { key: ExploreSection; label: string }[] = [
 ];
 
 export default function ExploreScreen() {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const { user } = useAuth();
   const [section, setSection] = useState<ExploreSection>("posts");
   const [sort, setSort] = useState<ExploreSort>("recommended");
@@ -365,105 +368,106 @@ export default function ExploreScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: COLORS.background },
-  title: {
-    height: 64,
-    alignItems: "center",
-    justifyContent: "center",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  searchRow: { padding: SPACING.md, flexDirection: "row", gap: SPACING.sm },
-  searchBox: {
-    flex: 1,
-    minHeight: 44,
-    paddingHorizontal: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surface,
-  },
-  searchInput: { flex: 1, color: COLORS.text },
-  searchButton: {
-    paddingHorizontal: SPACING.lg,
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  tabs: {
-    paddingHorizontal: SPACING.md,
-    flexDirection: "row",
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: COLORS.border,
-  },
-  tab: {
-    flex: 1,
-    paddingVertical: SPACING.md,
-    alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
-  },
-  tabActive: { borderBottomColor: COLORS.primary },
-  sortRow: {
-    padding: SPACING.md,
-    paddingBottom: SPACING.sm,
-    flexDirection: "row",
-    gap: SPACING.sm,
-  },
-  sports: {
-    paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.md,
-    gap: SPACING.sm,
-  },
-  chip: {
-    paddingHorizontal: SPACING.md,
-    paddingVertical: SPACING.sm,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.surface,
-  },
-  chipActive: {
-    borderColor: COLORS.primary,
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  listContent: { gap: SPACING.sm, paddingBottom: SPACING.lg },
-  inlineError: {
-    marginHorizontal: SPACING.md,
-    marginBottom: SPACING.md,
-    padding: SPACING.md,
-    borderRadius: RADIUS.md,
-    backgroundColor: COLORS.surface,
-  },
-  center: {
-    flex: 1,
-    minHeight: 220,
-    padding: SPACING.xl,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: SPACING.md,
-  },
-  message: { textAlign: "center" },
-  retry: {
-    paddingHorizontal: SPACING.xl,
-    paddingVertical: SPACING.sm,
-    borderRadius: RADIUS.full,
-    backgroundColor: COLORS.primary,
-  },
-  userItem: {
-    marginHorizontal: SPACING.md,
-    padding: SPACING.md,
-    flexDirection: "row",
-    alignItems: "center",
-    gap: SPACING.md,
-    borderRadius: RADIUS.lg,
-    backgroundColor: COLORS.surface,
-  },
-  userCopy: { flex: 1, gap: SPACING.xs },
-  footer: { padding: SPACING.lg, alignItems: "center" },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: { flex: 1, backgroundColor: COLORS.background },
+    title: {
+      height: 64,
+      alignItems: "center",
+      justifyContent: "center",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    searchRow: { padding: SPACING.md, flexDirection: "row", gap: SPACING.sm },
+    searchBox: {
+      flex: 1,
+      minHeight: 44,
+      paddingHorizontal: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.sm,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surface,
+    },
+    searchInput: { flex: 1, color: COLORS.text },
+    searchButton: {
+      paddingHorizontal: SPACING.lg,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    tabs: {
+      paddingHorizontal: SPACING.md,
+      flexDirection: "row",
+      borderBottomWidth: StyleSheet.hairlineWidth,
+      borderBottomColor: COLORS.border,
+    },
+    tab: {
+      flex: 1,
+      paddingVertical: SPACING.md,
+      alignItems: "center",
+      borderBottomWidth: 2,
+      borderBottomColor: "transparent",
+    },
+    tabActive: { borderBottomColor: COLORS.primary },
+    sortRow: {
+      padding: SPACING.md,
+      paddingBottom: SPACING.sm,
+      flexDirection: "row",
+      gap: SPACING.sm,
+    },
+    sports: {
+      paddingHorizontal: SPACING.md,
+      paddingBottom: SPACING.md,
+      gap: SPACING.sm,
+    },
+    chip: {
+      paddingHorizontal: SPACING.md,
+      paddingVertical: SPACING.sm,
+      borderWidth: 1,
+      borderColor: COLORS.border,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.surface,
+    },
+    chipActive: {
+      borderColor: COLORS.primary,
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    listContent: { gap: SPACING.sm, paddingBottom: SPACING.lg },
+    inlineError: {
+      marginHorizontal: SPACING.md,
+      marginBottom: SPACING.md,
+      padding: SPACING.md,
+      borderRadius: RADIUS.md,
+      backgroundColor: COLORS.surface,
+    },
+    center: {
+      flex: 1,
+      minHeight: 220,
+      padding: SPACING.xl,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: SPACING.md,
+    },
+    message: { textAlign: "center" },
+    retry: {
+      paddingHorizontal: SPACING.xl,
+      paddingVertical: SPACING.sm,
+      borderRadius: RADIUS.full,
+      backgroundColor: COLORS.primary,
+    },
+    userItem: {
+      marginHorizontal: SPACING.md,
+      padding: SPACING.md,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: SPACING.md,
+      borderRadius: RADIUS.lg,
+      backgroundColor: COLORS.surface,
+    },
+    userCopy: { flex: 1, gap: SPACING.xs },
+    footer: { padding: SPACING.lg, alignItems: "center" },
+  });

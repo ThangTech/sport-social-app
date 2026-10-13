@@ -1,5 +1,6 @@
+import { useTheme } from "@/contexts/ThemeContext";
 import AppText from "@/components/ui/AppText";
-import { COLORS, SPACING } from "@/constants/theme";
+import { SPACING } from "@/constants/theme";
 import { getFileUrl } from "@/services/api";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import type { ImagePickerAsset } from "expo-image-picker";
@@ -23,6 +24,8 @@ type Props = {
 };
 
 function VideoPreview({ uri }: { uri: string }) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   const player = useVideoPlayer(uri);
 
   return (
@@ -46,6 +49,8 @@ export default function PostImagePreview({
   disabled = false,
   variant,
 }: Props) {
+  const { colors: COLORS } = useTheme();
+  const styles = createStyles(COLORS);
   if (!selectedImage && (!existingMedia || removeExistingImage)) return null;
 
   const isNewImage = Boolean(selectedImage);
@@ -96,56 +101,57 @@ export default function PostImagePreview({
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    height: 140,
-    marginHorizontal: SPACING.lg,
-    overflow: "hidden",
-    backgroundColor: COLORS.surfaceAlt,
-  },
-  createContainer: {
-    marginBottom: SPACING.md,
-    borderRadius: 16,
-  },
-  editContainer: {
-    marginTop: SPACING.sm,
-    borderRadius: 14,
-  },
-  image: {
-    width: "100%",
-    height: "100%",
-  },
-  video: {
-    width: "100%",
-    height: "100%",
-  },
-  removeButton: {
-    position: "absolute",
-    backgroundColor: "rgba(0,0,0,0.65)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  createRemoveButton: {
-    top: 10,
-    right: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-  },
-  editRemoveButton: {
-    top: 8,
-    right: 8,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-  },
-  newImageBadge: {
-    position: "absolute",
-    left: 8,
-    bottom: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    backgroundColor: "rgba(0,0,0,0.65)",
-  },
-});
+const createStyles = (COLORS: typeof import("@/constants/theme").COLORS) =>
+  StyleSheet.create({
+    container: {
+      height: 140,
+      marginHorizontal: SPACING.lg,
+      overflow: "hidden",
+      backgroundColor: COLORS.surfaceAlt,
+    },
+    createContainer: {
+      marginBottom: SPACING.md,
+      borderRadius: 16,
+    },
+    editContainer: {
+      marginTop: SPACING.sm,
+      borderRadius: 14,
+    },
+    image: {
+      width: "100%",
+      height: "100%",
+    },
+    video: {
+      width: "100%",
+      height: "100%",
+    },
+    removeButton: {
+      position: "absolute",
+      backgroundColor: "rgba(0,0,0,0.65)",
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    createRemoveButton: {
+      top: 10,
+      right: 10,
+      width: 32,
+      height: 32,
+      borderRadius: 16,
+    },
+    editRemoveButton: {
+      top: 8,
+      right: 8,
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+    },
+    newImageBadge: {
+      position: "absolute",
+      left: 8,
+      bottom: 8,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 8,
+      backgroundColor: "rgba(0,0,0,0.65)",
+    },
+  });
